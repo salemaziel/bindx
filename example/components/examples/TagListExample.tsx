@@ -5,11 +5,7 @@ import { useEntityList } from '../../bindx.js'
  * Demonstrates useEntityList with custom rendering
  */
 export function TagListExample() {
-	const tags = useEntityList('Tag', {}, e => ({
-		id: e.id,
-		name: e.name,
-		color: e.color,
-	}))
+	const tags = useEntityList('Tag', {}, e => e.id().name().color())
 
 	if (tags.isLoading) {
 		return <div>Loading tags...</div>

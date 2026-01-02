@@ -100,9 +100,7 @@ describe('Identity Map Synchronization', () => {
 
 			// Component A displays author name
 			function ComponentA() {
-				const author = useEntity('Author', { id: 'author-1' }, e => ({
-					name: e.name,
-				}))
+				const author = useEntity('Author', { id: 'author-1' }, e => e.name())
 
 				if (author.isLoading) {
 					return <div data-testid="a-loading">Loading A...</div>
@@ -123,9 +121,7 @@ describe('Identity Map Synchronization', () => {
 
 			// Component B also displays author name
 			function ComponentB() {
-				const author = useEntity('Author', { id: 'author-1' }, e => ({
-					name: e.name,
-				}))
+				const author = useEntity('Author', { id: 'author-1' }, e => e.name())
 
 				if (author.isLoading) {
 					return <div data-testid="b-loading">Loading B...</div>
@@ -188,13 +184,9 @@ describe('Identity Map Synchronization', () => {
 
 			// Component that accesses author through article
 			function ArticleComponent() {
-				const article = useEntity('Article', { id: 'article-1' }, e => ({
-					title: e.title,
-					author: {
-						id: e.author.id,
-						name: e.author.name,
-					},
-				}))
+				const article = useEntity('Article', { id: 'article-1' }, e =>
+					e.title().author(a => a.id().name())
+				)
 
 				if (article.isLoading) {
 					return <div data-testid="article-loading">Loading...</div>
@@ -216,10 +208,7 @@ describe('Identity Map Synchronization', () => {
 
 			// Component that accesses author directly
 			function AuthorComponent() {
-				const author = useEntity('Author', { id: 'author-1' }, e => ({
-					name: e.name,
-					email: e.email,
-				}))
+				const author = useEntity('Author', { id: 'author-1' }, e => e.name().email())
 
 				if (author.isLoading) {
 					return <div data-testid="author-loading">Loading...</div>
@@ -282,9 +271,7 @@ describe('Identity Map Synchronization', () => {
 			const identityMap = new IdentityMap()
 
 			function ComponentA() {
-				const author = useEntity('Author', { id: 'author-1' }, e => ({
-					name: e.name,
-				}))
+				const author = useEntity('Author', { id: 'author-1' }, e => e.name())
 
 				if (author.isLoading) return <div>Loading...</div>
 
@@ -303,9 +290,7 @@ describe('Identity Map Synchronization', () => {
 			}
 
 			function ComponentB() {
-				const author = useEntity('Author', { id: 'author-1' }, e => ({
-					name: e.name,
-				}))
+				const author = useEntity('Author', { id: 'author-1' }, e => e.name())
 
 				if (author.isLoading) return <div>Loading...</div>
 
@@ -361,9 +346,7 @@ describe('Identity Map Synchronization', () => {
 			})
 
 			function TestComponent() {
-				const author = useEntity('Author', { id: 'author-1', cache: true }, e => ({
-					name: e.name,
-				}))
+				const author = useEntity('Author', { id: 'author-1', cache: true }, e => e.name())
 
 				if (author.isLoading) {
 					return <div data-testid="loading">Loading...</div>
@@ -394,12 +377,9 @@ describe('Identity Map Synchronization', () => {
 			const identityMap = new IdentityMap()
 
 			function ArticleTagsComponentA() {
-				const article = useEntity('Article', { id: 'article-1' }, e => ({
-					tags: e.tags.map(t => ({
-						id: t.id,
-						name: t.name,
-					})),
-				}))
+				const article = useEntity('Article', { id: 'article-1' }, e =>
+					e.tags(t => t.id().name())
+				)
 
 				if (article.isLoading) return <div>Loading...</div>
 
@@ -426,12 +406,9 @@ describe('Identity Map Synchronization', () => {
 			}
 
 			function ArticleTagsComponentB() {
-				const article = useEntity('Article', { id: 'article-1' }, e => ({
-					tags: e.tags.map(t => ({
-						id: t.id,
-						name: t.name,
-					})),
-				}))
+				const article = useEntity('Article', { id: 'article-1' }, e =>
+					e.tags(t => t.id().name())
+				)
 
 				if (article.isLoading) return <div>Loading...</div>
 

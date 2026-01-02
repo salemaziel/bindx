@@ -1,10 +1,9 @@
 import { describe, test, expect } from 'bun:test'
 import {
-	createModelProxy,
-	extractFragmentMeta,
-	buildQuery,
-	defineFragment,
-	type ModelProxy,
+	createSelectionBuilder,
+	createFragment,
+	buildQueryFromSelection,
+	SELECTION_META,
 } from '../src/index.js'
 
 interface Author {
@@ -26,61 +25,59 @@ interface Article {
 	tags: Tag[]
 }
 
-describe('Query Building', () => {
-	describe('extractFragmentMeta', () => {
+describe('Query Building with Fluent API', () => {
+	describe('createSelectionBuilder', () => {
 		test('should extract scalar field paths', () => {
-			const proxy = createModelProxy<Article>()
-			const result = { title: proxy.title, content: proxy.content }
-			const meta = extractFragmentMeta(result)
+			const builder = createSelectionBuilder<Article>()
+			const result = builder.title().content()
+			const meta = result[SELECTION_META]
 
 			expect(meta.fields.size).toBe(2)
-			expect(meta.fields.get('title')?.path).toEqual(['title'])
-			expect(meta.fields.get('content')?.path).toEqual(['content'])
+			expect(meta.fields.get('title')?.fieldName).toBe('title')
+			expect(meta.fields.get('content')?.fieldName).toBe('content')
 		})
 
-		test('should extract nested object paths', () => {
-			const proxy = createModelProxy<Article>()
-			const result = {
-				title: proxy.title,
-				author: {
-					name: proxy.author.name,
-					email: proxy.author.email,
-				},
-			}
-			const meta = extractFragmentMeta(result)
+		test('should extract nested object paths with callback', () => {
+			const builder = createSelectionBuilder<Article>()
+			const result = builder.title().author(a => a.name().email())
+			const meta = result[SELECTION_META]
 
 			expect(meta.fields.size).toBe(2)
-			expect(meta.fields.get('title')?.path).toEqual(['title'])
-			expect(meta.fields.get('author')?.path).toEqual(['author'])
+			expect(meta.fields.get('title')?.fieldName).toBe('title')
+			expect(meta.fields.get('author')?.fieldName).toBe('author')
 			expect(meta.fields.get('author')?.nested).toBeDefined()
-			expect(meta.fields.get('author')?.nested?.fields.get('name')?.path).toEqual(['author', 'name'])
-			expect(meta.fields.get('author')?.nested?.fields.get('email')?.path).toEqual(['author', 'email'])
+			expect(meta.fields.get('author')?.nested?.fields.get('name')?.fieldName).toBe('name')
+			expect(meta.fields.get('author')?.nested?.fields.get('email')?.fieldName).toBe('email')
 		})
 
-		test('should extract array with map', () => {
-			const proxy = createModelProxy<Article>()
-			const result = {
-				title: proxy.title,
-				tags: proxy.tags.map(t => ({
-					name: t.name,
-				})),
-			}
-			const meta = extractFragmentMeta(result)
+		test('should handle has-many with callback', () => {
+			const builder = createSelectionBuilder<Article>()
+			const result = builder.title().tags(t => t.name())
+			const meta = result[SELECTION_META]
 
 			expect(meta.fields.size).toBe(2)
-			expect(meta.fields.get('tags')?.isArray).toBe(true)
-			expect(meta.fields.get('tags')?.path).toEqual(['tags'])
-			expect(meta.fields.get('tags')?.arrayItemMeta).toBeDefined()
-			expect(meta.fields.get('tags')?.arrayItemMeta?.fields.get('name')?.path).toEqual(['name'])
+			expect(meta.fields.get('tags')?.fieldName).toBe('tags')
+			expect(meta.fields.get('tags')?.nested).toBeDefined()
+			expect(meta.fields.get('tags')?.nested?.fields.get('name')?.fieldName).toBe('name')
+		})
+
+		test('should support alias with scalar field', () => {
+			const builder = createSelectionBuilder<Article>()
+			const result = builder.title({ as: 'headline' })
+			const meta = result[SELECTION_META]
+
+			expect(meta.fields.size).toBe(1)
+			expect(meta.fields.get('headline')?.fieldName).toBe('title')
+			expect(meta.fields.get('headline')?.alias).toBe('headline')
 		})
 	})
 
-	describe('buildQuery', () => {
+	describe('buildQueryFromSelection', () => {
 		test('should build query for scalar fields', () => {
-			const proxy = createModelProxy<Article>()
-			const result = { title: proxy.title }
-			const meta = extractFragmentMeta(result)
-			const query = buildQuery(meta)
+			const builder = createSelectionBuilder<Article>()
+			const result = builder.title()
+			const meta = result[SELECTION_META]
+			const query = buildQueryFromSelection(meta)
 
 			expect(query.fields.length).toBe(1)
 			expect(query.fields[0]?.name).toBe('title')
@@ -88,14 +85,10 @@ describe('Query Building', () => {
 		})
 
 		test('should build query for nested objects', () => {
-			const proxy = createModelProxy<Article>()
-			const result = {
-				author: {
-					name: proxy.author.name,
-				},
-			}
-			const meta = extractFragmentMeta(result)
-			const query = buildQuery(meta)
+			const builder = createSelectionBuilder<Article>()
+			const result = builder.author(a => a.name())
+			const meta = result[SELECTION_META]
+			const query = buildQueryFromSelection(meta)
 
 			expect(query.fields.length).toBe(1)
 			expect(query.fields[0]?.name).toBe('author')
@@ -103,49 +96,53 @@ describe('Query Building', () => {
 			expect(query.fields[0]?.nested?.fields[0]?.name).toBe('name')
 		})
 
-		test('should build query for arrays', () => {
-			const proxy = createModelProxy<Article>()
-			const result = {
-				tags: proxy.tags.map(t => ({ name: t.name })),
-			}
-			const meta = extractFragmentMeta(result)
-			const query = buildQuery(meta)
+		test('should build query with has-many parameters', () => {
+			const builder = createSelectionBuilder<Article>()
+			const result = builder.tags({ filter: { active: true }, limit: 10 }, t => t.name())
+			const meta = result[SELECTION_META]
+			const query = buildQueryFromSelection(meta)
 
 			expect(query.fields.length).toBe(1)
 			expect(query.fields[0]?.name).toBe('tags')
 			expect(query.fields[0]?.isArray).toBe(true)
-			expect(query.fields[0]?.nested).toBeDefined()
+			expect(query.fields[0]?.filter).toEqual({ active: true })
+			expect(query.fields[0]?.limit).toBe(10)
 		})
 	})
 
-	describe('defineFragment', () => {
+	describe('createFragment', () => {
 		test('should create reusable fragment', () => {
-			const AuthorFragment = defineFragment((author: ModelProxy<Author>) => ({
-				id: author.id,
-				name: author.name,
-			}))
+			const AuthorFragment = createFragment<Author>()(e => e.id().name())
 
 			expect(AuthorFragment.__meta).toBeDefined()
 			expect(AuthorFragment.__meta.fields.size).toBe(2)
+			expect(AuthorFragment.__isFragment).toBe(true)
 		})
 
-		test('fragment.compose should merge metadata', () => {
-			const AuthorFragment = defineFragment((author: ModelProxy<Author>) => ({
-				id: author.id,
-				name: author.name,
-			}))
+		test('fragment should be usable in has-one selection', () => {
+			const AuthorFragment = createFragment<Author>()(e => e.id().name())
 
-			const proxy = createModelProxy<Article>()
-			const result = {
-				title: proxy.title,
-				author: AuthorFragment.compose(proxy.author),
-			}
-			const meta = extractFragmentMeta(result)
+			const builder = createSelectionBuilder<Article>()
+			const result = builder.title().author(AuthorFragment)
+			const meta = result[SELECTION_META]
 
 			expect(meta.fields.size).toBe(2)
 			expect(meta.fields.get('author')?.nested).toBeDefined()
-			expect(meta.fields.get('author')?.nested?.fields.get('id')?.path).toEqual(['author', 'id'])
-			expect(meta.fields.get('author')?.nested?.fields.get('name')?.path).toEqual(['author', 'name'])
+			expect(meta.fields.get('author')?.nested?.fields.get('id')?.fieldName).toBe('id')
+			expect(meta.fields.get('author')?.nested?.fields.get('name')?.fieldName).toBe('name')
+		})
+
+		test('fragment should be usable in has-many selection', () => {
+			const TagFragment = createFragment<Tag>()(e => e.id().name())
+
+			const builder = createSelectionBuilder<Article>()
+			const result = builder.tags(TagFragment)
+			const meta = result[SELECTION_META]
+
+			expect(meta.fields.size).toBe(1)
+			expect(meta.fields.get('tags')?.nested).toBeDefined()
+			expect(meta.fields.get('tags')?.nested?.fields.get('id')?.fieldName).toBe('id')
+			expect(meta.fields.get('tags')?.nested?.fields.get('name')?.fieldName).toBe('name')
 		})
 	})
 })

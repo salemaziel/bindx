@@ -1,4 +1,4 @@
-import type { FragmentMeta } from '../fragment/types.js'
+import type { SelectionMeta } from '../selection/types.js'
 import type { BackendAdapter } from '../adapter/types.js'
 import type { IdentityMap } from '../store/IdentityMap.js'
 import type { EntityListAccessor, EntityListItem, AccessorFromShape } from './types.js'
@@ -57,7 +57,7 @@ export class EntityListAccessorImpl<TData extends object> implements EntityListA
 
 	constructor(
 		private readonly entityType: string,
-		private readonly itemMeta: FragmentMeta,
+		private readonly itemMeta: SelectionMeta,
 		private readonly adapter: BackendAdapter,
 		private readonly identityMap: IdentityMap,
 		initialData: TData[],

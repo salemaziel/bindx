@@ -1,4 +1,4 @@
-import type { FragmentMeta, FieldMeta } from '../fragment/types.js'
+import type { SelectionMeta, SelectionFieldMeta } from '../selection/types.js'
 import type { BackendAdapter } from '../adapter/types.js'
 import type { IdentityMap } from '../store/IdentityMap.js'
 import type { EntityAccessor, AccessorFromShape, ChangeCollector } from './types.js'
@@ -21,7 +21,7 @@ export class EntityAccessorImpl<TData extends object>
 	constructor(
 		public readonly id: string,
 		private readonly entityType: string,
-		private readonly meta: FragmentMeta,
+		private readonly meta: SelectionMeta,
 		private readonly adapter: BackendAdapter,
 		private readonly identityMap: IdentityMap,
 		initialData: TData,
@@ -43,7 +43,7 @@ export class EntityAccessorImpl<TData extends object>
 	 * Field values are read from IdentityMap, not passed directly.
 	 */
 	private buildFields(
-		meta: FragmentMeta,
+		meta: SelectionMeta,
 	): Map<string, FieldAccessorImpl<unknown> | EntityAccessorImpl<object> | EntityListAccessorImpl<object>> {
 		const fields = new Map<
 			string,
@@ -51,15 +51,18 @@ export class EntityAccessorImpl<TData extends object>
 		>()
 
 		for (const [key, fieldMeta] of meta.fields) {
-			if (fieldMeta.isArray && fieldMeta.arrayItemMeta) {
+			// Detect array from actual data (for has-many relations)
+			const fieldData = this.getFieldData(key)
+			const isActuallyArray = Array.isArray(fieldData)
+
+			if ((fieldMeta.isArray || isActuallyArray) && fieldMeta.nested) {
 				// Has-many relation - create EntityListAccessor
-				const arrayData = this.getFieldData(key)
-				const arrayValue = Array.isArray(arrayData) ? arrayData : []
+				const arrayValue = isActuallyArray ? fieldData : []
 				fields.set(
 					key,
 					new EntityListAccessorImpl(
 						this.inferEntityType(fieldMeta),
-						fieldMeta.arrayItemMeta,
+						fieldMeta.nested,
 						this.adapter,
 						this.identityMap,
 						arrayValue as object[],
@@ -132,13 +135,13 @@ export class EntityAccessorImpl<TData extends object>
 	}
 
 	/**
-	 * Infers entity type from field path (uses last segment capitalized)
+	 * Infers entity type from field name (uses field name capitalized)
 	 */
-	private inferEntityType(fieldMeta: FieldMeta): string {
-		const lastSegment = fieldMeta.path[fieldMeta.path.length - 1]
-		if (!lastSegment) return 'Unknown'
+	private inferEntityType(fieldMeta: SelectionFieldMeta): string {
+		const fieldName = fieldMeta.fieldName
+		if (!fieldName) return 'Unknown'
 		// Simple heuristic: capitalize first letter
-		return lastSegment.charAt(0).toUpperCase() + lastSegment.slice(1)
+		return fieldName.charAt(0).toUpperCase() + fieldName.slice(1)
 	}
 
 	/**

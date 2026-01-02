@@ -5,8 +5,8 @@ import {
 	EntityListAccessorImpl,
 	MockAdapter,
 	IdentityMap,
-	extractFragmentMeta,
-	createModelProxy,
+	createSelectionBuilder,
+	SELECTION_META,
 } from '../src/index.js'
 
 interface Author {
@@ -120,9 +120,9 @@ describe('EntityAccessorImpl', () => {
 		const adapter = new MockAdapter(mockData, { delay: 0 })
 		const identityMap = new IdentityMap()
 
-		const proxy = createModelProxy<Article>()
-		const result = { title: proxy.title }
-		const meta = extractFragmentMeta(result)
+		const builder = createSelectionBuilder<Article>()
+		const resultBuilder = builder.title()
+		const meta = resultBuilder[SELECTION_META]
 
 		let changeCount = 0
 		const onChange = () => {
@@ -220,9 +220,9 @@ describe('EntityAccessorImpl', () => {
 		const adapter = new MockAdapter(mockData, { delay: 0 })
 		const identityMap = new IdentityMap()
 
-		const proxy = createModelProxy<Article>()
-		const result = { title: proxy.title }
-		const meta = extractFragmentMeta(result)
+		const builder = createSelectionBuilder<Article>()
+		const resultBuilder = builder.title()
+		const meta = resultBuilder[SELECTION_META]
 
 		const accessor = new EntityAccessorImpl(
 			'a-1',
@@ -248,9 +248,9 @@ describe('EntityListAccessorImpl', () => {
 		const adapter = new MockAdapter({ Tag: {} }, { delay: 0 })
 		const identityMap = new IdentityMap()
 
-		const proxy = createModelProxy<Tag>()
-		const result = { name: proxy.name }
-		const meta = extractFragmentMeta(result)
+		const builder = createSelectionBuilder<Tag>()
+		const resultBuilder = builder.name()
+		const meta = resultBuilder[SELECTION_META]
 
 		let changeCount = 0
 		const onChange = () => {

@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
-import { createModelProxy } from '../proxy/index.js'
-import type { UnwrapProxy } from '../proxy/types.js'
-import { extractFragmentMeta, buildQuery } from '../fragment/index.js'
-import type { Fragment, FragmentDefiner } from '../fragment/types.js'
+import { createSelectionBuilder, SELECTION_META, buildQueryFromSelection } from '../selection/index.js'
+import type { SelectionBuilder, FluentFragment, SelectionMeta } from '../selection/types.js'
 import { EntityAccessorImpl } from '../accessors/EntityAccessor.js'
 import type { EntityAccessor, EntityListAccessor } from '../accessors/types.js'
 import { EntityListAccessorImpl } from '../accessors/EntityListAccessor.js'
@@ -110,6 +108,13 @@ export interface EntitySchema {
 }
 
 /**
+ * Type for fluent definer function
+ */
+type FluentDefiner<TModel, TResult extends object> = (
+	builder: SelectionBuilder<TModel>,
+) => SelectionBuilder<TModel, TResult, object>
+
+/**
  * Creates type-safe bindx hooks for a specific schema.
  *
  * @example
@@ -124,13 +129,12 @@ export interface EntitySchema {
  * // Create typed hooks
  * export const { useEntity } = createBindx<Schema>()
  *
- * // Usage - entity name is autocompleted, model type is inferred
- * const article = useEntity('Article', { id }, e => ({
- *   title: e.title,
- *   author: {
- *     name: e.author.name,
- *   },
- * }))
+ * // Usage with fluent builder
+ * const article = useEntity('Article', { id }, e =>
+ *   e.id().title().content()
+ *    .author(a => a.name().email())
+ *    .tags(t => t.id().name())
+ * )
  * ```
  */
 export function createBindx<TSchema extends { [K in keyof TSchema]: object }>() {
@@ -139,18 +143,14 @@ export function createBindx<TSchema extends { [K in keyof TSchema]: object }>() 
 	 *
 	 * @param entityType - Name of the entity (autocompleted from schema)
 	 * @param options - Options including the entity ID and cache behavior
-	 * @param fragmentDefiner - Function defining which fields to fetch
+	 * @param definer - Fluent builder function defining which fields to fetch
 	 */
-	function useEntity<
-		TEntityName extends keyof TSchema & string,
-		TResult extends object,
-	>(
+	function useEntity<TEntityName extends keyof TSchema & string, TResult extends object>(
 		entityType: TEntityName,
 		options: UseEntityOptions,
-		fragmentOrDefiner: FragmentDefiner<TSchema[TEntityName], TResult> | Fragment<TSchema[TEntityName], TResult>,
-	): EntityAccessor<UnwrapProxy<TResult> & object> | LoadingEntityAccessor<UnwrapProxy<TResult> & object> {
+		definer: FluentDefiner<TSchema[TEntityName], TResult> | FluentFragment<TSchema[TEntityName], TResult>,
+	): EntityAccessor<TResult> | LoadingEntityAccessor<TResult> {
 		type TModel = TSchema[TEntityName]
-		type UnwrappedResult = UnwrapProxy<TResult> & object
 
 		const adapter = useBackendAdapter()
 		const identityMap = useIdentityMap()
@@ -159,23 +159,22 @@ export function createBindx<TSchema extends { [K in keyof TSchema]: object }>() 
 		const [, forceUpdate] = useReducer((x: number) => x + 1, 0)
 
 		// Track accessor for cleanup
-		const accessorRef = useRef<EntityAccessorImpl<UnwrappedResult> | null>(null)
+		const accessorRef = useRef<EntityAccessorImpl<TResult> | null>(null)
 
-		// Normalize fragment - memoize to prevent re-creation
-		const fragment = useMemo(() => {
-			if (typeof fragmentOrDefiner === 'function') {
-				// It's a definer function, wrap it
-				const proxy = createModelProxy<TModel>()
-				const result = fragmentOrDefiner(proxy)
-				const meta = extractFragmentMeta(result)
-				return { __meta: meta, __resultType: result }
+		// Extract selection metadata - memoize to prevent re-creation
+		const selectionMeta = useMemo((): SelectionMeta => {
+			if (typeof definer === 'function') {
+				// It's a fluent definer function
+				const builder = createSelectionBuilder<TModel>()
+				const resultBuilder = definer(builder)
+				return resultBuilder[SELECTION_META]
 			}
-			// It's already a Fragment
-			return fragmentOrDefiner
-		}, []) // Empty deps - fragment definition shouldn't change
+			// It's a FluentFragment
+			return definer.__meta
+		}, []) // Empty deps - selection definition shouldn't change
 
 		// Accessor state
-		const [accessor, setAccessor] = useState<EntityAccessorImpl<UnwrappedResult> | null>(null)
+		const [accessor, setAccessor] = useState<EntityAccessorImpl<TResult> | null>(null)
 		const [isLoading, setIsLoading] = useState(true)
 
 		// Fetch entity on mount and when ID changes
@@ -192,13 +191,13 @@ export function createBindx<TSchema extends { [K in keyof TSchema]: object }>() 
 			if (options.cache && identityMap.has(entityType, options.id)) {
 				const cachedRecord = identityMap.get(entityType, options.id)
 				if (cachedRecord) {
-					const newAccessor = new EntityAccessorImpl<UnwrappedResult>(
+					const newAccessor = new EntityAccessorImpl<TResult>(
 						options.id,
 						entityType,
-						fragment.__meta,
+						selectionMeta,
 						adapter,
 						identityMap,
-						cachedRecord.data as UnwrappedResult,
+						cachedRecord.data as TResult,
 						forceUpdate,
 					)
 
@@ -213,19 +212,19 @@ export function createBindx<TSchema extends { [K in keyof TSchema]: object }>() 
 
 			async function load() {
 				try {
-					const query = buildQuery(fragment.__meta)
+					const query = buildQueryFromSelection(selectionMeta)
 					const data = await adapter.fetchOne(entityType, options.id, query)
 
 					if (cancelled) return
 
 					// Create accessor with the fetched data
-					const newAccessor = new EntityAccessorImpl<UnwrappedResult>(
+					const newAccessor = new EntityAccessorImpl<TResult>(
 						options.id,
 						entityType,
-						fragment.__meta,
+						selectionMeta,
 						adapter,
 						identityMap,
-						data as UnwrappedResult,
+						data as TResult,
 						forceUpdate,
 					)
 
@@ -249,14 +248,14 @@ export function createBindx<TSchema extends { [K in keyof TSchema]: object }>() 
 					accessorRef.current = null
 				}
 			}
-		}, [entityType, options.id, options.cache, adapter, identityMap, fragment.__meta])
+		}, [entityType, options.id, options.cache, adapter, identityMap, selectionMeta])
 
 		// Return loading state or accessor
 		if (isLoading || !accessor) {
-			return createLoadingAccessor<UnwrappedResult>(options.id)
+			return createLoadingAccessor<TResult>(options.id)
 		}
 
-		return accessor as EntityAccessor<UnwrappedResult>
+		return accessor as EntityAccessor<TResult>
 	}
 
 	/**
@@ -264,18 +263,14 @@ export function createBindx<TSchema extends { [K in keyof TSchema]: object }>() 
 	 *
 	 * @param entityType - Name of the entity (autocompleted from schema)
 	 * @param options - Options including filter criteria
-	 * @param fragmentDefiner - Function defining which fields to fetch for each entity
+	 * @param definer - Fluent builder function defining which fields to fetch for each entity
 	 */
-	function useEntityList<
-		TEntityName extends keyof TSchema & string,
-		TResult extends object,
-	>(
+	function useEntityList<TEntityName extends keyof TSchema & string, TResult extends object>(
 		entityType: TEntityName,
 		options: UseEntityListOptions,
-		fragmentOrDefiner: FragmentDefiner<TSchema[TEntityName], TResult> | Fragment<TSchema[TEntityName], TResult>,
-	): EntityListAccessor<UnwrapProxy<TResult> & object> | LoadingEntityListAccessor<UnwrapProxy<TResult> & object> {
+		definer: FluentDefiner<TSchema[TEntityName], TResult> | FluentFragment<TSchema[TEntityName], TResult>,
+	): EntityListAccessor<TResult> | LoadingEntityListAccessor<TResult> {
 		type TModel = TSchema[TEntityName]
-		type UnwrappedResult = UnwrapProxy<TResult> & object
 
 		const adapter = useBackendAdapter()
 		const identityMap = useIdentityMap()
@@ -284,24 +279,23 @@ export function createBindx<TSchema extends { [K in keyof TSchema]: object }>() 
 		const [, forceUpdate] = useReducer((x: number) => x + 1, 0)
 
 		// Track accessor for cleanup
-		const accessorRef = useRef<EntityListAccessorImpl<UnwrappedResult> | null>(null)
+		const accessorRef = useRef<EntityListAccessorImpl<TResult> | null>(null)
 
-		// Normalize fragment - memoize to prevent re-creation
-		const fragment = useMemo(() => {
-			if (typeof fragmentOrDefiner === 'function') {
-				const proxy = createModelProxy<TModel>()
-				const result = fragmentOrDefiner(proxy)
-				const meta = extractFragmentMeta(result)
-				return { __meta: meta, __resultType: result }
+		// Extract selection metadata - memoize to prevent re-creation
+		const selectionMeta = useMemo((): SelectionMeta => {
+			if (typeof definer === 'function') {
+				const builder = createSelectionBuilder<TModel>()
+				const resultBuilder = definer(builder)
+				return resultBuilder[SELECTION_META]
 			}
-			return fragmentOrDefiner
+			return definer.__meta
 		}, [])
 
 		// Stringify filter for dependency tracking
 		const filterKey = useMemo(() => JSON.stringify(options.filter ?? {}), [options.filter])
 
 		// Accessor state
-		const [accessor, setAccessor] = useState<EntityListAccessorImpl<UnwrappedResult> | null>(null)
+		const [accessor, setAccessor] = useState<EntityListAccessorImpl<TResult> | null>(null)
 		const [isLoading, setIsLoading] = useState(true)
 
 		// Fetch entities on mount and when filter changes
@@ -321,18 +315,18 @@ export function createBindx<TSchema extends { [K in keyof TSchema]: object }>() 
 						throw new Error('Backend adapter does not support fetchMany')
 					}
 
-					const query = buildQuery(fragment.__meta)
+					const query = buildQueryFromSelection(selectionMeta)
 					const data = await adapter.fetchMany(entityType, query, options.filter)
 
 					if (cancelled) return
 
 					// Create accessor with the fetched data
-					const newAccessor = new EntityListAccessorImpl<UnwrappedResult>(
+					const newAccessor = new EntityListAccessorImpl<TResult>(
 						entityType,
-						fragment.__meta,
+						selectionMeta,
 						adapter,
 						identityMap,
-						data as UnwrappedResult[],
+						data as TResult[],
 						forceUpdate,
 					)
 
@@ -352,14 +346,14 @@ export function createBindx<TSchema extends { [K in keyof TSchema]: object }>() 
 				cancelled = true
 				accessorRef.current = null
 			}
-		}, [entityType, filterKey, adapter, identityMap, fragment.__meta, options.filter])
+		}, [entityType, filterKey, adapter, identityMap, selectionMeta, options.filter])
 
 		// Return loading state or accessor
 		if (isLoading || !accessor) {
-			return createLoadingListAccessor<UnwrappedResult>()
+			return createLoadingListAccessor<TResult>()
 		}
 
-		return accessor as EntityListAccessor<UnwrappedResult>
+		return accessor as EntityListAccessor<TResult>
 	}
 	return {
 		useEntity,

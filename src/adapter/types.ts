@@ -1,4 +1,4 @@
-import type { QuerySpec } from '../fragment/buildQuery.js'
+import type { QuerySpec } from '../selection/buildQuery.js'
 
 /**
  * Interface for backend adapters.

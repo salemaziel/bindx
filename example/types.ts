@@ -7,12 +7,14 @@ export interface Author {
 	name: string
 	email: string
 	bio: string
+	articles: Article[]
 }
 
 export interface Tag {
 	id: string
 	name: string
 	color: string
+	articles: Article[]
 }
 
 export interface Location {

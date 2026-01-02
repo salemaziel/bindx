@@ -8,12 +8,7 @@ import { useEntityList } from '../../bindx.js'
 export function LocationSelectExample() {
 	const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null)
 
-	const locations = useEntityList('Location', {}, e => ({
-		id: e.id,
-		label: e.label,
-		lat: e.lat,
-		lng: e.lng,
-	}))
+	const locations = useEntityList('Location', {}, e => e.id().label().lat().lng())
 
 	if (locations.isLoading) {
 		return <div>Loading locations...</div>

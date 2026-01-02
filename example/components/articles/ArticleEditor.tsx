@@ -8,14 +8,15 @@ import { AuthorEditor, LocationEditor, TagListEditor } from '../editors/index.js
  */
 export function ArticleEditor({ id }: { id: string }) {
 	// Type is inferred automatically from the schema and fragment definition
-	const article = useEntity('Article', { id }, e => ({
-		id: e.id,
-		title: e.title,
-		content: e.content,
-		author: AuthorFragment.compose(e.author),
-		location: LocationFragment.compose(e.location),
-		tags: e.tags.map(tag => TagFragment.compose(tag)),
-	}))
+	const article = useEntity('Article', { id }, e =>
+		e
+			.id()
+			.title()
+			.content()
+			.author(AuthorFragment)
+			.location(LocationFragment)
+			.tags(TagFragment),
+	)
 
 	if (article.isLoading) {
 		return <div>Loading article...</div>

@@ -11,11 +11,7 @@ interface AuthorSelectProps {
  * Author select component - demonstrates useEntityList for loading options
  */
 export function AuthorSelect({ value, onChange, label = 'Author' }: AuthorSelectProps) {
-	const authors = useEntityList('Author', {}, e => ({
-		id: e.id,
-		name: e.name,
-		email: e.email,
-	}))
+	const authors = useEntityList('Author', {}, e => e.id().name().email())
 
 	return (
 		<Select
@@ -33,11 +29,7 @@ export function AuthorSelect({ value, onChange, label = 'Author' }: AuthorSelect
  * Alternative: Author select with email shown
  */
 export function AuthorSelectWithEmail({ value, onChange, label = 'Author' }: AuthorSelectProps) {
-	const authors = useEntityList('Author', {}, e => ({
-		id: e.id,
-		name: e.name,
-		email: e.email,
-	}))
+	const authors = useEntityList('Author', {}, e => e.id().name().email())
 
 	if (authors.isLoading) {
 		return (

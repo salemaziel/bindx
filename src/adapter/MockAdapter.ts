@@ -1,4 +1,4 @@
-import type { QuerySpec, QueryFieldSpec } from '../fragment/buildQuery.js'
+import type { QuerySpec, QueryFieldSpec } from '../selection/buildQuery.js'
 import type { BackendAdapter } from './types.js'
 
 /**
@@ -180,17 +180,18 @@ export class MockAdapter implements BackendAdapter {
 			const relativePath = field.sourcePath.slice(basePath.length)
 			const value = this.getNestedValue(source, relativePath)
 
-			if (field.isArray && Array.isArray(value) && field.nested) {
-				// Project each item in array - items have paths relative to array
+			if (field.nested && Array.isArray(value)) {
+				// Project each item in array (has-many relation)
+				// Detect array from actual data even if field.isArray is not set
 				result[field.name] = value.map(item =>
 					this.projectFields(item as Record<string, unknown>, field.nested!.fields, []),
 				)
 			} else if (field.nested && value && typeof value === 'object') {
-				// Project nested object - use field.sourcePath as new basePath
+				// Project nested object (has-one relation)
 				result[field.name] = this.projectFields(
 					value as Record<string, unknown>,
 					field.nested.fields,
-					field.sourcePath,
+					[], // Empty basePath since we're projecting from the nested object directly
 				)
 			} else {
 				// Scalar or leaf value

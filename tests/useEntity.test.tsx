@@ -6,8 +6,7 @@ import {
 	BindxProvider,
 	createBindx,
 	MockAdapter,
-	defineFragment,
-	type ModelProxy,
+	createFragment,
 } from '../src/index.js'
 
 afterEach(() => {
@@ -89,9 +88,7 @@ describe('useEntity hook', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 50 })
 
 			function TestComponent() {
-				const article = useEntity('Article', { id: 'article-1' }, e => ({
-					title: e.title,
-				}))
+				const article = useEntity('Article', { id: 'article-1' }, e => e.title())
 
 				if (article.isLoading) {
 					return <div data-testid="loading">Loading...</div>
@@ -122,9 +119,7 @@ describe('useEntity hook', () => {
 			let accessor: ReturnType<typeof useEntity> | null = null
 
 			function TestComponent() {
-				accessor = useEntity('Article', { id: 'article-1' }, e => ({
-					title: e.title,
-				}))
+				accessor = useEntity('Article', { id: 'article-1' }, e => e.title())
 				return null
 			}
 
@@ -147,10 +142,7 @@ describe('useEntity hook', () => {
 				const article = useEntity(
 					'Article',
 					{ id: 'article-1' },
-					e => ({
-						title: e.title,
-						content: e.content,
-					}),
+					e => e.title().content(),
 				)
 
 				if (article.isLoading) {
@@ -186,13 +178,7 @@ describe('useEntity hook', () => {
 				const article = useEntity(
 					'Article',
 					{ id: 'article-1' },
-					e => ({
-						title: e.title,
-						author: {
-							name: e.author.name,
-							email: e.author.email,
-						},
-					}),
+					e => e.title().author(a => a.name().email()),
 				)
 
 				if (article.isLoading) {
@@ -230,10 +216,7 @@ describe('useEntity hook', () => {
 				const article = useEntity(
 					'Article',
 					{ id: 'article-1' },
-					e => ({
-						title: e.title,
-						tags: e.tags.map(t => ({ name: t.name })),
-					}),
+					e => e.title().tags(t => t.name()),
 				)
 
 				if (article.isLoading) {
@@ -276,10 +259,7 @@ describe('useEntity hook', () => {
 				const article = useEntity(
 					'Article',
 					{ id: 'article-1' },
-					e => ({
-						title: e.title,
-						content: e.content,
-					}),
+					e => e.title().content(),
 				)
 
 				if (article.isLoading) {
@@ -310,9 +290,7 @@ describe('useEntity hook', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent() {
-				const article = useEntity('Article', { id: 'article-1' }, e => ({
-					title: e.title,
-				}))
+				const article = useEntity('Article', { id: 'article-1' }, e => e.title())
 
 				if (article.isLoading) {
 					return <div>Loading...</div>
@@ -359,11 +337,7 @@ describe('useEntity hook', () => {
 				const article = useEntity(
 					'Article',
 					{ id: 'article-1' },
-					e => ({
-						author: {
-							name: e.author.name,
-						},
-					}),
+					e => e.author(a => a.name()),
 				)
 
 				if (article.isLoading) {
@@ -408,9 +382,7 @@ describe('useEntity hook', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent() {
-				const article = useEntity('Article', { id: 'article-1' }, e => ({
-					title: e.title,
-				}))
+				const article = useEntity('Article', { id: 'article-1' }, e => e.title())
 
 				if (article.isLoading) {
 					return <div>Loading...</div>
@@ -436,9 +408,7 @@ describe('useEntity hook', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent() {
-				const article = useEntity('Article', { id: 'article-1' }, e => ({
-					title: e.title,
-				}))
+				const article = useEntity('Article', { id: 'article-1' }, e => e.title())
 
 				if (article.isLoading) {
 					return <div>Loading...</div>
@@ -480,9 +450,7 @@ describe('useEntity hook', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent() {
-				const article = useEntity('Article', { id: 'article-1' }, e => ({
-					title: e.title,
-				}))
+				const article = useEntity('Article', { id: 'article-1' }, e => e.title())
 
 				if (article.isLoading) {
 					return <div>Loading...</div>
@@ -532,9 +500,7 @@ describe('useEntity hook', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent() {
-				const article = useEntity('Article', { id: 'article-1' }, e => ({
-					title: e.title,
-				}))
+				const article = useEntity('Article', { id: 'article-1' }, e => e.title())
 
 				if (article.isLoading) {
 					return <div>Loading...</div>
@@ -578,9 +544,7 @@ describe('useEntity hook', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent() {
-				const article = useEntity('Article', { id: 'article-1' }, e => ({
-					title: e.title,
-				}))
+				const article = useEntity('Article', { id: 'article-1' }, e => e.title())
 
 				if (article.isLoading) {
 					return <div>Loading...</div>
@@ -635,9 +599,7 @@ describe('useEntity hook', () => {
 			const adapter = new MockAdapter(mockData, { delay: 0 })
 
 			function TestComponent() {
-				const article = useEntity('Article', { id: 'article-1' }, e => ({
-					title: e.title,
-				}))
+				const article = useEntity('Article', { id: 'article-1' }, e => e.title())
 
 				if (article.isLoading) {
 					return <div>Loading...</div>
@@ -698,9 +660,7 @@ describe('useEntity hook', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 100 })
 
 			function TestComponent() {
-				const article = useEntity('Article', { id: 'article-1' }, e => ({
-					title: e.title,
-				}))
+				const article = useEntity('Article', { id: 'article-1' }, e => e.title())
 
 				if (article.isLoading) {
 					return <div>Loading...</div>
@@ -755,19 +715,13 @@ describe('useEntity hook', () => {
 		test('should work with pre-defined fragments', async () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
-			const AuthorFragment = defineFragment((author: ModelProxy<Author>) => ({
-				id: author.id,
-				name: author.name,
-			}))
+			const AuthorFragment = createFragment<Author>()(a => a.id().name())
 
 			function TestComponent() {
 				const article = useEntity(
 					'Article',
 					{ id: 'article-1' },
-					e => ({
-						title: e.title,
-						author: AuthorFragment.compose(e.author),
-					}),
+					e => e.title().author(AuthorFragment),
 				)
 
 				if (article.isLoading) {
@@ -799,11 +753,7 @@ describe('useEntity hook', () => {
 		test('should work with child components receiving field accessors', async () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
-			const AuthorFragment = defineFragment((author: ModelProxy<Author>) => ({
-				id: author.id,
-				name: author.name,
-				email: author.email,
-			}))
+			const AuthorFragment = createFragment<Author>()(a => a.id().name().email())
 
 			// Simulates TextInput from example/components.tsx
 			function TextInput({ field, label }: { field: { value: string | null; setValue: (v: string) => void }; label: string }) {
@@ -834,10 +784,7 @@ describe('useEntity hook', () => {
 				const article = useEntity(
 					'Article',
 					{ id: 'article-1' },
-					(e: ModelProxy<Article>) => ({
-						title: e.title,
-						author: AuthorFragment.compose(e.author),
-					}),
+					e => e.title().author(AuthorFragment),
 				)
 
 				if (article.isLoading) {

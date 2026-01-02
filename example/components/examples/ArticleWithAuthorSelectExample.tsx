@@ -10,22 +10,16 @@ export function ArticleWithAuthorSelectExample({ id }: { id: string }) {
 	const [selectedAuthorId, setSelectedAuthorId] = useState<string | null>(null)
 
 	// Load the article
-	const article = useEntity('Article', { id }, e => ({
-		id: e.id,
-		title: e.title,
-		content: e.content,
-		author: {
-			id: e.author.id,
-			name: e.author.name,
-		},
-	}))
+	const article = useEntity('Article', { id }, e =>
+		e
+			.id()
+			.title()
+			.content()
+			.author(a => a.id().name()),
+	)
 
 	// Load all authors for the select dropdown
-	const authors = useEntityList('Author', {}, e => ({
-		id: e.id,
-		name: e.name,
-		email: e.email,
-	}))
+	const authors = useEntityList('Author', {}, e => e.id().name().email())
 
 	if (article.isLoading) {
 		return <div>Loading article...</div>

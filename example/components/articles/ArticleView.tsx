@@ -4,12 +4,7 @@ import { useEntity } from '../../bindx.js'
  * Simple article view using inline fragment definition
  */
 export function ArticleView({ id }: { id: string }) {
-	const article = useEntity('Article', { id }, e => ({
-		title: e.title,
-		author: {
-			name: e.author.name,
-		},
-	}))
+	const article = useEntity('Article', { id }, e => e.title().author(a => a.name()))
 
 	if (article.isLoading) {
 		return <div>Loading...</div>

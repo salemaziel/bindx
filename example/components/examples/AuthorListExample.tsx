@@ -5,12 +5,7 @@ import { useEntityList } from '../../bindx.js'
  * Demonstrates basic useEntityList usage for displaying a list of entities
  */
 export function AuthorListExample() {
-	const authors = useEntityList('Author', {}, e => ({
-		id: e.id,
-		name: e.name,
-		email: e.email,
-		bio: e.bio,
-	}))
+	const authors = useEntityList('Author', {}, e => e.id().name().email().bio())
 
 	if (authors.isLoading) {
 		return <div>Loading authors...</div>

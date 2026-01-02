@@ -1,37 +1,21 @@
-// Proxy - type-safe query building
+// Selection - fluent type-safe query building
 export {
-	createModelProxy,
-	getProxyPath,
-	isModelProxy,
-	isArrayMapResult,
-	getArrayMapResult,
-	type ModelProxy,
-	type ModelProxyArray,
-	type ModelProxyArrayResult,
-	type ModelProxyScalar,
-	type ProxyMeta,
-	type UnwrapProxy,
-	PROXY_META,
-} from './proxy/index.js'
-
-// Fragment - declarative data dependencies
-export {
-	defineFragment,
-	extractFragmentMeta,
-	isFragmentComposition,
-	mergeFragmentMeta,
-	buildQuery,
+	createSelectionBuilder,
+	getSelectionMeta,
+	createFragment,
+	buildQueryFromSelection,
 	collectPaths,
-	type Fragment,
-	type FragmentComposition,
-	type FragmentDefiner,
-	type FragmentMeta,
-	type FragmentModel,
-	type FragmentResult,
-	type FieldMeta,
+	SELECTION_META,
+	type SelectionBuilder,
+	type SelectionMeta,
+	type SelectionFieldMeta,
+	type FluentFragment,
+	type FluentDefiner,
+	type HasManyOptions,
+	type InferSelection,
 	type QuerySpec,
 	type QueryFieldSpec,
-} from './fragment/index.js'
+} from './selection/index.js'
 
 // Accessors - data read/write
 export {
