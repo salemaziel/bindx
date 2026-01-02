@@ -1,4 +1,4 @@
-import type { EntityAccessor } from '../../../src/index.js'
+import type { HasOneAccessor } from '../../../src/index.js'
 import { LocationFragment } from '../../fragments.js'
 import { TextInput, CoordinatePicker } from '../inputs/index.js'
 
@@ -8,7 +8,7 @@ import { TextInput, CoordinatePicker } from '../inputs/index.js'
 export function LocationEditor({
 	location,
 }: {
-	location: EntityAccessor<typeof LocationFragment.__resultType>
+	location: HasOneAccessor<typeof LocationFragment.__resultType>
 }) {
 	return (
 		<div className="location-editor">

@@ -21,12 +21,22 @@ export {
 export {
 	type FieldAccessor,
 	type EntityAccessor,
+	type EntityAccessorBase,
+	type RootEntityAccessor,
+	type HasOneAccessor,
+	type HasOneRelationState,
+	type PlaceholderEntityAccessor,
 	type EntityListAccessor,
 	type EntityListItem,
 	type AccessorFromShape,
+	type AccessorFromShapeInternal,
+	type RelationChange,
 	FieldAccessorImpl,
 	EntityAccessorImpl,
 	EntityListAccessorImpl,
+	HasOneAccessorImpl,
+	PlaceholderEntityAccessorImpl,
+	isPlaceholder,
 } from './accessors/index.js'
 
 // Store - identity map

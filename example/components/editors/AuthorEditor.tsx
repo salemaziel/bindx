@@ -1,4 +1,4 @@
-import type { EntityAccessor } from '../../../src/index.js'
+import type { HasOneAccessor } from '../../../src/index.js'
 import { AuthorFragment } from '../../fragments.js'
 import { TextInput } from '../inputs/index.js'
 
@@ -8,7 +8,7 @@ import { TextInput } from '../inputs/index.js'
 export function AuthorEditor({
 	author,
 }: {
-	author: EntityAccessor<typeof AuthorFragment.__resultType>
+	author: HasOneAccessor<typeof AuthorFragment.__resultType>
 }) {
 	return (
 		<div className="author-editor">

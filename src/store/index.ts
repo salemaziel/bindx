@@ -1,1 +1,1 @@
-export { IdentityMap, getNestedValue, type EntityRecord } from './IdentityMap.js'
+export { IdentityMap, getNestedValue, type EntityRecord, type RelationState } from './IdentityMap.js'

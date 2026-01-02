@@ -1,3 +1,5 @@
+import type { HasOneRelationState } from '../accessors/types.js'
+
 /**
  * Record for a single entity in the identity map
  */
@@ -13,6 +15,29 @@ export interface EntityRecord {
 }
 
 /**
+ * State for a has-one relation within an entity
+ */
+export interface RelationState {
+	/** Current referenced entity ID (null if disconnected) */
+	currentId: string | null
+	/** Server-side entity ID (for dirty tracking) */
+	serverId: string | null
+	/** Current relation state */
+	state: HasOneRelationState
+	/** Server state (for reset) */
+	serverState: HasOneRelationState
+	/** Placeholder entity data (if state is 'creating') */
+	placeholderData: Record<string, unknown>
+}
+
+/**
+ * Key for relation state storage
+ */
+function getRelationKey(parentEntityType: string, parentEntityId: string, fieldKey: string): string {
+	return `${parentEntityType}:${parentEntityId}:${fieldKey}`
+}
+
+/**
  * Identity Map for managing entity state.
  *
  * Ensures that entities with the same ID share the same state,
@@ -21,6 +46,8 @@ export interface EntityRecord {
  */
 export class IdentityMap {
 	private entities = new Map<string, EntityRecord>()
+	private relations = new Map<string, RelationState>()
+	private relationSubscribers = new Map<string, Set<() => void>>()
 
 	/**
 	 * Creates a unique key for an entity
@@ -196,6 +223,8 @@ export class IdentityMap {
 	 */
 	clear(): void {
 		this.entities.clear()
+		this.relations.clear()
+		this.relationSubscribers.clear()
 	}
 
 	/**
@@ -203,6 +232,139 @@ export class IdentityMap {
 	 */
 	keys(): string[] {
 		return Array.from(this.entities.keys())
+	}
+
+	// ==================== Relation State Management ====================
+
+	/**
+	 * Gets or creates relation state for a has-one field
+	 */
+	getOrCreateRelation(
+		parentEntityType: string,
+		parentEntityId: string,
+		fieldKey: string,
+		initialState: RelationState,
+	): RelationState {
+		const key = getRelationKey(parentEntityType, parentEntityId, fieldKey)
+
+		if (!this.relations.has(key)) {
+			this.relations.set(key, { ...initialState })
+			this.relationSubscribers.set(key, new Set())
+		}
+
+		return this.relations.get(key)!
+	}
+
+	/**
+	 * Gets relation state if it exists
+	 */
+	getRelation(
+		parentEntityType: string,
+		parentEntityId: string,
+		fieldKey: string,
+	): RelationState | undefined {
+		const key = getRelationKey(parentEntityType, parentEntityId, fieldKey)
+		return this.relations.get(key)
+	}
+
+	/**
+	 * Updates a relation state
+	 */
+	setRelation(
+		parentEntityType: string,
+		parentEntityId: string,
+		fieldKey: string,
+		updates: Partial<RelationState>,
+	): void {
+		const key = getRelationKey(parentEntityType, parentEntityId, fieldKey)
+		const state = this.relations.get(key)
+		if (!state) return
+
+		Object.assign(state, updates)
+		this.notifyRelationSubscribers(key)
+	}
+
+	/**
+	 * Commits relation state (server = current)
+	 */
+	commitRelation(
+		parentEntityType: string,
+		parentEntityId: string,
+		fieldKey: string,
+	): void {
+		const key = getRelationKey(parentEntityType, parentEntityId, fieldKey)
+		const state = this.relations.get(key)
+		if (!state) return
+
+		state.serverId = state.currentId
+		state.serverState = state.state === 'creating' ? 'connected' : state.state
+		state.placeholderData = {}
+	}
+
+	/**
+	 * Resets relation to server state
+	 */
+	resetRelation(
+		parentEntityType: string,
+		parentEntityId: string,
+		fieldKey: string,
+	): void {
+		const key = getRelationKey(parentEntityType, parentEntityId, fieldKey)
+		const state = this.relations.get(key)
+		if (!state) return
+
+		state.currentId = state.serverId
+		state.state = state.serverState
+		state.placeholderData = {}
+		this.notifyRelationSubscribers(key)
+	}
+
+	/**
+	 * Subscribes to changes on a relation
+	 */
+	subscribeRelation(
+		parentEntityType: string,
+		parentEntityId: string,
+		fieldKey: string,
+		callback: () => void,
+	): () => void {
+		const key = getRelationKey(parentEntityType, parentEntityId, fieldKey)
+		let subscribers = this.relationSubscribers.get(key)
+
+		if (!subscribers) {
+			subscribers = new Set()
+			this.relationSubscribers.set(key, subscribers)
+		}
+
+		subscribers.add(callback)
+		return () => {
+			subscribers!.delete(callback)
+		}
+	}
+
+	/**
+	 * Notifies all subscribers of a relation
+	 */
+	private notifyRelationSubscribers(key: string): void {
+		const subscribers = this.relationSubscribers.get(key)
+		if (!subscribers) return
+
+		for (const callback of subscribers) {
+			callback()
+		}
+	}
+
+	/**
+	 * Removes a relation from the map
+	 */
+	removeRelation(
+		parentEntityType: string,
+		parentEntityId: string,
+		fieldKey: string,
+	): void {
+		const key = getRelationKey(parentEntityType, parentEntityId, fieldKey)
+		this.relations.delete(key)
+		this.relationSubscribers.delete(key)
 	}
 }
 

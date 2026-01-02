@@ -1,19 +1,20 @@
 import type { SelectionMeta, SelectionFieldMeta } from '../selection/types.js'
 import type { BackendAdapter } from '../adapter/types.js'
 import type { IdentityMap } from '../store/IdentityMap.js'
-import type { EntityAccessor, AccessorFromShape, ChangeCollector } from './types.js'
+import type { RootEntityAccessor, AccessorFromShape, ChangeCollector } from './types.js'
 import { FieldAccessorImpl } from './FieldAccessor.js'
 import { EntityListAccessorImpl } from './EntityListAccessor.js'
+import { HasOneAccessorImpl } from './HasOneAccessor.js'
 
 /**
- * Implementation of EntityAccessor.
+ * Implementation of RootEntityAccessor (also implements deprecated EntityAccessor).
  * Manages a collection of field accessors and coordinates persistence.
  * Data is stored in IdentityMap - this accessor is a projection/view into that data.
  */
 export class EntityAccessorImpl<TData extends object>
-	implements EntityAccessor<TData>, ChangeCollector
+	implements RootEntityAccessor<TData>, ChangeCollector
 {
-	private _fields: Map<string, FieldAccessorImpl<unknown> | EntityAccessorImpl<object> | EntityListAccessorImpl<object>>
+	private _fields: Map<string, FieldAccessorImpl<unknown> | HasOneAccessorImpl<object> | EntityAccessorImpl<object> | EntityListAccessorImpl<object>>
 	private _isLoading: boolean = false
 	private _isPersisting: boolean = false
 	private _unsubscribe: (() => void) | null = null
@@ -26,6 +27,8 @@ export class EntityAccessorImpl<TData extends object>
 		private readonly identityMap: IdentityMap,
 		initialData: TData,
 		private readonly onChange: () => void,
+		/** If true, creates HasOneAccessor for nested objects. If false, creates nested EntityAccessorImpl directly. */
+		private readonly useHasOneForNested: boolean = true,
 	) {
 		// Register entity in IdentityMap (or get existing)
 		this.identityMap.getOrCreate(entityType, id, initialData as Record<string, unknown>)
@@ -44,10 +47,10 @@ export class EntityAccessorImpl<TData extends object>
 	 */
 	private buildFields(
 		meta: SelectionMeta,
-	): Map<string, FieldAccessorImpl<unknown> | EntityAccessorImpl<object> | EntityListAccessorImpl<object>> {
+	): Map<string, FieldAccessorImpl<unknown> | HasOneAccessorImpl<object> | EntityAccessorImpl<object> | EntityListAccessorImpl<object>> {
 		const fields = new Map<
 			string,
-			FieldAccessorImpl<unknown> | EntityAccessorImpl<object> | EntityListAccessorImpl<object>
+			FieldAccessorImpl<unknown> | HasOneAccessorImpl<object> | EntityAccessorImpl<object> | EntityListAccessorImpl<object>
 		>()
 
 		for (const [key, fieldMeta] of meta.fields) {
@@ -73,41 +76,59 @@ export class EntityAccessorImpl<TData extends object>
 					),
 				)
 			} else if (fieldMeta.nested) {
-				// Nested object/entity - create EntityAccessor
-				const nestedData = (this.getFieldData(key) ?? {}) as Record<string, unknown>
-				const nestedId = this.extractId(nestedData)
+				const nestedData = this.getFieldData(key) as object | null
 				const nestedEntityType = this.inferEntityType(fieldMeta)
 
-				if (nestedId) {
-					// Entity with ID -> separate entry in IdentityMap
+				if (this.useHasOneForNested) {
+					// Has-one relation at root level - create HasOneAccessor
 					fields.set(
 						key,
-						new EntityAccessorImpl(
-							nestedId,
+						new HasOneAccessorImpl(
+							this.entityType,
+							this.id,
+							key,
 							nestedEntityType,
 							fieldMeta.nested,
 							this.adapter,
 							this.identityMap,
-							nestedData as object,
+							nestedData,
 							this.onChange,
 						),
 					)
 				} else {
-					// Embedded object without ID -> stays inline in parent entity
-					// Use composite ID and store in parent's data
-					const compositeId = `${this.id}:${key}`
-					fields.set(
-						key,
-						new EntityAccessorImpl(
-							compositeId,
-							nestedEntityType,
-							fieldMeta.nested,
-							this.adapter,
-							this.identityMap,
-							nestedData as object,
-							this.onChange,
-						),
-					)
+					// Nested entity inside HasOneAccessor - create plain EntityAccessor
+					const nestedId = this.extractNestedId(nestedData)
+					if (nestedId) {
+						fields.set(
+							key,
+							new EntityAccessorImpl(
+								nestedId,
+								nestedEntityType,
+								fieldMeta.nested,
+								this.adapter,
+								this.identityMap,
+								nestedData as object,
+								this.onChange,
+								false, // Don't create HasOneAccessor recursively
+							),
+						)
+					} else {
+						// Embedded object without ID
+						const compositeId = `${this.id}:${key}`
+						fields.set(
+							key,
+							new EntityAccessorImpl(
+								compositeId,
+								nestedEntityType,
+								fieldMeta.nested,
+								this.adapter,
+								this.identityMap,
+								(nestedData ?? {}) as object,
+								this.onChange,
+								false,
+							),
+						)
+					}
 				}
 			} else {
 				// Scalar field - create FieldAccessor that reads from IdentityMap
@@ -128,6 +149,17 @@ export class EntityAccessorImpl<TData extends object>
 	}
 
 	/**
+	 * Extracts ID from nested data object
+	 */
+	private extractNestedId(data: object | null): string | undefined {
+		if (!data) return undefined
+		if ('id' in data && typeof (data as Record<string, unknown>)['id'] === 'string') {
+			return (data as Record<string, unknown>)['id'] as string
+		}
+		return undefined
+	}
+
+	/**
 	 * Gets field data from IdentityMap
 	 */
 	private getFieldData(key: string): unknown {
@@ -142,16 +174,6 @@ export class EntityAccessorImpl<TData extends object>
 		if (!fieldName) return 'Unknown'
 		// Simple heuristic: capitalize first letter
 		return fieldName.charAt(0).toUpperCase() + fieldName.slice(1)
-	}
-
-	/**
-	 * Extracts ID from an object if present
-	 */
-	private extractId(obj: object): string | undefined {
-		if ('id' in obj && typeof obj.id === 'string') {
-			return obj.id
-		}
-		return undefined
 	}
 
 	get fields(): AccessorFromShape<TData> {
@@ -178,6 +200,8 @@ export class EntityAccessorImpl<TData extends object>
 		for (const [key, accessor] of this._fields) {
 			if (accessor instanceof FieldAccessorImpl) {
 				result[key] = accessor.value
+			} else if (accessor instanceof HasOneAccessorImpl) {
+				result[key] = accessor.data
 			} else if (accessor instanceof EntityAccessorImpl) {
 				result[key] = accessor.data
 			} else if (accessor instanceof EntityListAccessorImpl) {
@@ -223,9 +247,11 @@ export class EntityAccessorImpl<TData extends object>
 		// Reset entity in IdentityMap
 		this.identityMap.reset(this.entityType, this.id)
 
-		// Also reset nested entities
+		// Also reset nested entities and relations
 		for (const accessor of this._fields.values()) {
-			if (accessor instanceof EntityAccessorImpl) {
+			if (accessor instanceof HasOneAccessorImpl) {
+				accessor.reset()
+			} else if (accessor instanceof EntityAccessorImpl) {
 				accessor.reset()
 			} else if (accessor instanceof EntityListAccessorImpl) {
 				accessor.reset()
@@ -245,6 +271,11 @@ export class EntityAccessorImpl<TData extends object>
 
 			if (accessor instanceof FieldAccessorImpl) {
 				changes[key] = accessor._getCurrentValue()
+			} else if (accessor instanceof HasOneAccessorImpl) {
+				const relationChange = accessor.collectChanges()
+				if (relationChange !== null) {
+					changes[key] = relationChange
+				}
 			} else if (accessor instanceof EntityAccessorImpl) {
 				changes[key] = accessor.collectChanges()
 			} else if (accessor instanceof EntityListAccessorImpl) {
@@ -261,6 +292,8 @@ export class EntityAccessorImpl<TData extends object>
 	commitChanges(): void {
 		for (const accessor of this._fields.values()) {
 			if (accessor instanceof FieldAccessorImpl) {
+				accessor.commitChanges()
+			} else if (accessor instanceof HasOneAccessorImpl) {
 				accessor.commitChanges()
 			} else if (accessor instanceof EntityAccessorImpl) {
 				accessor.commitChanges()
@@ -290,7 +323,9 @@ export class EntityAccessorImpl<TData extends object>
 
 		// Dispose nested accessors
 		for (const accessor of this._fields.values()) {
-			if (accessor instanceof EntityAccessorImpl) {
+			if (accessor instanceof HasOneAccessorImpl) {
+				accessor._dispose()
+			} else if (accessor instanceof EntityAccessorImpl) {
 				accessor._dispose()
 			} else if (accessor instanceof EntityListAccessorImpl) {
 				accessor._dispose()

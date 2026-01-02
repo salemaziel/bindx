@@ -93,7 +93,9 @@ describe('Query Building with Fluent API', () => {
 			expect(query.fields.length).toBe(1)
 			expect(query.fields[0]?.name).toBe('author')
 			expect(query.fields[0]?.nested).toBeDefined()
-			expect(query.fields[0]?.nested?.fields[0]?.name).toBe('name')
+			// 'id' is automatically added for nested queries (needed for relation identity)
+			expect(query.fields[0]?.nested?.fields[0]?.name).toBe('id')
+			expect(query.fields[0]?.nested?.fields[1]?.name).toBe('name')
 		})
 
 		test('should build query with has-many parameters', () => {
