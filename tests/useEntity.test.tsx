@@ -41,7 +41,7 @@ interface TestSchema {
 	Tag: Tag
 }
 
-const { useEntity, isLoading } = createBindx<TestSchema>()
+const { useEntity } = createBindx<TestSchema>()
 
 // Helper to query by data-testid
 function getByTestId(container: Element, testId: string): Element {
@@ -93,7 +93,7 @@ describe('useEntity hook', () => {
 					title: e.title,
 				}))
 
-				if (isLoading(article)) {
+				if (article.isLoading) {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -135,7 +135,7 @@ describe('useEntity hook', () => {
 			)
 
 			expect(accessor).not.toBeNull()
-			expect(isLoading(accessor!)).toBe(true)
+			expect(accessor!.isLoading).toBe(true)
 		})
 	})
 
@@ -153,7 +153,7 @@ describe('useEntity hook', () => {
 					}),
 				)
 
-				if (isLoading(article)) {
+				if (article.isLoading) {
 					return <div>Loading...</div>
 				}
 
@@ -195,7 +195,7 @@ describe('useEntity hook', () => {
 					}),
 				)
 
-				if (isLoading(article)) {
+				if (article.isLoading) {
 					return <div>Loading...</div>
 				}
 
@@ -236,7 +236,7 @@ describe('useEntity hook', () => {
 					}),
 				)
 
-				if (isLoading(article)) {
+				if (article.isLoading) {
 					return <div>Loading...</div>
 				}
 
@@ -282,7 +282,7 @@ describe('useEntity hook', () => {
 					}),
 				)
 
-				if (isLoading(article)) {
+				if (article.isLoading) {
 					return <div>Loading...</div>
 				}
 
@@ -314,7 +314,7 @@ describe('useEntity hook', () => {
 					title: e.title,
 				}))
 
-				if (isLoading(article)) {
+				if (article.isLoading) {
 					return <div>Loading...</div>
 				}
 
@@ -366,7 +366,7 @@ describe('useEntity hook', () => {
 					}),
 				)
 
-				if (isLoading(article)) {
+				if (article.isLoading) {
 					return <div>Loading...</div>
 				}
 
@@ -412,7 +412,7 @@ describe('useEntity hook', () => {
 					title: e.title,
 				}))
 
-				if (isLoading(article)) {
+				if (article.isLoading) {
 					return <div>Loading...</div>
 				}
 
@@ -440,7 +440,7 @@ describe('useEntity hook', () => {
 					title: e.title,
 				}))
 
-				if (isLoading(article)) {
+				if (article.isLoading) {
 					return <div>Loading...</div>
 				}
 
@@ -484,7 +484,7 @@ describe('useEntity hook', () => {
 					title: e.title,
 				}))
 
-				if (isLoading(article)) {
+				if (article.isLoading) {
 					return <div>Loading...</div>
 				}
 
@@ -536,7 +536,7 @@ describe('useEntity hook', () => {
 					title: e.title,
 				}))
 
-				if (isLoading(article)) {
+				if (article.isLoading) {
 					return <div>Loading...</div>
 				}
 
@@ -582,7 +582,7 @@ describe('useEntity hook', () => {
 					title: e.title,
 				}))
 
-				if (isLoading(article)) {
+				if (article.isLoading) {
 					return <div>Loading...</div>
 				}
 
@@ -639,7 +639,7 @@ describe('useEntity hook', () => {
 					title: e.title,
 				}))
 
-				if (isLoading(article)) {
+				if (article.isLoading) {
 					return <div>Loading...</div>
 				}
 
@@ -702,7 +702,7 @@ describe('useEntity hook', () => {
 					title: e.title,
 				}))
 
-				if (isLoading(article)) {
+				if (article.isLoading) {
 					return <div>Loading...</div>
 				}
 
@@ -770,7 +770,7 @@ describe('useEntity hook', () => {
 					}),
 				)
 
-				if (isLoading(article)) {
+				if (article.isLoading) {
 					return <div>Loading...</div>
 				}
 
@@ -840,7 +840,7 @@ describe('useEntity hook', () => {
 					}),
 				)
 
-				if (isLoading(article)) {
+				if (article.isLoading) {
 					return <div data-testid="loading">Loading...</div>
 				}
 

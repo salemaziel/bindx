@@ -56,6 +56,47 @@ export class IdentityMap {
 	}
 
 	/**
+	 * Gets a field value from an entity
+	 */
+	getValue(entityType: string, id: string, fieldPath: string[]): unknown {
+		const record = this.get(entityType, id)
+		if (!record) return undefined
+		return getNestedValue(record.data, fieldPath)
+	}
+
+	/**
+	 * Gets a field's server value from an entity
+	 */
+	getServerValue(entityType: string, id: string, fieldPath: string[]): unknown {
+		const record = this.get(entityType, id)
+		if (!record) return undefined
+		return getNestedValue(record.serverData, fieldPath)
+	}
+
+	/**
+	 * Sets a field value and notifies subscribers
+	 */
+	setFieldValue(entityType: string, id: string, fieldPath: string[], value: unknown): void {
+		const key = this.getKey(entityType, id)
+		const record = this.entities.get(key)
+		if (!record) return
+
+		setNestedValue(record.data, fieldPath, value)
+		this.notifySubscribers(key)
+	}
+
+	/**
+	 * Commits a field (sets serverData to match data)
+	 */
+	commitField(entityType: string, id: string, fieldPath: string[]): void {
+		const record = this.get(entityType, id)
+		if (!record) return
+
+		const value = getNestedValue(record.data, fieldPath)
+		setNestedValue(record.serverData, fieldPath, value)
+	}
+
+	/**
 	 * Checks if an entity exists in the map
 	 */
 	has(entityType: string, id: string): boolean {

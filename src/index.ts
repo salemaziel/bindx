@@ -57,7 +57,9 @@ export {
 	createBindx,
 	type BindxProviderProps,
 	type UseEntityOptions,
+	type UseEntityListOptions,
 	type LoadingEntityAccessor,
+	type LoadingEntityListAccessor,
 	type EntitySchema,
 } from './hooks/index.js'
 

@@ -34,10 +34,18 @@ class EntityListItemImpl<TData extends object> implements EntityListItem<TData> 
 	remove(): void {
 		this.onRemove()
 	}
+
+	/**
+	 * Dispose internal entity accessor
+	 */
+	_dispose(): void {
+		this._entity._dispose()
+	}
 }
 
 /**
- * Implementation of EntityListAccessor for has-many relations
+ * Implementation of EntityListAccessor for has-many relations.
+ * Items with IDs are registered in IdentityMap for cross-component synchronization.
  */
 export class EntityListAccessorImpl<TData extends object> implements EntityListAccessor<TData> {
 	private _items: EntityListItemImpl<TData>[] = []
@@ -45,6 +53,7 @@ export class EntityListAccessorImpl<TData extends object> implements EntityListA
 	private _removedKeys: Set<string> = new Set()
 	private _serverOrder: string[] = []
 	private _orderChanged: boolean = false
+	private _initialData: TData[] = []
 
 	constructor(
 		private readonly entityType: string,
@@ -53,7 +62,11 @@ export class EntityListAccessorImpl<TData extends object> implements EntityListA
 		private readonly identityMap: IdentityMap,
 		initialData: TData[],
 		private readonly onChange: () => void,
+		private readonly parentEntityType?: string,
+		private readonly parentEntityId?: string,
+		private readonly fieldKey?: string,
 	) {
+		this._initialData = [...initialData]
 		this._items = initialData.map((data, index) => this.createItem(data, index))
 		// Track which items came from server
 		this._serverItems = new Set(this._items.map(item => item.key))
@@ -63,7 +76,7 @@ export class EntityListAccessorImpl<TData extends object> implements EntityListA
 	/**
 	 * Creates a list item from data
 	 */
-	private createItem(data: TData, index: number): EntityListItemImpl<TData> {
+	private createItem(data: TData, _index: number): EntityListItemImpl<TData> {
 		const id = this.extractId(data) ?? generateTempId()
 		const key = id
 
@@ -98,7 +111,10 @@ export class EntityListAccessorImpl<TData extends object> implements EntityListA
 		const index = this._items.findIndex(item => item.key === key)
 		if (index === -1) return
 
-		this._items.splice(index, 1)
+		const [removed] = this._items.splice(index, 1)
+		if (removed) {
+			removed._dispose()
+		}
 
 		// Track if a server item was removed
 		if (this._serverItems.has(key)) {
@@ -128,6 +144,10 @@ export class EntityListAccessorImpl<TData extends object> implements EntityListA
 			if (item.entity.isDirty) return true
 		}
 
+		return false
+	}
+
+	get isLoading(): boolean {
 		return false
 	}
 
@@ -181,6 +201,23 @@ export class EntityListAccessorImpl<TData extends object> implements EntityListA
 	}
 
 	/**
+	 * Resets list to server state
+	 */
+	reset(): void {
+		// Dispose current items
+		for (const item of this._items) {
+			item._dispose()
+		}
+
+		// Recreate items from initial data
+		this._items = this._initialData.map((data, index) => this.createItem(data, index))
+		this._removedKeys.clear()
+		this._orderChanged = false
+
+		this.onChange()
+	}
+
+	/**
 	 * Collects all items' data for persistence
 	 */
 	collectData(): TData[] {
@@ -200,7 +237,23 @@ export class EntityListAccessorImpl<TData extends object> implements EntityListA
 	commitChanges(): void {
 		this._serverItems = new Set(this._items.map(item => item.key))
 		this._serverOrder = this._items.map(item => item.key)
+		this._initialData = this.collectData()
 		this._removedKeys.clear()
 		this._orderChanged = false
+
+		// Commit each item's entity
+		for (const item of this._items) {
+			const entityAccessor = item.entity as EntityAccessorImpl<TData>
+			entityAccessor.commitChanges()
+		}
+	}
+
+	/**
+	 * Cleanup subscriptions (call on unmount)
+	 */
+	_dispose(): void {
+		for (const item of this._items) {
+			item._dispose()
+		}
 	}
 }

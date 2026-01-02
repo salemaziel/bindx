@@ -82,6 +82,9 @@ export interface EntityListAccessor<TData> {
 	/** Whether any item has been modified, added, or removed */
 	readonly isDirty: boolean
 
+	/** Whether data is being loaded */
+	readonly isLoading: boolean
+
 	/** Add a new item to the collection */
 	add(data: Partial<TData>): void
 

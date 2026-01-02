@@ -8,6 +8,7 @@ import { EntityListAccessorImpl } from './EntityListAccessor.js'
 /**
  * Implementation of EntityAccessor.
  * Manages a collection of field accessors and coordinates persistence.
+ * Data is stored in IdentityMap - this accessor is a projection/view into that data.
  */
 export class EntityAccessorImpl<TData extends object>
 	implements EntityAccessor<TData>, ChangeCollector
@@ -15,6 +16,7 @@ export class EntityAccessorImpl<TData extends object>
 	private _fields: Map<string, FieldAccessorImpl<unknown> | EntityAccessorImpl<object> | EntityListAccessorImpl<object>>
 	private _isLoading: boolean = false
 	private _isPersisting: boolean = false
+	private _unsubscribe: (() => void) | null = null
 
 	constructor(
 		public readonly id: string,
@@ -25,14 +27,22 @@ export class EntityAccessorImpl<TData extends object>
 		initialData: TData,
 		private readonly onChange: () => void,
 	) {
-		this._fields = this.buildFields(initialData, meta)
+		// Register entity in IdentityMap (or get existing)
+		this.identityMap.getOrCreate(entityType, id, initialData as Record<string, unknown>)
+
+		// Subscribe to changes in IdentityMap for this entity
+		this._unsubscribe = this.identityMap.subscribe(entityType, id, () => {
+			this.onChange()
+		})
+
+		this._fields = this.buildFields(meta)
 	}
 
 	/**
-	 * Builds field accessors from initial data and metadata
+	 * Builds field accessors from metadata.
+	 * Field values are read from IdentityMap, not passed directly.
 	 */
 	private buildFields(
-		data: object,
 		meta: FragmentMeta,
 	): Map<string, FieldAccessorImpl<unknown> | EntityAccessorImpl<object> | EntityListAccessorImpl<object>> {
 		const fields = new Map<
@@ -41,11 +51,10 @@ export class EntityAccessorImpl<TData extends object>
 		>()
 
 		for (const [key, fieldMeta] of meta.fields) {
-			const value = (data as Record<string, unknown>)[key]
-
 			if (fieldMeta.isArray && fieldMeta.arrayItemMeta) {
 				// Has-many relation - create EntityListAccessor
-				const arrayData = Array.isArray(value) ? value : []
+				const arrayData = this.getFieldData(key)
+				const arrayValue = Array.isArray(arrayData) ? arrayData : []
 				fields.set(
 					key,
 					new EntityListAccessorImpl(
@@ -53,35 +62,73 @@ export class EntityAccessorImpl<TData extends object>
 						fieldMeta.arrayItemMeta,
 						this.adapter,
 						this.identityMap,
-						arrayData as object[],
+						arrayValue as object[],
 						this.onChange,
+						this.entityType,
+						this.id,
+						key,
 					),
 				)
 			} else if (fieldMeta.nested) {
 				// Nested object/entity - create EntityAccessor
-				const nestedData = (value ?? {}) as object
-				const nestedId = this.extractId(nestedData) ?? `${this.id}:${key}`
+				const nestedData = (this.getFieldData(key) ?? {}) as Record<string, unknown>
+				const nestedId = this.extractId(nestedData)
 				const nestedEntityType = this.inferEntityType(fieldMeta)
 
+				if (nestedId) {
+					// Entity with ID -> separate entry in IdentityMap
+					fields.set(
+						key,
+						new EntityAccessorImpl(
+							nestedId,
+							nestedEntityType,
+							fieldMeta.nested,
+							this.adapter,
+							this.identityMap,
+							nestedData as object,
+							this.onChange,
+						),
+					)
+				} else {
+					// Embedded object without ID -> stays inline in parent entity
+					// Use composite ID and store in parent's data
+					const compositeId = `${this.id}:${key}`
+					fields.set(
+						key,
+						new EntityAccessorImpl(
+							compositeId,
+							nestedEntityType,
+							fieldMeta.nested,
+							this.adapter,
+							this.identityMap,
+							nestedData as object,
+							this.onChange,
+						),
+					)
+				}
+			} else {
+				// Scalar field - create FieldAccessor that reads from IdentityMap
 				fields.set(
 					key,
-					new EntityAccessorImpl(
-						nestedId,
-						nestedEntityType,
-						fieldMeta.nested,
-						this.adapter,
+					new FieldAccessorImpl(
 						this.identityMap,
-						nestedData,
+						this.entityType,
+						this.id,
+						[key],
 						this.onChange,
 					),
 				)
-			} else {
-				// Scalar field - create FieldAccessor
-				fields.set(key, new FieldAccessorImpl(value as unknown, this.onChange))
 			}
 		}
 
 		return fields
+	}
+
+	/**
+	 * Gets field data from IdentityMap
+	 */
+	private getFieldData(key: string): unknown {
+		return this.identityMap.getValue(this.entityType, this.id, [key])
 	}
 
 	/**
@@ -170,15 +217,18 @@ export class EntityAccessorImpl<TData extends object>
 	}
 
 	reset(): void {
+		// Reset entity in IdentityMap
+		this.identityMap.reset(this.entityType, this.id)
+
+		// Also reset nested entities
 		for (const accessor of this._fields.values()) {
-			if (accessor instanceof FieldAccessorImpl) {
-				accessor._setServerValue(accessor.serverValue)
-			} else if (accessor instanceof EntityAccessorImpl) {
+			if (accessor instanceof EntityAccessorImpl) {
 				accessor.reset()
 			} else if (accessor instanceof EntityListAccessorImpl) {
-				// TODO: Reset list to server state
+				accessor.reset()
 			}
 		}
+
 		this.onChange()
 	}
 
@@ -211,6 +261,8 @@ export class EntityAccessorImpl<TData extends object>
 				accessor.commitChanges()
 			} else if (accessor instanceof EntityAccessorImpl) {
 				accessor.commitChanges()
+			} else if (accessor instanceof EntityListAccessorImpl) {
+				accessor.commitChanges()
 			}
 		}
 	}
@@ -222,5 +274,24 @@ export class EntityAccessorImpl<TData extends object>
 	 */
 	_setLoading(loading: boolean): void {
 		this._isLoading = loading
+	}
+
+	/**
+	 * Cleanup subscriptions (call on unmount)
+	 */
+	_dispose(): void {
+		if (this._unsubscribe) {
+			this._unsubscribe()
+			this._unsubscribe = null
+		}
+
+		// Dispose nested accessors
+		for (const accessor of this._fields.values()) {
+			if (accessor instanceof EntityAccessorImpl) {
+				accessor._dispose()
+			} else if (accessor instanceof EntityListAccessorImpl) {
+				accessor._dispose()
+			}
+		}
 	}
 }

@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useReducer, useState } from 'react'
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { createModelProxy } from '../proxy/index.js'
 import type { UnwrapProxy } from '../proxy/types.js'
 import { extractFragmentMeta, buildQuery } from '../fragment/index.js'
 import type { Fragment, FragmentDefiner } from '../fragment/types.js'
 import { EntityAccessorImpl } from '../accessors/EntityAccessor.js'
-import type { EntityAccessor } from '../accessors/types.js'
+import type { EntityAccessor, EntityListAccessor } from '../accessors/types.js'
+import { EntityListAccessorImpl } from '../accessors/EntityListAccessor.js'
 import { useBackendAdapter, useIdentityMap } from './BackendAdapterContext.js'
 
 /**
@@ -13,6 +14,16 @@ import { useBackendAdapter, useIdentityMap } from './BackendAdapterContext.js'
 export interface UseEntityOptions {
 	/** Entity ID to fetch */
 	id: string
+	/** If true, use cached data from IdentityMap if available (default: false) */
+	cache?: boolean
+}
+
+/**
+ * Options for useEntityList hook
+ */
+export interface UseEntityListOptions {
+	/** Optional filter criteria */
+	filter?: Record<string, unknown>
 }
 
 /**
@@ -48,6 +59,42 @@ function createLoadingAccessor<TData>(id: string): LoadingEntityAccessor<TData> 
 			// No-op while loading
 		},
 		reset() {
+			// No-op while loading
+		},
+	}
+}
+
+/**
+ * Result type for useEntityList when loading
+ */
+export interface LoadingEntityListAccessor<TData> {
+	readonly isLoading: true
+	readonly isDirty: false
+	readonly items: never
+	readonly length: 0
+	add(data: Partial<TData>): void
+	remove(key: string): void
+	move(fromIndex: number, toIndex: number): void
+}
+
+/**
+ * Creates a placeholder accessor for entity list loading state
+ */
+function createLoadingListAccessor<TData>(): LoadingEntityListAccessor<TData> {
+	return {
+		isLoading: true,
+		isDirty: false,
+		get items(): never {
+			throw new Error('Cannot access items while loading')
+		},
+		length: 0,
+		add() {
+			// No-op while loading
+		},
+		remove() {
+			// No-op while loading
+		},
+		move() {
 			// No-op while loading
 		},
 	}
@@ -91,7 +138,7 @@ export function createBindx<TSchema extends { [K in keyof TSchema]: object }>() 
 	 * Hook to fetch and manage a single entity with full type inference.
 	 *
 	 * @param entityType - Name of the entity (autocompleted from schema)
-	 * @param options - Options including the entity ID
+	 * @param options - Options including the entity ID and cache behavior
 	 * @param fragmentDefiner - Function defining which fields to fetch
 	 */
 	function useEntity<
@@ -110,6 +157,9 @@ export function createBindx<TSchema extends { [K in keyof TSchema]: object }>() 
 
 		// Force re-render when accessor notifies changes
 		const [, forceUpdate] = useReducer((x: number) => x + 1, 0)
+
+		// Track accessor for cleanup
+		const accessorRef = useRef<EntityAccessorImpl<UnwrappedResult> | null>(null)
 
 		// Normalize fragment - memoize to prevent re-creation
 		const fragment = useMemo(() => {
@@ -131,6 +181,34 @@ export function createBindx<TSchema extends { [K in keyof TSchema]: object }>() 
 		// Fetch entity on mount and when ID changes
 		useEffect(() => {
 			let cancelled = false
+
+			// Cleanup previous accessor
+			if (accessorRef.current) {
+				accessorRef.current._dispose()
+				accessorRef.current = null
+			}
+
+			// Check if we should use cached data
+			if (options.cache && identityMap.has(entityType, options.id)) {
+				const cachedRecord = identityMap.get(entityType, options.id)
+				if (cachedRecord) {
+					const newAccessor = new EntityAccessorImpl<UnwrappedResult>(
+						options.id,
+						entityType,
+						fragment.__meta,
+						adapter,
+						identityMap,
+						cachedRecord.data as UnwrappedResult,
+						forceUpdate,
+					)
+
+					accessorRef.current = newAccessor
+					setAccessor(newAccessor)
+					setIsLoading(false)
+					return
+				}
+			}
+
 			setIsLoading(true)
 
 			async function load() {
@@ -151,6 +229,7 @@ export function createBindx<TSchema extends { [K in keyof TSchema]: object }>() 
 						forceUpdate,
 					)
 
+					accessorRef.current = newAccessor
 					setAccessor(newAccessor)
 					setIsLoading(false)
 				} catch (error) {
@@ -164,8 +243,13 @@ export function createBindx<TSchema extends { [K in keyof TSchema]: object }>() 
 
 			return () => {
 				cancelled = true
+				// Cleanup accessor on unmount
+				if (accessorRef.current) {
+					accessorRef.current._dispose()
+					accessorRef.current = null
+				}
 			}
-		}, [entityType, options.id, adapter, identityMap, fragment.__meta])
+		}, [entityType, options.id, options.cache, adapter, identityMap, fragment.__meta])
 
 		// Return loading state or accessor
 		if (isLoading || !accessor) {
@@ -176,16 +260,109 @@ export function createBindx<TSchema extends { [K in keyof TSchema]: object }>() 
 	}
 
 	/**
-	 * Type guard to check if accessor is loading
+	 * Hook to fetch and manage a list of entities with full type inference.
+	 *
+	 * @param entityType - Name of the entity (autocompleted from schema)
+	 * @param options - Options including filter criteria
+	 * @param fragmentDefiner - Function defining which fields to fetch for each entity
 	 */
-	function isEntityLoading<TData>(
-		accessor: EntityAccessor<TData> | LoadingEntityAccessor<TData>,
-	): accessor is LoadingEntityAccessor<TData> {
-		return accessor.isLoading === true
-	}
+	function useEntityList<
+		TEntityName extends keyof TSchema & string,
+		TResult extends object,
+	>(
+		entityType: TEntityName,
+		options: UseEntityListOptions,
+		fragmentOrDefiner: FragmentDefiner<TSchema[TEntityName], TResult> | Fragment<TSchema[TEntityName], TResult>,
+	): EntityListAccessor<UnwrapProxy<TResult> & object> | LoadingEntityListAccessor<UnwrapProxy<TResult> & object> {
+		type TModel = TSchema[TEntityName]
+		type UnwrappedResult = UnwrapProxy<TResult> & object
 
+		const adapter = useBackendAdapter()
+		const identityMap = useIdentityMap()
+
+		// Force re-render when accessor notifies changes
+		const [, forceUpdate] = useReducer((x: number) => x + 1, 0)
+
+		// Track accessor for cleanup
+		const accessorRef = useRef<EntityListAccessorImpl<UnwrappedResult> | null>(null)
+
+		// Normalize fragment - memoize to prevent re-creation
+		const fragment = useMemo(() => {
+			if (typeof fragmentOrDefiner === 'function') {
+				const proxy = createModelProxy<TModel>()
+				const result = fragmentOrDefiner(proxy)
+				const meta = extractFragmentMeta(result)
+				return { __meta: meta, __resultType: result }
+			}
+			return fragmentOrDefiner
+		}, [])
+
+		// Stringify filter for dependency tracking
+		const filterKey = useMemo(() => JSON.stringify(options.filter ?? {}), [options.filter])
+
+		// Accessor state
+		const [accessor, setAccessor] = useState<EntityListAccessorImpl<UnwrappedResult> | null>(null)
+		const [isLoading, setIsLoading] = useState(true)
+
+		// Fetch entities on mount and when filter changes
+		useEffect(() => {
+			let cancelled = false
+
+			// Cleanup previous accessor
+			if (accessorRef.current) {
+				accessorRef.current = null
+			}
+
+			setIsLoading(true)
+
+			async function load() {
+				try {
+					if (!adapter.fetchMany) {
+						throw new Error('Backend adapter does not support fetchMany')
+					}
+
+					const query = buildQuery(fragment.__meta)
+					const data = await adapter.fetchMany(entityType, query, options.filter)
+
+					if (cancelled) return
+
+					// Create accessor with the fetched data
+					const newAccessor = new EntityListAccessorImpl<UnwrappedResult>(
+						entityType,
+						fragment.__meta,
+						adapter,
+						identityMap,
+						data as UnwrappedResult[],
+						forceUpdate,
+					)
+
+					accessorRef.current = newAccessor
+					setAccessor(newAccessor)
+					setIsLoading(false)
+				} catch (error) {
+					if (cancelled) return
+					console.error(`Failed to fetch ${entityType} list:`, error)
+					setIsLoading(false)
+				}
+			}
+
+			load()
+
+			return () => {
+				cancelled = true
+				accessorRef.current = null
+			}
+		}, [entityType, filterKey, adapter, identityMap, fragment.__meta, options.filter])
+
+		// Return loading state or accessor
+		if (isLoading || !accessor) {
+			return createLoadingListAccessor<UnwrappedResult>()
+		}
+
+		return accessor as EntityListAccessor<UnwrappedResult>
+	}
 	return {
 		useEntity,
-		isLoading: isEntityLoading,
+		useEntityList,
 	}
 }

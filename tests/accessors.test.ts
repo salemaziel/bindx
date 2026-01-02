@@ -27,9 +27,32 @@ interface Article {
 }
 
 describe('FieldAccessorImpl', () => {
+	function createFieldAccessor(initialValue: unknown) {
+		const identityMap = new IdentityMap()
+		const entityType = 'Test'
+		const entityId = 'test-1'
+
+		// Initialize entity in IdentityMap
+		identityMap.getOrCreate(entityType, entityId, { field: initialValue })
+
+		let changeCount = 0
+		const onChange = () => {
+			changeCount++
+		}
+
+		const accessor = new FieldAccessorImpl(
+			identityMap,
+			entityType,
+			entityId,
+			['field'],
+			onChange,
+		)
+
+		return { accessor, identityMap, getChangeCount: () => changeCount }
+	}
+
 	test('should store initial value', () => {
-		const onChange = () => {}
-		const accessor = new FieldAccessorImpl('initial', onChange)
+		const { accessor } = createFieldAccessor('initial')
 
 		expect(accessor.value).toBe('initial')
 		expect(accessor.serverValue).toBe('initial')
@@ -37,34 +60,26 @@ describe('FieldAccessorImpl', () => {
 	})
 
 	test('setValue should update value and mark as dirty', () => {
-		let changed = false
-		const onChange = () => {
-			changed = true
-		}
-		const accessor = new FieldAccessorImpl('initial', onChange)
+		const { accessor, getChangeCount } = createFieldAccessor('initial')
 
 		accessor.setValue('updated')
 
 		expect(accessor.value).toBe('updated')
 		expect(accessor.serverValue).toBe('initial')
 		expect(accessor.isDirty).toBe(true)
-		expect(changed).toBe(true)
+		expect(getChangeCount()).toBe(1)
 	})
 
 	test('setValue to same value should not trigger onChange', () => {
-		let changeCount = 0
-		const onChange = () => {
-			changeCount++
-		}
-		const accessor = new FieldAccessorImpl('value', onChange)
+		const { accessor, getChangeCount } = createFieldAccessor('value')
 
 		accessor.setValue('value')
 
-		expect(changeCount).toBe(0)
+		expect(getChangeCount()).toBe(0)
 	})
 
 	test('commitChanges should update serverValue', () => {
-		const accessor = new FieldAccessorImpl('initial', () => {})
+		const { accessor } = createFieldAccessor('initial')
 
 		accessor.setValue('updated')
 		expect(accessor.isDirty).toBe(true)
@@ -76,26 +91,25 @@ describe('FieldAccessorImpl', () => {
 		expect(accessor.isDirty).toBe(false)
 	})
 
-	test('_setServerValue should update both values', () => {
-		const accessor = new FieldAccessorImpl('initial', () => {})
+	test('_resetToServerValue should reset value to serverValue', () => {
+		const { accessor } = createFieldAccessor('initial')
 
 		accessor.setValue('local')
-		accessor._setServerValue('server')
+		expect(accessor.value).toBe('local')
 
-		expect(accessor.value).toBe('server')
-		expect(accessor.serverValue).toBe('server')
+		accessor._resetToServerValue()
+
+		expect(accessor.value).toBe('initial')
+		expect(accessor.serverValue).toBe('initial')
 		expect(accessor.isDirty).toBe(false)
 	})
 
 	test('inputProps should provide value and setValue', () => {
-		let changed = false
-		const accessor = new FieldAccessorImpl('test', () => {
-			changed = true
-		})
+		const { accessor, getChangeCount } = createFieldAccessor('test')
 
 		expect(accessor.inputProps.value).toBe('test')
 		accessor.inputProps.setValue('new')
-		expect(changed).toBe(true)
+		expect(getChangeCount()).toBe(1)
 		expect(accessor.value).toBe('new')
 	})
 })

@@ -1,41 +1,42 @@
 import type { FieldAccessor, ChangeCollector } from './types.js'
+import type { IdentityMap } from '../store/IdentityMap.js'
 
 /**
  * Implementation of FieldAccessor for scalar values.
+ * Acts as a "lens" into the IdentityMap - doesn't store its own state.
  */
 export class FieldAccessorImpl<T> implements FieldAccessor<T>, ChangeCollector {
-	private _value: T | null
-	private _serverValue: T | null
-
 	constructor(
-		initialValue: T | null,
+		private readonly identityMap: IdentityMap,
+		private readonly entityType: string,
+		private readonly entityId: string,
+		private readonly fieldPath: string[],
 		private readonly onChange: () => void,
-	) {
-		this._value = initialValue
-		this._serverValue = initialValue
-	}
+	) {}
 
 	get value(): T | null {
-		return this._value
+		return this.identityMap.getValue(this.entityType, this.entityId, this.fieldPath) as T | null
 	}
 
 	get serverValue(): T | null {
-		return this._serverValue
+		return this.identityMap.getServerValue(this.entityType, this.entityId, this.fieldPath) as T | null
 	}
 
 	get isDirty(): boolean {
-		return this._value !== this._serverValue
+		return this.value !== this.serverValue
 	}
 
 	setValue(value: T | null): void {
-		if (this._value === value) return
-		this._value = value
+		if (this.value === value) return
+		this.identityMap.setFieldValue(this.entityType, this.entityId, this.fieldPath, value)
+		// Note: IdentityMap.setFieldValue already calls notifySubscribers,
+		// but we still call onChange for this specific accessor's component
 		this.onChange()
 	}
 
 	get inputProps() {
 		return {
-			value: this._value,
+			value: this.value,
 			setValue: (value: T | null) => this.setValue(value),
 		}
 	}
@@ -49,23 +50,23 @@ export class FieldAccessorImpl<T> implements FieldAccessor<T>, ChangeCollector {
 	}
 
 	commitChanges(): void {
-		this._serverValue = this._value
+		this.identityMap.commitField(this.entityType, this.entityId, this.fieldPath)
 	}
 
-	// Internal methods for IdentityMap integration
-
-	/**
-	 * Updates the server value (called after fetch or persist)
-	 */
-	_setServerValue(value: T | null): void {
-		this._serverValue = value
-		this._value = value
-	}
+	// Internal methods
 
 	/**
 	 * Gets the current value for persistence
 	 */
 	_getCurrentValue(): T | null {
-		return this._value
+		return this.value
+	}
+
+	/**
+	 * Resets the field value to server value
+	 */
+	_resetToServerValue(): void {
+		const serverValue = this.serverValue
+		this.identityMap.setFieldValue(this.entityType, this.entityId, this.fieldPath, serverValue)
 	}
 }

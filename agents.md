@@ -264,7 +264,7 @@ function ArticleEditor({ id }: { id: string }) {
     tags: e.tags.map(tag => TagFragment.compose(tag)),
   }))
 
-  if (isLoading(article)) {
+  if (article.isLoading) {
     return <div>Loading...</div>
   }
 

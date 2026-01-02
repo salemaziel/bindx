@@ -21,10 +21,15 @@ export interface Schema {
  *   title: e.title,
  *   author: { name: e.author.name },
  * }))
+ *
+ * const authors = useEntityList('Author', {}, e => ({
+ *   id: e.id,
+ *   name: e.name,
+ * }))
  * ```
  *
  * - Entity name ('Article') is autocompleted
  * - `e` is automatically typed as ModelProxy<Article>
  * - Result fields are fully typed
  */
-export const { useEntity, isLoading } = createBindx<Schema>()
+export const { useEntity, useEntityList, } = createBindx<Schema>()
