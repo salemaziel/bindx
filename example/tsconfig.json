@@ -3,7 +3,8 @@
   "compilerOptions": {
     "composite": true,
     "rootDir": ".",
-    "outDir": "../dist-example",
+    "outDir": "../dist/example",
+	"emitDeclarationOnly": true,
     "declaration": true,
     "declarationMap": true
   },

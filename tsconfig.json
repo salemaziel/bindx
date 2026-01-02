@@ -17,7 +17,8 @@
   },
   "references": [
     { "path": "./src" },
-    { "path": "./example" }
+    { "path": "./example" },
+    { "path": "./tests" }
   ],
   "files": []
 }

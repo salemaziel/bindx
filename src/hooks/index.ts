@@ -6,6 +6,4 @@ export {
 	type BindxProviderProps,
 } from './BackendAdapterContext.js'
 
-export { useEntity, isLoading, type UseEntityOptions, type LoadingEntityAccessor } from './useEntity.js'
-
-export { createBindx, type EntitySchema } from './createBindx.js'
+export { createBindx, type EntitySchema, type UseEntityOptions, type LoadingEntityAccessor } from './createBindx.js'

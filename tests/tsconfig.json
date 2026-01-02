@@ -5,9 +5,13 @@
 		"declaration": true,
 		"declarationMap": true,
 		"sourceMap": true,
-		"outDir": "../dist-tests",
+		"noEmit": true,
 		"rootDir": ".",
+		"outDir": "../dist/tests",
 		"types": ["bun-types"]
 	},
-	"include": ["./**/*"]
+	"include": ["./**/*"],
+	"references": [
+		{ "path": "../src" }
+	]
 }

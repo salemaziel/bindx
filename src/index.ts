@@ -54,8 +54,6 @@ export {
 	useBackendAdapter,
 	useIdentityMap,
 	useBindxContext,
-	useEntity,
-	isLoading,
 	createBindx,
 	type BindxProviderProps,
 	type UseEntityOptions,

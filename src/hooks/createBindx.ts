@@ -1,12 +1,33 @@
 import { useEffect, useMemo, useReducer, useState } from 'react'
 import { createModelProxy } from '../proxy/index.js'
-import type { ModelProxy, UnwrapProxy } from '../proxy/types.js'
+import type { UnwrapProxy } from '../proxy/types.js'
 import { extractFragmentMeta, buildQuery } from '../fragment/index.js'
 import type { Fragment, FragmentDefiner } from '../fragment/types.js'
 import { EntityAccessorImpl } from '../accessors/EntityAccessor.js'
 import type { EntityAccessor } from '../accessors/types.js'
 import { useBackendAdapter, useIdentityMap } from './BackendAdapterContext.js'
-import type { LoadingEntityAccessor } from './useEntity.js'
+
+/**
+ * Options for useEntity hook
+ */
+export interface UseEntityOptions {
+	/** Entity ID to fetch */
+	id: string
+}
+
+/**
+ * Result type for useEntity when loading
+ */
+export interface LoadingEntityAccessor<TData> {
+	readonly isLoading: true
+	readonly isPersisting: false
+	readonly isDirty: false
+	readonly id: string
+	readonly fields: never
+	readonly data: never
+	persist(): Promise<void>
+	reset(): void
+}
 
 /**
  * Creates a placeholder accessor for loading state
@@ -30,14 +51,6 @@ function createLoadingAccessor<TData>(id: string): LoadingEntityAccessor<TData> 
 			// No-op while loading
 		},
 	}
-}
-
-/**
- * Options for useEntity hook
- */
-export interface UseEntityOptions {
-	/** Entity ID to fetch */
-	id: string
 }
 
 /**
