@@ -1,5 +1,5 @@
 import React, { type ReactElement, type ReactNode } from 'react'
-import type { HasOneProps, EntityRef, JsxSelectionFieldMeta, JsxSelectionMeta, SelectionProvider } from '../types.js'
+import type { HasOneProps, EntityRef, SelectionFieldMeta, SelectionMeta, SelectionProvider } from '../types.js'
 import { FIELD_REF_META, BINDX_COMPONENT } from '../types.js'
 import { createCollectorProxy } from '../proxy.js'
 import { SelectionMetaCollector, mergeSelections } from '../SelectionMeta.js'
@@ -41,8 +41,8 @@ const hasOneWithSelection = HasOne as typeof HasOne & SelectionProvider & { [BIN
 
 hasOneWithSelection.getSelection = (
 	props: HasOneProps<unknown>,
-	collectNested: (children: ReactNode) => JsxSelectionMeta,
-): JsxSelectionFieldMeta => {
+	collectNested: (children: ReactNode) => SelectionMeta,
+): SelectionFieldMeta => {
 	const meta = props.field[FIELD_REF_META]
 
 	// Create nested selection by calling children with collector
@@ -64,6 +64,7 @@ hasOneWithSelection.getSelection = (
 
 	return {
 		fieldName: meta.fieldName,
+		alias: meta.fieldName,
 		path: meta.path,
 		isArray: false,
 		isRelation: true,

@@ -13,6 +13,8 @@ export {
 	type UseEntityListOptions,
 	type LoadingEntityAccessor,
 	type LoadingEntityListAccessor,
+	type ErrorEntityAccessor,
+	type ErrorEntityListAccessor,
 } from './createBindx.js'
 
 export {

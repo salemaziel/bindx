@@ -26,6 +26,12 @@ export interface SelectionFieldMeta {
 	fieldName: string
 	/** Alias (output key) - defaults to fieldName */
 	alias: string
+	/** Full path to this field (for JSX components) */
+	path: string[]
+	/** Whether this is a relation (has nested fields) */
+	isRelation: boolean
+	/** Whether this is an array/has-many relation */
+	isArray: boolean
 	/** For relations: nested selection metadata */
 	nested?: SelectionMeta
 	/** For has-many: additional parameters */
@@ -35,8 +41,6 @@ export interface SelectionFieldMeta {
 		limit?: number
 		offset?: number
 	}
-	/** Whether this is an array/has-many relation */
-	isArray: boolean
 }
 
 /**

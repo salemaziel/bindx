@@ -70,6 +70,8 @@ function createFieldMethod<TEntity, TSelected extends object, THasManyParams ext
 		const fieldMeta: SelectionFieldMeta = {
 			fieldName,
 			alias,
+			path: [fieldName],
+			isRelation: false,
 			isArray: false,
 			nested: undefined,
 			hasManyParams: undefined,
@@ -80,6 +82,7 @@ function createFieldMethod<TEntity, TSelected extends object, THasManyParams ext
 			const nestedBuilder = createSelectionBuilder<unknown>()
 			const resultBuilder = selector(nestedBuilder) as SelectionBuilder<unknown, object, object>
 			fieldMeta.nested = resultBuilder[SELECTION_META]
+			fieldMeta.isRelation = true
 
 			// Check if this looks like a has-many (options has filter/orderBy/limit)
 			if (options && isHasManyOptions(options)) {
@@ -96,6 +99,7 @@ function createFieldMethod<TEntity, TSelected extends object, THasManyParams ext
 		// Handle relation with fragment
 		if (fragment && isFluentFragment(fragment)) {
 			fieldMeta.nested = fragment.__meta
+			fieldMeta.isRelation = true
 
 			// Check has-many params
 			if (options && isHasManyOptions(options)) {

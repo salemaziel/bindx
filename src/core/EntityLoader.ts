@@ -25,6 +25,7 @@ export interface LoadEntityOptions {
 	id: string
 	query: QuerySpec
 	useCache?: boolean
+	signal?: AbortSignal
 }
 
 /**
@@ -34,6 +35,7 @@ export interface LoadEntityListOptions {
 	entityType: string
 	query: QuerySpec
 	filter?: Record<string, unknown>
+	signal?: AbortSignal
 }
 
 /**
@@ -50,7 +52,7 @@ export class EntityLoader {
 	 * Loads a single entity by ID.
 	 */
 	async loadOne<T>(options: LoadEntityOptions): Promise<EntityLoadResult<T>> {
-		const { entityType, id, query, useCache = false } = options
+		const { entityType, id, query, useCache = false, signal } = options
 
 		// Check cache first
 		if (useCache && this.identityMap.has(entityType, id)) {
@@ -61,7 +63,7 @@ export class EntityLoader {
 		}
 
 		try {
-			const data = await this.adapter.fetchOne(entityType, id, query)
+			const data = await this.adapter.fetchOne(entityType, id, query, { signal })
 
 			if (!data) {
 				return { status: 'not_found' }
@@ -72,6 +74,10 @@ export class EntityLoader {
 
 			return { status: 'success', data: data as T }
 		} catch (error) {
+			// Don't treat abort as error
+			if (error instanceof DOMException && error.name === 'AbortError') {
+				throw error
+			}
 			return {
 				status: 'error',
 				error: error instanceof Error ? error : new Error(String(error)),
@@ -83,7 +89,7 @@ export class EntityLoader {
 	 * Loads multiple entities matching filter.
 	 */
 	async loadMany<T>(options: LoadEntityListOptions): Promise<EntityListLoadResult<T>> {
-		const { entityType, query, filter } = options
+		const { entityType, query, filter, signal } = options
 
 		if (!this.adapter.fetchMany) {
 			return {
@@ -93,7 +99,7 @@ export class EntityLoader {
 		}
 
 		try {
-			const data = await this.adapter.fetchMany(entityType, query, filter)
+			const data = await this.adapter.fetchMany(entityType, query, filter, { signal })
 
 			// Store each entity in identity map
 			for (const item of data) {
@@ -105,6 +111,10 @@ export class EntityLoader {
 
 			return { status: 'success', data: data as T[] }
 		} catch (error) {
+			// Don't treat abort as error
+			if (error instanceof DOMException && error.name === 'AbortError') {
+				throw error
+			}
 			return {
 				status: 'error',
 				error: error instanceof Error ? error : new Error(String(error)),

@@ -1,5 +1,5 @@
 import React, { type ReactElement, type ReactNode } from 'react'
-import type { FieldRef, JsxSelectionFieldMeta, JsxSelectionMeta, SelectionProvider } from '../types.js'
+import type { FieldRef, SelectionFieldMeta, SelectionMeta, SelectionProvider } from '../types.js'
 import { FIELD_REF_META, BINDX_COMPONENT } from '../types.js'
 
 /**
@@ -37,11 +37,12 @@ export function Show<T>({ field, children, fallback }: ShowProps<T>): ReactEleme
 // Static method for selection extraction
 const showWithSelection = Show as typeof Show & SelectionProvider & { [BINDX_COMPONENT]: true }
 
-showWithSelection.getSelection = (props: ShowProps<unknown>): JsxSelectionFieldMeta | null => {
+showWithSelection.getSelection = (props: ShowProps<unknown>): SelectionFieldMeta | null => {
 	const meta = props.field[FIELD_REF_META]
 
 	return {
 		fieldName: meta.fieldName,
+		alias: meta.fieldName,
 		path: meta.path,
 		isArray: false,
 		isRelation: false,

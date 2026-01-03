@@ -1,114 +1,113 @@
-// Selection - fluent type-safe query building
-export {
-	createSelectionBuilder,
-	getSelectionMeta,
-	createFragment,
-	buildQueryFromSelection,
-	collectPaths,
-	SELECTION_META,
-	type SelectionBuilder,
-	type SelectionMeta,
-	type SelectionFieldMeta,
-	type FluentFragment,
-	type FluentDefiner,
-	type HasManyOptions,
-	type InferSelection,
-	type QuerySpec,
-	type QueryFieldSpec,
+/**
+ * Bindx - Type-safe React data binding framework
+ *
+ * @packageDocumentation
+ */
+
+// ============================================================================
+// Public API - Types
+// ============================================================================
+
+// Selection types
+export type {
+	SelectionBuilder,
+	SelectionMeta,
+	SelectionFieldMeta,
+	FluentFragment,
+	FluentDefiner,
+	HasManyOptions,
+	InferSelection,
+	QuerySpec,
+	QueryFieldSpec,
 } from './selection/index.js'
 
-// Accessors - data read/write
-export {
-	type FieldAccessor,
-	type EntityAccessor,
-	type EntityAccessorBase,
-	type RootEntityAccessor,
-	type HasOneAccessor,
-	type HasOneRelationState,
-	type PlaceholderEntityAccessor,
-	type EntityListAccessor,
-	type EntityListItem,
-	type AccessorFromShape,
-	type AccessorFromShapeInternal,
-	type RelationChange,
-	FieldAccessorImpl,
-	EntityAccessorImpl,
-	EntityListAccessorImpl,
-	HasOneAccessorImpl,
-	PlaceholderEntityAccessorImpl,
-	isPlaceholder,
+// Accessor types (interfaces only)
+export type {
+	FieldAccessor,
+	EntityAccessor,
+	EntityAccessorBase,
+	RootEntityAccessor,
+	HasOneAccessor,
+	HasOneRelationState,
+	PlaceholderEntityAccessor,
+	EntityListAccessor,
+	EntityListItem,
+	AccessorFromShape,
+	AccessorFromShapeInternal,
+	RelationChange,
 } from './accessors/index.js'
 
-// Store - identity map
-export { IdentityMap, getNestedValue, type EntityRecord } from './store/index.js'
+// Hook types
+export type {
+	BindxProviderProps,
+	UseEntityOptions,
+	UseEntityListOptions,
+	LoadingEntityAccessor,
+	LoadingEntityListAccessor,
+	ErrorEntityAccessor,
+	ErrorEntityListAccessor,
+	EntitySchema,
+} from './hooks/index.js'
 
-// Hooks - React integration
+// Adapter types
+export type {
+	BackendAdapter,
+	FetchOptions,
+	MockDataStore,
+	MockAdapterOptions,
+} from './adapter/index.js'
+
+// Core types
+export type {
+	EntityLoadResult,
+	EntityListLoadResult,
+	LoadEntityOptions,
+	LoadEntityListOptions,
+	SelectionInput,
+	FluentDefiner as CoreFluentDefiner,
+} from './core/index.js'
+
+// JSX types
+export type {
+	FieldRefMeta,
+	FieldRef,
+	HasManyRef,
+	HasOneRef,
+	EntityRef,
+	EntityFields,
+	FieldProps,
+	HasManyProps,
+	HasOneProps,
+	IfProps,
+	EntityComponentProps,
+	HasManyComponentOptions,
+	ShowProps,
+} from './jsx/index.js'
+
+// ============================================================================
+// Public API - Functions & Components
+// ============================================================================
+
+// Selection utilities
+export { createFragment, buildQueryFromSelection } from './selection/index.js'
+
+// Hooks
 export {
 	BindxProvider,
 	useBackendAdapter,
 	useIdentityMap,
 	useBindxContext,
 	createBindx,
-	type BindxProviderProps,
-	type UseEntityOptions,
-	type UseEntityListOptions,
-	type LoadingEntityAccessor,
-	type LoadingEntityListAccessor,
-	type EntitySchema,
 } from './hooks/index.js'
 
-// Adapter - backend interface
-export { type BackendAdapter, MockAdapter, type MockDataStore, type MockAdapterOptions } from './adapter/index.js'
+// Adapter
+export { MockAdapter } from './adapter/index.js'
 
-// Core - non-React services
-export {
-	EntityLoader,
-	createEntityLoader,
-	resolveSelectionMeta,
-	buildQuery,
-	type EntityLoadResult,
-	type EntityListLoadResult,
-	type LoadEntityOptions,
-	type LoadEntityListOptions,
-	type SelectionInput,
-	type FluentDefiner as CoreFluentDefiner,
-} from './core/index.js'
+// Core
+export { createEntityLoader, resolveSelectionMeta, buildQuery } from './core/index.js'
 
-// JSX Components - two-pass type-safe approach
+// JSX Components
 export {
-	// Types
-	BINDX_COMPONENT,
-	FIELD_REF_META,
-	type FieldRefMeta,
-	type FieldRef,
-	type HasManyRef,
-	type HasOneRef,
-	type EntityRef,
-	type EntityFields,
-	type FieldProps,
-	type HasManyProps,
-	type HasOneProps,
-	type IfProps,
-	type EntityComponentProps,
-	type JsxSelectionMeta,
-	type JsxSelectionFieldMeta,
-	type HasManyComponentOptions,
-	type ShowProps,
-	// Selection
-	SelectionMetaCollector,
-	mergeSelections,
-	createEmptySelection,
-	toSelectionMeta,
-	fromSelectionMeta,
-	// Proxy
-	createCollectorProxy,
-	createRuntimeAccessor,
-	// Analyzer
-	analyzeJsx,
-	collectSelection,
-	convertToQuerySelection,
-	debugSelection,
-	// Components
 	Field,
 	HasMany,
 	HasOne,
@@ -116,4 +115,20 @@ export {
 	Show,
 	Entity,
 	type EntityProps,
+	BINDX_COMPONENT,
+	FIELD_REF_META,
 } from './jsx/index.js'
+
+// ============================================================================
+// Internal API (for advanced use cases)
+// ============================================================================
+
+/**
+ * Internal exports for advanced use cases.
+ *
+ * @internal
+ * @remarks
+ * These exports are implementation details and may change without notice.
+ * Use the public API whenever possible.
+ */
+export * as __internal from './internal.js'

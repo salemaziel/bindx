@@ -1,13 +1,14 @@
 import { describe, test, expect } from 'bun:test'
-import {
+import { MockAdapter, __internal } from '../src/index.js'
+
+const {
 	FieldAccessorImpl,
 	EntityAccessorImpl,
 	EntityListAccessorImpl,
-	MockAdapter,
 	IdentityMap,
 	createSelectionBuilder,
-	SELECTION_META,
-} from '../src/index.js'
+	getSelectionMeta,
+} = __internal
 
 interface Author {
 	id: string
@@ -122,7 +123,7 @@ describe('EntityAccessorImpl', () => {
 
 		const builder = createSelectionBuilder<Article>()
 		const resultBuilder = builder.title()
-		const meta = resultBuilder[SELECTION_META]
+		const meta = getSelectionMeta(resultBuilder)
 
 		let changeCount = 0
 		const onChange = () => {
@@ -222,7 +223,7 @@ describe('EntityAccessorImpl', () => {
 
 		const builder = createSelectionBuilder<Article>()
 		const resultBuilder = builder.title()
-		const meta = resultBuilder[SELECTION_META]
+		const meta = getSelectionMeta(resultBuilder)
 
 		const accessor = new EntityAccessorImpl(
 			'a-1',
@@ -250,7 +251,7 @@ describe('EntityListAccessorImpl', () => {
 
 		const builder = createSelectionBuilder<Tag>()
 		const resultBuilder = builder.name()
-		const meta = resultBuilder[SELECTION_META]
+		const meta = getSelectionMeta(resultBuilder)
 
 		let changeCount = 0
 		const onChange = () => {

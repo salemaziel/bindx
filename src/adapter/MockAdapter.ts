@@ -1,5 +1,5 @@
 import type { QuerySpec, QueryFieldSpec } from '../selection/buildQuery.js'
-import type { BackendAdapter } from './types.js'
+import type { BackendAdapter, FetchOptions } from './types.js'
 
 /**
  * In-memory data store structure
@@ -37,11 +37,31 @@ export class MockAdapter implements BackendAdapter {
 	}
 
 	/**
-	 * Simulates network delay
+	 * Simulates network delay with abort support
 	 */
-	private async simulateDelay(): Promise<void> {
+	private async simulateDelay(signal?: AbortSignal): Promise<void> {
 		if (this.delay > 0) {
-			await new Promise(resolve => setTimeout(resolve, this.delay))
+			await new Promise<void>((resolve, reject) => {
+				const timeoutId = setTimeout(resolve, this.delay)
+
+				if (signal) {
+					if (signal.aborted) {
+						clearTimeout(timeoutId)
+						reject(new DOMException('Aborted', 'AbortError'))
+						return
+					}
+
+					signal.addEventListener('abort', () => {
+						clearTimeout(timeoutId)
+						reject(new DOMException('Aborted', 'AbortError'))
+					})
+				}
+			})
+		}
+
+		// Check if aborted after delay
+		if (signal?.aborted) {
+			throw new DOMException('Aborted', 'AbortError')
 		}
 	}
 
@@ -58,9 +78,10 @@ export class MockAdapter implements BackendAdapter {
 		entityType: string,
 		id: string,
 		query: QuerySpec,
+		options?: FetchOptions,
 	): Promise<Record<string, unknown>> {
 		this.log('fetchOne', { entityType, id, query })
-		await this.simulateDelay()
+		await this.simulateDelay(options?.signal)
 
 		const entityStore = this.store[entityType]
 		if (!entityStore) {
@@ -83,9 +104,10 @@ export class MockAdapter implements BackendAdapter {
 		entityType: string,
 		query: QuerySpec,
 		filter?: Record<string, unknown>,
+		options?: FetchOptions,
 	): Promise<Record<string, unknown>[]> {
 		this.log('fetchMany', { entityType, query, filter })
-		await this.simulateDelay()
+		await this.simulateDelay(options?.signal)
 
 		const entityStore = this.store[entityType]
 		if (!entityStore) {

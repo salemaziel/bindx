@@ -6,8 +6,10 @@ import {
 	BindxProvider,
 	createBindx,
 	MockAdapter,
-	IdentityMap,
+	__internal,
 } from '../src/index.js'
+
+const { IdentityMap } = __internal
 
 afterEach(() => {
 	cleanup()

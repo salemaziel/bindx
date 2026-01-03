@@ -24,6 +24,7 @@ export function createCollectorProxy<T>(
 			// Register the field access
 			selection.addField({
 				fieldName,
+				alias: fieldName,
 				path: fieldPath,
 				isArray: false,
 				isRelation: false,
@@ -88,6 +89,7 @@ function createCollectorFieldRef(
 			// Update selection to mark as array relation
 			selection.addField({
 				fieldName,
+				alias: fieldName,
 				path,
 				isArray: true,
 				isRelation: true,
@@ -110,6 +112,7 @@ function createCollectorFieldRef(
 				// Update selection to mark as has-one relation
 				selection.addField({
 					fieldName,
+					alias: fieldName,
 					path,
 					isArray: false,
 					isRelation: true,
@@ -119,6 +122,7 @@ function createCollectorFieldRef(
 				const nestedPath = [...path, nestedFieldName]
 				nestedSelection.addField({
 					fieldName: nestedFieldName,
+					alias: nestedFieldName,
 					path: [nestedFieldName],
 					isArray: false,
 					isRelation: false,

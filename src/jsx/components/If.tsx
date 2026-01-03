@@ -1,5 +1,5 @@
 import React, { type ReactElement, type ReactNode } from 'react'
-import type { IfProps, JsxSelectionFieldMeta, JsxSelectionMeta, SelectionProvider } from '../types.js'
+import type { IfProps, SelectionFieldMeta, SelectionMeta, SelectionProvider } from '../types.js'
 import { FIELD_REF_META, BINDX_COMPONENT } from '../types.js'
 import { mergeSelections, createEmptySelection } from '../SelectionMeta.js'
 
@@ -38,8 +38,8 @@ const ifWithSelection = If as typeof If & SelectionProvider & { [BINDX_COMPONENT
 
 ifWithSelection.getSelection = (
 	props: IfProps,
-	collectNested: (children: ReactNode) => JsxSelectionMeta,
-): JsxSelectionFieldMeta[] | null => {
+	collectNested: (children: ReactNode) => SelectionMeta,
+): SelectionFieldMeta[] | null => {
 	const thenSelection = collectNested(props.then)
 	const elseSelection = props.else ? collectNested(props.else) : createEmptySelection()
 
@@ -47,7 +47,7 @@ ifWithSelection.getSelection = (
 	mergeSelections(thenSelection, elseSelection)
 
 	// Return all fields from merged selection
-	const result: JsxSelectionFieldMeta[] = []
+	const result: SelectionFieldMeta[] = []
 	for (const field of thenSelection.fields.values()) {
 		result.push(field)
 	}
@@ -57,6 +57,7 @@ ifWithSelection.getSelection = (
 		const meta = props.condition[FIELD_REF_META]
 		result.push({
 			fieldName: meta.fieldName,
+			alias: meta.fieldName,
 			path: meta.path,
 			isArray: false,
 			isRelation: false,

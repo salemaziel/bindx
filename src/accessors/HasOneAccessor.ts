@@ -24,6 +24,7 @@ export class HasOneAccessorImpl<TData extends object>
 	private _serverEntity: EntityAccessorImpl<TData> | null
 	private _unsubscribe: (() => void) | null = null
 	private _isLoading = false
+	private _fetchVersion = 0
 
 	constructor(
 		private readonly parentEntityType: string,
@@ -203,6 +204,7 @@ export class HasOneAccessorImpl<TData extends object>
 		} else {
 			// Need to fetch entity from backend
 			this._isLoading = true
+			const version = ++this._fetchVersion
 			this.identityMap.setRelation(
 				this.parentEntityType,
 				this.parentEntityId,
@@ -213,17 +215,22 @@ export class HasOneAccessorImpl<TData extends object>
 				},
 			)
 
-			// Fetch asynchronously
-			this.fetchEntity(id)
+			// Fetch asynchronously with version check
+			this.fetchEntity(id, version)
 		}
 
 		this.onChange()
 	}
 
-	private async fetchEntity(id: string): Promise<void> {
+	private async fetchEntity(id: string, version: number): Promise<void> {
 		try {
 			const query = buildQueryFromSelection(this.meta)
 			const data = await this.adapter.fetchOne(this.relatedEntityType, id, query)
+
+			// Check if this fetch is still relevant (not superseded by newer connect call)
+			if (version !== this._fetchVersion) {
+				return
+			}
 
 			if (data) {
 				this._entity = new EntityAccessorImpl(
@@ -238,8 +245,11 @@ export class HasOneAccessorImpl<TData extends object>
 				)
 			}
 		} finally {
-			this._isLoading = false
-			this.onChange()
+			// Only update loading state if this is still the current fetch
+			if (version === this._fetchVersion) {
+				this._isLoading = false
+				this.onChange()
+			}
 		}
 	}
 

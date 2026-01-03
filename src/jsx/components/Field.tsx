@@ -1,5 +1,5 @@
 import React, { type ReactElement } from 'react'
-import type { FieldRef, FieldProps, JsxSelectionFieldMeta, SelectionProvider } from '../types.js'
+import type { FieldRef, FieldProps, SelectionFieldMeta, SelectionProvider } from '../types.js'
 import { FIELD_REF_META, BINDX_COMPONENT } from '../types.js'
 
 /**
@@ -39,10 +39,11 @@ export function Field<T>({ field, children, format }: FieldProps<T>): ReactEleme
 // Static method for selection extraction
 const fieldWithSelection = Field as typeof Field & SelectionProvider & { [BINDX_COMPONENT]: true }
 
-fieldWithSelection.getSelection = (props: FieldProps<unknown>): JsxSelectionFieldMeta => {
+fieldWithSelection.getSelection = (props: FieldProps<unknown>): SelectionFieldMeta => {
 	const meta = props.field[FIELD_REF_META]
 	return {
 		fieldName: meta.fieldName,
+		alias: meta.fieldName,
 		path: meta.path,
 		isArray: false,
 		isRelation: false,

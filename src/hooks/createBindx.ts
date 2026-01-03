@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useEffect } from 'react'
 import type { SelectionMeta, FluentFragment, SelectionBuilder } from '../selection/types.js'
 import { EntityAccessorImpl } from '../accessors/EntityAccessor.js'
 import type { EntityAccessor, EntityListAccessor } from '../accessors/types.js'
@@ -29,6 +29,23 @@ export interface UseEntityListOptions {
  */
 export interface LoadingEntityAccessor<TData> {
 	readonly isLoading: true
+	readonly isError: false
+	readonly isPersisting: false
+	readonly isDirty: false
+	readonly id: string
+	readonly fields: never
+	readonly data: never
+	persist(): Promise<void>
+	reset(): void
+}
+
+/**
+ * Result type for useEntity when error occurred
+ */
+export interface ErrorEntityAccessor<TData> {
+	readonly isLoading: false
+	readonly isError: true
+	readonly error: Error
 	readonly isPersisting: false
 	readonly isDirty: false
 	readonly id: string
@@ -44,6 +61,7 @@ export interface LoadingEntityAccessor<TData> {
 function createLoadingAccessor<TData>(id: string): LoadingEntityAccessor<TData> {
 	return {
 		isLoading: true,
+		isError: false,
 		isPersisting: false,
 		isDirty: false,
 		id,
@@ -63,10 +81,52 @@ function createLoadingAccessor<TData>(id: string): LoadingEntityAccessor<TData> 
 }
 
 /**
+ * Creates a placeholder accessor for error state
+ */
+function createErrorAccessor<TData>(id: string, error: Error): ErrorEntityAccessor<TData> {
+	return {
+		isLoading: false,
+		isError: true,
+		error,
+		isPersisting: false,
+		isDirty: false,
+		id,
+		get fields(): never {
+			throw new Error('Cannot access fields after error')
+		},
+		get data(): never {
+			throw new Error('Cannot access data after error')
+		},
+		async persist() {
+			// No-op after error
+		},
+		reset() {
+			// No-op after error
+		},
+	}
+}
+
+/**
  * Result type for useEntityList when loading
  */
 export interface LoadingEntityListAccessor<TData> {
 	readonly isLoading: true
+	readonly isError: false
+	readonly isDirty: false
+	readonly items: never
+	readonly length: 0
+	add(data: Partial<TData>): void
+	remove(key: string): void
+	move(fromIndex: number, toIndex: number): void
+}
+
+/**
+ * Result type for useEntityList when error occurred
+ */
+export interface ErrorEntityListAccessor<TData> {
+	readonly isLoading: false
+	readonly isError: true
+	readonly error: Error
 	readonly isDirty: false
 	readonly items: never
 	readonly length: 0
@@ -81,6 +141,7 @@ export interface LoadingEntityListAccessor<TData> {
 function createLoadingListAccessor<TData>(): LoadingEntityListAccessor<TData> {
 	return {
 		isLoading: true,
+		isError: false,
 		isDirty: false,
 		get items(): never {
 			throw new Error('Cannot access items while loading')
@@ -94,6 +155,31 @@ function createLoadingListAccessor<TData>(): LoadingEntityListAccessor<TData> {
 		},
 		move() {
 			// No-op while loading
+		},
+	}
+}
+
+/**
+ * Creates a placeholder accessor for entity list error state
+ */
+function createErrorListAccessor<TData>(error: Error): ErrorEntityListAccessor<TData> {
+	return {
+		isLoading: false,
+		isError: true,
+		error,
+		isDirty: false,
+		get items(): never {
+			throw new Error('Cannot access items after error')
+		},
+		length: 0,
+		add() {
+			// No-op after error
+		},
+		remove() {
+			// No-op after error
+		},
+		move() {
+			// No-op after error
 		},
 	}
 }
@@ -147,7 +233,7 @@ export function createBindx<TSchema extends { [K in keyof TSchema]: object }>() 
 		entityType: TEntityName,
 		options: UseEntityOptions,
 		definer: SelectionInput<TSchema[TEntityName], TResult>,
-	): EntityAccessor<TResult> | LoadingEntityAccessor<TResult> {
+	): EntityAccessor<TResult> | LoadingEntityAccessor<TResult> | ErrorEntityAccessor<TResult> {
 		// Track accessor for cleanup
 		const accessorRef = useRef<EntityAccessorImpl<TResult> | null>(null)
 
@@ -157,14 +243,22 @@ export function createBindx<TSchema extends { [K in keyof TSchema]: object }>() 
 			definer,
 		)
 
+		// Cleanup accessor on unmount
+		useEffect(() => {
+			return () => {
+				accessorRef.current?._dispose()
+				accessorRef.current = null
+			}
+		}, [])
+
 		// Return loading state
 		if (state.status === 'loading' || state.status === 'not_found') {
 			return createLoadingAccessor<TResult>(options.id)
 		}
 
+		// Return error state
 		if (state.status === 'error') {
-			console.error(`Failed to fetch ${entityType}:${options.id}:`, state.error)
-			return createLoadingAccessor<TResult>(options.id)
+			return createErrorAccessor<TResult>(options.id, state.error)
 		}
 
 		// Create or update accessor
@@ -194,7 +288,7 @@ export function createBindx<TSchema extends { [K in keyof TSchema]: object }>() 
 		entityType: TEntityName,
 		options: UseEntityListOptions,
 		definer: SelectionInput<TSchema[TEntityName], TResult>,
-	): EntityListAccessor<TResult> | LoadingEntityListAccessor<TResult> {
+	): EntityListAccessor<TResult> | LoadingEntityListAccessor<TResult> | ErrorEntityListAccessor<TResult> {
 		// Track accessor for cleanup
 		const accessorRef = useRef<EntityListAccessorImpl<TResult> | null>(null)
 
@@ -204,14 +298,22 @@ export function createBindx<TSchema extends { [K in keyof TSchema]: object }>() 
 			definer,
 		)
 
+		// Cleanup accessor on unmount
+		useEffect(() => {
+			return () => {
+				accessorRef.current?._dispose()
+				accessorRef.current = null
+			}
+		}, [])
+
 		// Return loading state
 		if (state.status === 'loading') {
 			return createLoadingListAccessor<TResult>()
 		}
 
+		// Return error state
 		if (state.status === 'error') {
-			console.error(`Failed to fetch ${entityType} list:`, state.error)
-			return createLoadingListAccessor<TResult>()
+			return createErrorListAccessor<TResult>(state.error)
 		}
 
 		// Create or update accessor

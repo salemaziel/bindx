@@ -1,10 +1,7 @@
 import { describe, test, expect } from 'bun:test'
-import {
-	createSelectionBuilder,
-	createFragment,
-	buildQueryFromSelection,
-	SELECTION_META,
-} from '../src/index.js'
+import { createFragment, buildQueryFromSelection, __internal } from '../src/index.js'
+
+const { createSelectionBuilder, getSelectionMeta } = __internal
 
 interface Author {
 	id: string
@@ -30,7 +27,7 @@ describe('Query Building with Fluent API', () => {
 		test('should extract scalar field paths', () => {
 			const builder = createSelectionBuilder<Article>()
 			const result = builder.title().content()
-			const meta = result[SELECTION_META]
+			const meta = getSelectionMeta(result)
 
 			expect(meta.fields.size).toBe(2)
 			expect(meta.fields.get('title')?.fieldName).toBe('title')
@@ -40,7 +37,7 @@ describe('Query Building with Fluent API', () => {
 		test('should extract nested object paths with callback', () => {
 			const builder = createSelectionBuilder<Article>()
 			const result = builder.title().author(a => a.name().email())
-			const meta = result[SELECTION_META]
+			const meta = getSelectionMeta(result)
 
 			expect(meta.fields.size).toBe(2)
 			expect(meta.fields.get('title')?.fieldName).toBe('title')
@@ -53,7 +50,7 @@ describe('Query Building with Fluent API', () => {
 		test('should handle has-many with callback', () => {
 			const builder = createSelectionBuilder<Article>()
 			const result = builder.title().tags(t => t.name())
-			const meta = result[SELECTION_META]
+			const meta = getSelectionMeta(result)
 
 			expect(meta.fields.size).toBe(2)
 			expect(meta.fields.get('tags')?.fieldName).toBe('tags')
@@ -64,7 +61,7 @@ describe('Query Building with Fluent API', () => {
 		test('should support alias with scalar field', () => {
 			const builder = createSelectionBuilder<Article>()
 			const result = builder.title({ as: 'headline' })
-			const meta = result[SELECTION_META]
+			const meta = getSelectionMeta(result)
 
 			expect(meta.fields.size).toBe(1)
 			expect(meta.fields.get('headline')?.fieldName).toBe('title')
@@ -76,7 +73,7 @@ describe('Query Building with Fluent API', () => {
 		test('should build query for scalar fields', () => {
 			const builder = createSelectionBuilder<Article>()
 			const result = builder.title()
-			const meta = result[SELECTION_META]
+			const meta = getSelectionMeta(result)
 			const query = buildQueryFromSelection(meta)
 
 			expect(query.fields.length).toBe(1)
@@ -87,7 +84,7 @@ describe('Query Building with Fluent API', () => {
 		test('should build query for nested objects', () => {
 			const builder = createSelectionBuilder<Article>()
 			const result = builder.author(a => a.name())
-			const meta = result[SELECTION_META]
+			const meta = getSelectionMeta(result)
 			const query = buildQueryFromSelection(meta)
 
 			expect(query.fields.length).toBe(1)
@@ -101,7 +98,7 @@ describe('Query Building with Fluent API', () => {
 		test('should build query with has-many parameters', () => {
 			const builder = createSelectionBuilder<Article>()
 			const result = builder.tags({ filter: { active: true }, limit: 10 }, t => t.name())
-			const meta = result[SELECTION_META]
+			const meta = getSelectionMeta(result)
 			const query = buildQueryFromSelection(meta)
 
 			expect(query.fields.length).toBe(1)
@@ -126,7 +123,7 @@ describe('Query Building with Fluent API', () => {
 
 			const builder = createSelectionBuilder<Article>()
 			const result = builder.title().author(AuthorFragment)
-			const meta = result[SELECTION_META]
+			const meta = getSelectionMeta(result)
 
 			expect(meta.fields.size).toBe(2)
 			expect(meta.fields.get('author')?.nested).toBeDefined()
@@ -139,7 +136,7 @@ describe('Query Building with Fluent API', () => {
 
 			const builder = createSelectionBuilder<Article>()
 			const result = builder.tags(TagFragment)
-			const meta = result[SELECTION_META]
+			const meta = getSelectionMeta(result)
 
 			expect(meta.fields.size).toBe(1)
 			expect(meta.fields.get('tags')?.nested).toBeDefined()

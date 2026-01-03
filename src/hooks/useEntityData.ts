@@ -82,7 +82,7 @@ export function useEntityData<TModel, TResult extends object>(
 
 	// Fetch entity
 	useEffect(() => {
-		let cancelled = false
+		const controller = new AbortController()
 
 		setState({ status: 'loading' })
 
@@ -90,32 +90,39 @@ export function useEntityData<TModel, TResult extends object>(
 			const loader = loaderRef.current!
 			const query = buildQuery(selection)
 
-			const result = await loader.loadOne<TResult>({
-				entityType: options.entityType,
-				id: options.id,
-				query,
-				useCache: options.useCache,
-			})
+			try {
+				const result = await loader.loadOne<TResult>({
+					entityType: options.entityType,
+					id: options.id,
+					query,
+					useCache: options.useCache,
+					signal: controller.signal,
+				})
 
-			if (cancelled) return
-
-			switch (result.status) {
-				case 'success':
-					setState({ status: 'success', data: result.data })
-					break
-				case 'error':
-					setState({ status: 'error', error: result.error })
-					break
-				case 'not_found':
-					setState({ status: 'not_found' })
-					break
+				switch (result.status) {
+					case 'success':
+						setState({ status: 'success', data: result.data })
+						break
+					case 'error':
+						setState({ status: 'error', error: result.error })
+						break
+					case 'not_found':
+						setState({ status: 'not_found' })
+						break
+				}
+			} catch (error) {
+				// Ignore abort errors
+				if (error instanceof DOMException && error.name === 'AbortError') {
+					return
+				}
+				throw error
 			}
 		}
 
 		load()
 
 		return () => {
-			cancelled = true
+			controller.abort()
 		}
 	}, [options.entityType, options.id, options.useCache, loadVersion])
 
@@ -206,7 +213,7 @@ export function useEntityListData<TModel, TResult extends object>(
 
 	// Fetch entities
 	useEffect(() => {
-		let cancelled = false
+		const controller = new AbortController()
 
 		setState({ status: 'loading' })
 
@@ -214,28 +221,35 @@ export function useEntityListData<TModel, TResult extends object>(
 			const loader = loaderRef.current!
 			const query = buildQuery(selection)
 
-			const result = await loader.loadMany<TResult>({
-				entityType: options.entityType,
-				query,
-				filter: options.filter,
-			})
+			try {
+				const result = await loader.loadMany<TResult>({
+					entityType: options.entityType,
+					query,
+					filter: options.filter,
+					signal: controller.signal,
+				})
 
-			if (cancelled) return
-
-			switch (result.status) {
-				case 'success':
-					setState({ status: 'success', data: result.data })
-					break
-				case 'error':
-					setState({ status: 'error', error: result.error })
-					break
+				switch (result.status) {
+					case 'success':
+						setState({ status: 'success', data: result.data })
+						break
+					case 'error':
+						setState({ status: 'error', error: result.error })
+						break
+				}
+			} catch (error) {
+				// Ignore abort errors
+				if (error instanceof DOMException && error.name === 'AbortError') {
+					return
+				}
+				throw error
 			}
 		}
 
 		load()
 
 		return () => {
-			cancelled = true
+			controller.abort()
 		}
 	}, [options.entityType, filterKey, loadVersion])
 

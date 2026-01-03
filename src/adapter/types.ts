@@ -1,6 +1,16 @@
 import type { QuerySpec } from '../selection/buildQuery.js'
 
 /**
+ * Options for fetch operations
+ */
+export interface FetchOptions {
+	/**
+	 * AbortSignal for cancelling the request
+	 */
+	signal?: AbortSignal
+}
+
+/**
  * Interface for backend adapters.
  * Implement this to connect bindx to your data source.
  */
@@ -11,9 +21,15 @@ export interface BackendAdapter {
 	 * @param entityType - The type/name of the entity (e.g., 'Article', 'User')
 	 * @param id - The entity's unique identifier
 	 * @param query - Specification of which fields to fetch
+	 * @param options - Optional fetch options including AbortSignal
 	 * @returns The fetched data projected according to query
 	 */
-	fetchOne(entityType: string, id: string, query: QuerySpec): Promise<Record<string, unknown>>
+	fetchOne(
+		entityType: string,
+		id: string,
+		query: QuerySpec,
+		options?: FetchOptions,
+	): Promise<Record<string, unknown>>
 
 	/**
 	 * Fetches multiple entities
@@ -21,12 +37,14 @@ export interface BackendAdapter {
 	 * @param entityType - The type/name of the entities
 	 * @param query - Specification of which fields to fetch
 	 * @param filter - Optional filter criteria (adapter-specific)
+	 * @param options - Optional fetch options including AbortSignal
 	 * @returns Array of fetched entities
 	 */
 	fetchMany?(
 		entityType: string,
 		query: QuerySpec,
 		filter?: Record<string, unknown>,
+		options?: FetchOptions,
 	): Promise<Record<string, unknown>[]>
 
 	/**

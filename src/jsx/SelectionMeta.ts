@@ -1,16 +1,15 @@
-import type { JsxSelectionMeta, JsxSelectionFieldMeta } from './types.js'
 import type { SelectionMeta, SelectionFieldMeta } from '../selection/types.js'
 
 /**
  * Class for collecting field selection metadata during collection phase
  */
-export class SelectionMetaCollector implements JsxSelectionMeta {
-	readonly fields = new Map<string, JsxSelectionFieldMeta>()
+export class SelectionMetaCollector implements SelectionMeta {
+	readonly fields = new Map<string, SelectionFieldMeta>()
 
 	/**
 	 * Add a field to the selection
 	 */
-	addField(fieldMeta: JsxSelectionFieldMeta): void {
+	addField(fieldMeta: SelectionFieldMeta): void {
 		const key = fieldMeta.path.join('.')
 		const existing = this.fields.get(key)
 
@@ -29,8 +28,8 @@ export class SelectionMetaCollector implements JsxSelectionMeta {
 	/**
 	 * Get all root-level fields (not nested)
 	 */
-	getRootFields(): JsxSelectionFieldMeta[] {
-		const result: JsxSelectionFieldMeta[] = []
+	getRootFields(): SelectionFieldMeta[] {
+		const result: SelectionFieldMeta[] = []
 		for (const field of this.fields.values()) {
 			if (field.path.length === 1) {
 				result.push(field)
@@ -42,7 +41,7 @@ export class SelectionMetaCollector implements JsxSelectionMeta {
 	/**
 	 * Convert to plain object for serialization
 	 */
-	toJSON(): JsxSelectionMeta {
+	toJSON(): SelectionMeta {
 		return {
 			fields: new Map(this.fields),
 		}
@@ -52,7 +51,7 @@ export class SelectionMetaCollector implements JsxSelectionMeta {
 /**
  * Merge two selections together
  */
-export function mergeSelections(target: JsxSelectionMeta, source: JsxSelectionMeta): void {
+export function mergeSelections(target: SelectionMeta, source: SelectionMeta): void {
 	for (const [key, field] of source.fields) {
 		const existing = target.fields.get(key)
 		if (existing) {
@@ -70,57 +69,22 @@ export function mergeSelections(target: JsxSelectionMeta, source: JsxSelectionMe
 /**
  * Create empty selection metadata
  */
-export function createEmptySelection(): JsxSelectionMeta {
+export function createEmptySelection(): SelectionMeta {
 	return { fields: new Map() }
 }
 
 /**
- * Converts JsxSelectionMeta to SelectionMeta (standard selection format).
- * This allows JSX-collected selection to be used with the standard query building pipeline.
+ * @deprecated Types are now unified - this is an identity function
+ * Converts JsxSelectionMeta to SelectionMeta (now the same type).
  */
-export function toSelectionMeta(jsxMeta: JsxSelectionMeta): SelectionMeta {
-	const fields = new Map<string, SelectionFieldMeta>()
-
-	for (const [key, jsxField] of jsxMeta.fields) {
-		// Only include root-level fields (path length 1)
-		if (jsxField.path.length !== 1) continue
-
-		const field: SelectionFieldMeta = {
-			fieldName: jsxField.fieldName,
-			alias: jsxField.fieldName, // Use field name as alias
-			isArray: jsxField.isArray,
-			...(jsxField.nested && { nested: toSelectionMeta(jsxField.nested) }),
-			...(jsxField.hasManyParams && { hasManyParams: jsxField.hasManyParams }),
-		}
-
-		fields.set(jsxField.fieldName, field)
-	}
-
-	return { fields }
+export function toSelectionMeta(meta: SelectionMeta): SelectionMeta {
+	return meta
 }
 
 /**
- * Converts SelectionMeta to JsxSelectionMeta.
- * Used for interoperability between systems.
+ * @deprecated Types are now unified - this is an identity function
+ * Converts SelectionMeta to JsxSelectionMeta (now the same type).
  */
-export function fromSelectionMeta(meta: SelectionMeta, basePath: string[] = []): JsxSelectionMeta {
-	const fields = new Map<string, JsxSelectionFieldMeta>()
-
-	for (const [alias, field] of meta.fields) {
-		const path = [...basePath, field.fieldName]
-		const isRelation = !!field.nested
-
-		const jsxField: JsxSelectionFieldMeta = {
-			fieldName: field.fieldName,
-			path,
-			isArray: field.isArray,
-			isRelation,
-			...(field.nested && { nested: fromSelectionMeta(field.nested, path) }),
-			...(field.hasManyParams && { hasManyParams: field.hasManyParams }),
-		}
-
-		fields.set(path.join('.'), jsxField)
-	}
-
-	return { fields }
+export function fromSelectionMeta(meta: SelectionMeta): SelectionMeta {
+	return meta
 }

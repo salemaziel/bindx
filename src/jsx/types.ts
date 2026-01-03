@@ -1,4 +1,18 @@
 import type { ReactNode } from 'react'
+import type { SelectionMeta, SelectionFieldMeta } from '../selection/types.js'
+
+// Re-export unified types for backwards compatibility
+export type { SelectionMeta, SelectionFieldMeta }
+
+/**
+ * @deprecated Use SelectionMeta from selection/types.ts instead
+ */
+export type JsxSelectionMeta = SelectionMeta
+
+/**
+ * @deprecated Use SelectionFieldMeta from selection/types.ts instead
+ */
+export type JsxSelectionFieldMeta = SelectionFieldMeta
 
 /**
  * Marker symbol for identifying bindx components
@@ -153,29 +167,6 @@ export interface EntityRef<T> {
 	readonly isDirty: boolean
 }
 
-/**
- * Selection metadata collected during first pass
- */
-export interface JsxSelectionMeta {
-	fields: Map<string, JsxSelectionFieldMeta>
-}
-
-/**
- * Metadata for a single field in selection
- */
-export interface JsxSelectionFieldMeta {
-	fieldName: string
-	path: string[]
-	isArray: boolean
-	isRelation: boolean
-	nested?: JsxSelectionMeta
-	hasManyParams?: {
-		filter?: unknown
-		orderBy?: unknown
-		limit?: number
-		offset?: number
-	}
-}
 
 /**
  * Props for Field component
@@ -240,6 +231,6 @@ export interface IfProps {
 export interface SelectionProvider {
 	getSelection(
 		props: unknown,
-		collectNested: (children: ReactNode) => JsxSelectionMeta,
-	): JsxSelectionFieldMeta | JsxSelectionFieldMeta[] | null
+		collectNested: (children: ReactNode) => SelectionMeta,
+	): SelectionFieldMeta | SelectionFieldMeta[] | null
 }
