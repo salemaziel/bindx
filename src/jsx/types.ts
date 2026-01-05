@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react'
 import type { SelectionMeta, SelectionFieldMeta } from '../selection/types.js'
-import type { EntityFields, FieldRefMeta } from '../handles/types.js'
+import type { EntityFields, FieldRefMeta, SelectedEntityFields } from '../handles/types.js'
 
 // Re-export unified types for backwards compatibility
 export type { SelectionMeta, SelectionFieldMeta }
 
 // Re-export from handles/types for backwards compatibility
-export type { EntityFields, FieldRefMeta, ScalarKeys, HasManyKeys, HasOneKeys } from '../handles/types.js'
+export type { EntityFields, FieldRefMeta, ScalarKeys, HasManyKeys, HasOneKeys, SelectedEntityFields } from '../handles/types.js'
 
 /**
  * @deprecated Use SelectionMeta from selection/types.ts instead
@@ -55,9 +55,12 @@ export interface FieldRef<T> {
 }
 
 /**
- * Reference to a has-many relation
+ * Reference to a has-many relation - selection-aware version
+ *
+ * @typeParam TEntity - The full entity type
+ * @typeParam TSelected - The selected subset of fields (defaults to TEntity for backwards compatibility)
  */
-export interface HasManyRef<T> {
+export interface HasManyRef<TEntity, TSelected = TEntity> {
 	/** Internal metadata for collection phase */
 	readonly [FIELD_REF_META]: FieldRefMeta
 
@@ -67,20 +70,26 @@ export interface HasManyRef<T> {
 	/** Whether any item has been modified */
 	readonly isDirty: boolean
 
-	/** Iterate over items */
-	map<R>(fn: (item: EntityRef<T>, index: number) => R): R[]
+	/** Iterate over items - returns selection-aware entity refs */
+	map<R>(fn: (item: EntityRef<TEntity, TSelected>, index: number) => R): R[]
 
 	/** Add a new item */
-	add(data?: Partial<T>): void
+	add(data?: Partial<TEntity>): void
 
 	/** Remove item by key */
 	remove(key: string): void
+
+	/** Type brand - ensures HasManyRef<Author> is not assignable to HasManyRef<Tag> */
+	readonly __entityType: TEntity
 }
 
 /**
- * Reference to a has-one relation
+ * Reference to a has-one relation - selection-aware version
+ *
+ * @typeParam TEntity - The full entity type
+ * @typeParam TSelected - The selected subset of fields (defaults to TEntity for backwards compatibility)
  */
-export interface HasOneRef<T> {
+export interface HasOneRef<TEntity, TSelected = TEntity> {
 	/** Internal metadata for collection phase */
 	readonly [FIELD_REF_META]: FieldRefMeta
 
@@ -90,31 +99,50 @@ export interface HasOneRef<T> {
 	/** Whether relation is dirty */
 	readonly isDirty: boolean
 
-	/** Nested entity fields */
-	readonly fields: EntityFields<T>
+	/** Nested entity fields - only selected fields are accessible */
+	readonly fields: SelectedEntityFields<TEntity, TSelected>
 
 	/** Connect to existing entity */
 	connect(id: string): void
 
 	/** Disconnect relation */
 	disconnect(): void
+
+	/** Type brand - ensures HasOneRef<Author> is not assignable to HasOneRef<Tag> */
+	readonly __entityType: TEntity
 }
 
 /**
- * Reference to an entity - provides typed field access
+ * Reference to an entity - provides typed field access.
+ * Selection-aware: only selected fields are accessible.
+ *
+ * @typeParam TEntity - The full entity type
+ * @typeParam TSelected - The selected subset of fields (defaults to TEntity for backwards compatibility)
+ *
+ * @example
+ * ```ts
+ * // Full access (backwards compatible)
+ * EntityRef<Author>  // All fields accessible
+ *
+ * // Selection-aware
+ * EntityRef<Author, { name: string; email: string }>  // Only name and email accessible
+ * ```
  */
-export interface EntityRef<T> {
+export interface EntityRef<TEntity, TSelected = TEntity> {
 	/** Entity ID */
 	readonly id: string
 
-	/** Typed field accessors */
-	readonly fields: EntityFields<T>
+	/** Typed field accessors - only selected fields are accessible */
+	readonly fields: SelectedEntityFields<TEntity, TSelected>
 
 	/** Raw data snapshot */
-	readonly data: T | null
+	readonly data: TSelected | null
 
 	/** Whether entity is dirty */
 	readonly isDirty: boolean
+
+	/** Type brand - ensures EntityRef<Author> is not assignable to EntityRef<Tag> */
+	readonly __entityType: TEntity
 }
 
 
@@ -138,11 +166,15 @@ export interface HasManyComponentOptions {
 }
 
 /**
- * Props for HasMany component
+ * Props for HasMany component.
+ * Selection-aware: children callback receives EntityRef with only selected fields.
+ *
+ * @typeParam TEntity - The full entity type
+ * @typeParam TSelected - The selected subset of fields (defaults to TEntity for backwards compatibility)
  */
-export interface HasManyProps<T> {
-	field: HasManyRef<T>
-	children: (item: EntityRef<T>, index: number) => ReactNode
+export interface HasManyProps<TEntity, TSelected = TEntity> {
+	field: HasManyRef<TEntity, TSelected>
+	children: (item: EntityRef<TEntity, TSelected>, index: number) => ReactNode
 	filter?: unknown
 	orderBy?: unknown
 	limit?: number
@@ -150,11 +182,15 @@ export interface HasManyProps<T> {
 }
 
 /**
- * Props for HasOne component
+ * Props for HasOne component.
+ * Selection-aware: children callback receives EntityRef with only selected fields.
+ *
+ * @typeParam TEntity - The full entity type
+ * @typeParam TSelected - The selected subset of fields (defaults to TEntity for backwards compatibility)
  */
-export interface HasOneProps<T> {
-	field: HasOneRef<T>
-	children: (entity: EntityRef<T>) => ReactNode
+export interface HasOneProps<TEntity, TSelected = TEntity> {
+	field: HasOneRef<TEntity, TSelected>
+	children: (entity: EntityRef<TEntity, TSelected>) => ReactNode
 }
 
 /**

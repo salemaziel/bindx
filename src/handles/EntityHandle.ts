@@ -5,8 +5,8 @@ import type { SnapshotStore } from '../store/SnapshotStore.js'
 import type { SchemaRegistry } from '../schema/SchemaRegistry.js'
 import type { EntitySnapshot } from '../store/snapshots.js'
 import { resetEntity, commitEntity } from '../core/actions.js'
-import { FIELD_REF_META, type HasOneRef, type HasManyRef, type FieldRefMeta } from '../jsx/types.js'
-import type { EntityFields } from './types.js'
+import { FIELD_REF_META, type HasOneRef, type HasManyRef, type FieldRefMeta, type EntityRef } from '../jsx/types.js'
+import type { EntityFields, SelectedEntityFields } from './types.js'
 
 // Type for relation handle cache
 type RelationHandle = HasOneHandle<object> | HasManyListHandle<object>
@@ -281,9 +281,12 @@ export class EntityHandle<T extends object = object> extends EntityRelatedHandle
 /**
  * HasOneHandle provides access to a has-one relation.
  * Implements HasOneRef interface for JSX compatibility.
+ *
+ * @typeParam TEntity - The full entity type of the related entity
+ * @typeParam TSelected - The selected subset of fields (defaults to TEntity for backwards compatibility)
  */
-export class HasOneHandle<T extends object = object> extends EntityRelatedHandle implements HasOneRef<T> {
-	private entityHandleCache: EntityHandle<T> | null = null
+export class HasOneHandle<TEntity extends object = object, TSelected = TEntity> extends EntityRelatedHandle implements HasOneRef<TEntity, TSelected> {
+	private entityHandleCache: EntityHandle<TEntity> | null = null
 
 	constructor(
 		parentEntityType: string,
@@ -366,24 +369,24 @@ export class HasOneHandle<T extends object = object> extends EntityRelatedHandle
 	 * Implements HasOneRef interface.
 	 * Returns proxy with null values if relation is disconnected.
 	 */
-	get fields(): EntityFields<T> {
+	get fields(): SelectedEntityFields<TEntity, TSelected> {
 		const entity = this.entity
 		if (!entity) {
 			// Return proxy that returns null FieldHandles for disconnected relations
-			return createNullFieldsProxy<T>()
+			return createNullFieldsProxy<TEntity>() as SelectedEntityFields<TEntity, TSelected>
 		}
-		return entity.fields
+		return entity.fields as unknown as SelectedEntityFields<TEntity, TSelected>
 	}
 
 	/**
 	 * Gets the related entity handle if connected.
 	 */
-	get entity(): EntityHandle<T> | null {
+	get entity(): EntityHandle<TEntity> | null {
 		const id = this.relatedId
 		if (!id) return null
 
 		if (!this.entityHandleCache || this.entityHandleCache.id !== id) {
-			this.entityHandleCache = new EntityHandle<T>(
+			this.entityHandleCache = new EntityHandle<TEntity>(
 				id,
 				this.targetType,
 				this.store,
@@ -463,14 +466,25 @@ export class HasOneHandle<T extends object = object> extends EntityRelatedHandle
 		this.entityHandleCache?.dispose()
 		this.entityHandleCache = null
 	}
+
+	/**
+	 * Type brand - ensures HasOneRef<Author> is not assignable to HasOneRef<Tag>.
+	 * This is a phantom property that only exists in the type system.
+	 */
+	get __entityType(): TEntity {
+		return undefined as unknown as TEntity
+	}
 }
 
 /**
  * HasManyListHandle provides access to a has-many relation (list of entities).
  * Implements HasManyRef interface for JSX compatibility.
+ *
+ * @typeParam TEntity - The full entity type of items in the relation
+ * @typeParam TSelected - The selected subset of fields (defaults to TEntity for backwards compatibility)
  */
-export class HasManyListHandle<T extends object = object> extends EntityRelatedHandle implements HasManyRef<T> {
-	private itemHandleCache = new Map<string, EntityHandle<T>>()
+export class HasManyListHandle<TEntity extends object = object, TSelected = TEntity> extends EntityRelatedHandle implements HasManyRef<TEntity, TSelected> {
+	private itemHandleCache = new Map<string, EntityHandle<TEntity>>()
 
 	constructor(
 		parentEntityType: string,
@@ -500,7 +514,7 @@ export class HasManyListHandle<T extends object = object> extends EntityRelatedH
 	/**
 	 * Gets the list of items as entity handles.
 	 */
-	get items(): EntityHandle<T>[] {
+	get items(): EntityHandle<TEntity>[] {
 		const data = this.getEntityData()
 		if (!data) return []
 
@@ -520,11 +534,11 @@ export class HasManyListHandle<T extends object = object> extends EntityRelatedH
 	/**
 	 * Gets a handle for a specific item.
 	 */
-	getItemHandle(itemId: string): EntityHandle<T> {
+	getItemHandle(itemId: string): EntityHandle<TEntity> {
 		let handle = this.itemHandleCache.get(itemId)
 
 		if (!handle) {
-			handle = new EntityHandle<T>(
+			handle = new EntityHandle<TEntity>(
 				itemId,
 				this.itemType,
 				this.store,
@@ -547,17 +561,28 @@ export class HasManyListHandle<T extends object = object> extends EntityRelatedH
 
 	/**
 	 * Maps over items.
-	 * Implements HasManyRef interface.
+	 * Implements HasManyRef interface - returns selection-aware entity refs.
 	 */
-	map<R>(fn: (handle: EntityHandle<T>, index: number) => R): R[] {
-		return this.items.map(fn)
+	map<R>(fn: (item: EntityRef<TEntity, TSelected>, index: number) => R): R[] {
+		// Cast items to selection-aware EntityRef type for type safety
+		return this.items.map((handle, index) => {
+			// Create a selection-aware view of the handle
+			const ref: EntityRef<TEntity, TSelected> = {
+				id: handle.id,
+				fields: handle.fields as unknown as SelectedEntityFields<TEntity, TSelected>,
+				data: handle.data as TSelected | null,
+				isDirty: handle.isDirty,
+				__entityType: undefined as unknown as TEntity,
+			}
+			return fn(ref, index)
+		})
 	}
 
 	/**
 	 * Adds a new item to the list.
 	 * Implements HasManyRef interface.
 	 */
-	add(_data?: Partial<T>): void {
+	add(_data?: Partial<TEntity>): void {
 		// TODO: Implement add - requires store support for list mutations
 		this.assertNotDisposed()
 	}
@@ -581,6 +606,14 @@ export class HasManyListHandle<T extends object = object> extends EntityRelatedH
 			handle.dispose()
 		}
 		this.itemHandleCache.clear()
+	}
+
+	/**
+	 * Type brand - ensures HasManyRef<Author> is not assignable to HasManyRef<Tag>.
+	 * This is a phantom property that only exists in the type system.
+	 */
+	get __entityType(): TEntity {
+		return undefined as unknown as TEntity
 	}
 }
 

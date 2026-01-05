@@ -18,23 +18,40 @@ export const ENTITY_FRAGMENT_COMPONENT = Symbol('ENTITY_FRAGMENT_COMPONENT')
 export const ENTITY_FRAGMENT_PROPS = Symbol('ENTITY_FRAGMENT_PROPS')
 
 /**
- * Extract keys from props type where value is EntityRef<any>
+ * Extract keys from props type where value is EntityRef<any, any>
  */
 export type EntityPropKeys<P> = {
-	[K in keyof P]: P[K] extends EntityRef<infer _T> ? K : never
+	[K in keyof P]: P[K] extends EntityRef<infer _T, infer _S> ? K : never
 }[keyof P]
 
 /**
- * Extract the entity type from an EntityRef prop
+ * Extract the full entity type from an EntityRef prop
  */
-export type EntityFromProp<P, K extends keyof P> = P[K] extends EntityRef<infer T> ? T : never
+export type EntityFromProp<P, K extends keyof P> = P[K] extends EntityRef<infer T, infer _S> ? T : never
 
 /**
- * Fragment properties - $propName for each entity prop
- * The result type is the full entity type since the fragment selects from that entity.
+ * Extract the selection type from an EntityRef prop.
+ * If EntityRef<E, S>, returns S (the selected subset).
+ * If EntityRef<E> (no explicit selection), returns E (full entity).
+ */
+export type SelectionFromProp<P, K extends keyof P> = P[K] extends EntityRef<infer _T, infer S> ? S : never
+
+/**
+ * Fragment properties - $propName for each entity prop.
+ * The result type matches the selection type from the prop's EntityRef.
+ *
+ * When you declare:
+ *   interface Props { author: EntityRef<Author, { name: string }> }
+ *
+ * The fragment becomes:
+ *   Component.$author: FluentFragment<Author, { name: string }>
+ *
+ * This ensures type-safe interoperability:
+ * - The component only sees selected fields
+ * - The fragment advertises what it actually selects
  */
 export type EntityFragmentProperties<P> = {
-	[K in EntityPropKeys<P> as `$${K & string}`]: FluentFragment<EntityFromProp<P, K>, EntityFromProp<P, K>>
+	[K in EntityPropKeys<P> as `$${K & string}`]: FluentFragment<EntityFromProp<P, K>, SelectionFromProp<P, K>>
 }
 
 /**
@@ -71,31 +88,45 @@ export type EntityFragmentComponentWithProps<P> = EntityFragmentComponent<P> & E
  * 1. As a JSX component under `<Entity>`: `<AuthorInfo author={author} />`
  * 2. As a fragment in `useEntity`: `e.author(AuthorInfo.$author)`
  *
- * Entity props (those typed as `EntityRef<T>`) are automatically detected
- * and their selections are collected from the render function.
+ * ## Type-Safe Selection Declaration
  *
- * @example
+ * For full type safety, declare the selection in the EntityRef type:
+ *
  * ```tsx
  * interface AuthorInfoProps {
- *   author: EntityRef<Author>
- *   showEmail?: boolean
+ *   // Explicitly declare what fields this component needs
+ *   author: EntityRef<Author, { name: string; email: string }>
  * }
  *
  * const AuthorInfo = createEntityFragment<AuthorInfoProps>(
- *   ({ author, showEmail }) => (
+ *   ({ author }) => (
  *     <div>
- *       <Field field={author.fields.name} />
- *       {showEmail && <Field field={author.fields.email} />}
- *       <HasMany field={author.fields.articles}>
- *         {article => <Field field={article.fields.title} />}
- *       </HasMany>
+ *       <Field field={author.fields.name} />   // ✓ Allowed
+ *       <Field field={author.fields.email} />  // ✓ Allowed
+ *       // author.fields.bio  // ✗ Type error! Not in selection
  *     </div>
  *   )
  * )
  *
+ * // AuthorInfo.$author is FluentFragment<Author, { name: string; email: string }>
+ * // This enables type-safe composition in useEntity
+ * ```
+ *
+ * ## Backwards Compatible Usage
+ *
+ * Without explicit selection, the full entity type is used:
+ *
+ * ```tsx
+ * interface AuthorInfoProps {
+ *   author: EntityRef<Author>  // Full entity type
+ * }
+ * ```
+ *
+ * @example
+ * ```tsx
  * // Usage in JSX
  * <Entity name="Author" id={id}>
- *   {author => <AuthorInfo author={author} showEmail />}
+ *   {author => <AuthorInfo author={author} />}
  * </Entity>
  *
  * // Usage with useEntity

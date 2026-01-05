@@ -47,6 +47,7 @@ export function createCollectorProxy<T>(
 		fields: fieldsProxy,
 		data: null,
 		isDirty: false,
+		__entityType: undefined as unknown as T,
 	}
 }
 
@@ -138,6 +139,9 @@ function createCollectorFieldRef(
 		}),
 		connect: () => {},
 		disconnect: () => {},
+
+		// Type brand (phantom property - only exists in type system)
+		__entityType: undefined as unknown,
 	}
 }
 
@@ -169,6 +173,7 @@ export function createRuntimeAccessor<T>(
 			if (!snap) return false
 			return !deepEqual(snap.data, snap.serverData)
 		},
+		__entityType: undefined as unknown as T,
 	}
 }
 
@@ -325,6 +330,9 @@ function createRuntimeFieldRef(
 		disconnect: () => {
 			setValue(null)
 		},
+
+		// Type brand (phantom property - only exists in type system)
+		__entityType: undefined as unknown,
 	}
 }
 

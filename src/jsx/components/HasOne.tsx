@@ -31,6 +31,7 @@ function HasOneImpl<T>({ field, children }: HasOneProps<T>): ReactElement | null
 		fields: field.fields,
 		data: null,
 		isDirty: field.isDirty,
+		__entityType: undefined as unknown as T,
 	}
 
 	return <>{children(entityRef)}</>
@@ -57,6 +58,7 @@ hasOneWithSelection.getSelection = (
 		fields: nestedCollector.fields,
 		data: null,
 		isDirty: false,
+		__entityType: undefined as unknown,
 	}
 	const syntheticChildren = props.children(entityRef)
 

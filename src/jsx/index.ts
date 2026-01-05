@@ -8,6 +8,7 @@ export {
 	type HasOneRef,
 	type EntityRef,
 	type EntityFields,
+	type SelectedEntityFields,
 	type FieldProps,
 	type HasManyProps,
 	type HasOneProps,
@@ -60,5 +61,6 @@ export {
 	type EntityFragmentComponentWithProps,
 	type EntityPropKeys,
 	type EntityFromProp,
+	type SelectionFromProp,
 	type EntityFragmentProperties,
 } from './createEntityFragment.js'

@@ -92,6 +92,61 @@ export type EntityFields<T> = {
 }
 
 // ============================================================================
+// Selection-Aware EntityFields Type
+// ============================================================================
+
+/**
+ * Extracts the nested selection type for a relation field.
+ * If the selected type has a field K, extract its type, otherwise never.
+ */
+type ExtractNestedSelection<TSelected, K extends PropertyKey> =
+	K extends keyof TSelected ? TSelected[K] : never
+
+/**
+ * Maps entity fields to Handle types, but only for fields present in TSelected.
+ * This enables compile-time checking that only fetched fields are accessed.
+ *
+ * @typeParam TEntity - The full entity type
+ * @typeParam TSelected - The selected subset (determines which fields are accessible)
+ *
+ * @example
+ * ```typescript
+ * interface Author {
+ *   id: string
+ *   name: string
+ *   email: string
+ *   bio: string
+ * }
+ *
+ * // Only name and email were selected
+ * type Selected = { name: string; email: string }
+ *
+ * type Fields = SelectedEntityFields<Author, Selected>
+ * // Fields.name: FieldHandle<string>  ✓
+ * // Fields.email: FieldHandle<string> ✓
+ * // Fields.id: never (not selected)
+ * // Fields.bio: never (not selected)
+ * ```
+ */
+export type SelectedEntityFields<TEntity, TSelected> = {
+	// Scalar fields: only include if key exists in TSelected
+	[K in ScalarKeys<TEntity> & keyof TSelected]: FieldHandle<TEntity[K]>
+} & {
+	// HasMany fields: only include if key exists in TSelected, with nested selection
+	[K in HasManyKeys<TEntity> & keyof TSelected]: TEntity[K] extends (infer U)[]
+		? U extends object
+			? HasManyListHandle<U, ExtractNestedSelection<TSelected, K> extends (infer S)[] ? S : U>
+			: never
+		: never
+} & {
+	// HasOne fields: only include if key exists in TSelected, with nested selection
+	[K in HasOneKeys<TEntity> & keyof TSelected]: HasOneHandle<
+		NonNullable<TEntity[K]>,
+		ExtractNestedSelection<TSelected, K> extends object ? ExtractNestedSelection<TSelected, K> : NonNullable<TEntity[K]>
+	>
+}
+
+// ============================================================================
 // Helper Types for Ref Interface Compatibility
 // ============================================================================
 

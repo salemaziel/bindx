@@ -3,6 +3,7 @@ export { FieldHandle } from './FieldHandle.js'
 export { EntityHandle, HasOneHandle, HasManyListHandle } from './EntityHandle.js'
 export {
 	type EntityFields,
+	type SelectedEntityFields,
 	type ScalarKeys,
 	type HasManyKeys,
 	type HasOneKeys,

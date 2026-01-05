@@ -114,12 +114,14 @@ export type {
 	EntityFragmentComponentWithProps,
 	EntityPropKeys,
 	EntityFromProp,
+	SelectionFromProp,
 	EntityFragmentProperties,
 } from './jsx/index.js'
 
 // Unified handle types
 export type {
 	EntityFields,
+	SelectedEntityFields,
 	ScalarKeys,
 	HasManyKeys,
 	HasOneKeys,
