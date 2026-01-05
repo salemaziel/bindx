@@ -1,0 +1,25 @@
+{
+	"name": "@contember/bindx-example",
+	"version": "0.1.0",
+	"private": true,
+	"description": "Example application for bindx",
+	"type": "module",
+	"scripts": {
+		"dev": "vite",
+		"build": "tsc --build && vite build",
+		"typecheck": "tsc --build"
+	},
+	"dependencies": {
+		"@contember/bindx": "workspace:*",
+		"@contember/react-bindx": "workspace:*",
+		"react": "^19.0.0",
+		"react-dom": "^19.0.0"
+	},
+	"devDependencies": {
+		"@types/react": "^19",
+		"@types/react-dom": "^19",
+		"@vitejs/plugin-react": "^5.1.2",
+		"typescript": "^5.3.0",
+		"vite": "^7.3.0"
+	}
+}

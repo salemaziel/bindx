@@ -5,7 +5,7 @@
  * entity system. They ensure that:
  *
  * 1. Selection-aware EntityRef only exposes selected fields
- * 2. createEntityFragment extracts correct selection types
+ * 2. createComponent extracts correct selection types
  * 3. Fragment $propName has correct result type for composition
  * 4. useEntity returns selection-aware accessor
  * 5. Type errors are raised when accessing non-selected fields
@@ -18,17 +18,17 @@ import type {
 	SelectedEntityFields,
 	EntityFromProp,
 	SelectionFromProp,
-} from '../src/index.js'
+} from '@contember/react-bindx'
 import {
 	createFragment,
-	createEntityFragment,
+	createComponent,
 	createBindx,
 	defineSchema,
 	scalar,
 	hasOne,
 	hasMany,
 	mergeFragments,
-} from '../src/index.js'
+} from '@contember/react-bindx'
 
 // ============================================================================
 // Type Assertion Helpers
@@ -162,7 +162,7 @@ describe('Type Safety - Compile Time Checks', () => {
 		})
 	})
 
-	describe('createEntityFragment Type Extraction', () => {
+	describe('createComponent Type Extraction', () => {
 		test('extracts selection type from EntityRef props', () => {
 			interface AuthorCardProps {
 				author: EntityRef<Author, { name: string; email: string }>
@@ -187,7 +187,7 @@ describe('Type Safety - Compile Time Checks', () => {
 				tag: EntityRef<Tag, { name: string; color: string }>
 			}
 
-			const TagDisplay = createEntityFragment<TagDisplayProps>(({ tag }) => {
+			const TagDisplay = createComponent<TagDisplayProps>(({ tag }) => {
 				void tag.fields.name
 				void tag.fields.color
 				return null
@@ -246,14 +246,14 @@ describe('Type Safety - Compile Time Checks', () => {
 // ============================================================================
 
 describe('Type Safety - Runtime Behavior', () => {
-	describe('createEntityFragment', () => {
+	describe('createComponent', () => {
 		test('creates component with correct $propName fragment when fields accessed', () => {
 			interface AuthorInfoProps {
 				author: EntityRef<Author, { name: string }>
 			}
 
 			// Note: $author fragment is only created when fields are accessed
-			const AuthorInfo = createEntityFragment<AuthorInfoProps>(({ author }) => {
+			const AuthorInfo = createComponent<AuthorInfoProps>(({ author }) => {
 				// Must access fields to trigger fragment creation
 				void author.fields.name
 				return null
@@ -271,7 +271,7 @@ describe('Type Safety - Runtime Behavior', () => {
 			}
 
 			// This component doesn't access any fields
-			const AuthorInfo = createEntityFragment<AuthorInfoProps>(() => null)
+			const AuthorInfo = createComponent<AuthorInfoProps>(() => null)
 
 			// $author fragment should NOT exist (no fields were accessed)
 			expect(AuthorInfo.$author).toBeUndefined()
@@ -282,7 +282,7 @@ describe('Type Safety - Runtime Behavior', () => {
 				tag: EntityRef<Tag, { name: string; color: string }>
 			}
 
-			const TagList = createEntityFragment<TagListProps>(({ tag }) => {
+			const TagList = createComponent<TagListProps>(({ tag }) => {
 				// Access fields (this happens during component creation)
 				void tag.fields.name
 				void tag.fields.color
@@ -301,7 +301,7 @@ describe('Type Safety - Runtime Behavior', () => {
 				author: EntityRef<Author, { name: string }>
 			}
 
-			const ArticleView = createEntityFragment<ArticleViewProps>(({ article, author }) => {
+			const ArticleView = createComponent<ArticleViewProps>(({ article, author }) => {
 				void article.fields.title
 				void author.fields.name
 				return null
@@ -466,12 +466,12 @@ describe('Type Safety - Expected Errors', () => {
 		const _test2: TagFrag = null as unknown as AuthorFrag
 	})
 
-	test('createEntityFragment component has typed props', () => {
+	test('createComponent component has typed props', () => {
 		interface AuthorCardProps {
 			author: EntityRef<Author, { name: string }>
 		}
 
-		const AuthorCard = createEntityFragment<AuthorCardProps>(({ author }) => {
+		const AuthorCard = createComponent<AuthorCardProps>(({ author }) => {
 			void author.fields.name
 			return null
 		})
@@ -488,7 +488,7 @@ describe('Type Safety - Expected Errors', () => {
 			author: EntityRef<Author, { name: string }>
 		}
 
-		const _AuthorCard = createEntityFragment<AuthorCardProps>(({ author }) => {
+		const _AuthorCard = createComponent<AuthorCardProps>(({ author }) => {
 			void author.fields.name
 			return null
 		})
@@ -571,8 +571,8 @@ describe('Type Safety - Known Limitations', () => {
 
 	test('HasManyProps is selection-aware', () => {
 		type SelectedTag = { name: string }
-		type TagsRef = import('../src/index.js').HasManyRef<Tag, SelectedTag>
-		type Props = import('../src/index.js').HasManyProps<Tag, SelectedTag>
+		type TagsRef = import('@contember/react-bindx').HasManyRef<Tag, SelectedTag>
+		type Props = import('@contember/react-bindx').HasManyProps<Tag, SelectedTag>
 
 		// The field prop should be HasManyRef<Tag, SelectedTag>
 		assertTrue<AssertExtends<TagsRef, Props['field']>>()
@@ -588,8 +588,8 @@ describe('Type Safety - Known Limitations', () => {
 
 	test('HasOneProps is selection-aware', () => {
 		type SelectedAuthor = { name: string; email: string }
-		type AuthorRef = import('../src/index.js').HasOneRef<Author, SelectedAuthor>
-		type Props = import('../src/index.js').HasOneProps<Author, SelectedAuthor>
+		type AuthorRef = import('@contember/react-bindx').HasOneRef<Author, SelectedAuthor>
+		type Props = import('@contember/react-bindx').HasOneProps<Author, SelectedAuthor>
 
 		// The field prop should be HasOneRef<Author, SelectedAuthor>
 		assertTrue<AssertExtends<AuthorRef, Props['field']>>()
@@ -624,7 +624,7 @@ describe('Type Safety - Integration', () => {
 			author: EntityRef<Author, { id: string; name: string }>
 		}
 
-		const AuthorDisplay = createEntityFragment<AuthorDisplayProps>(({ author }) => {
+		const AuthorDisplay = createComponent<AuthorDisplayProps>(({ author }) => {
 			// Access fields to trigger fragment creation
 			void author.fields.id
 			void author.fields.name

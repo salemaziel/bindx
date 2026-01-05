@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test'
-import { MockAdapter, __internal } from '../src/index.js'
+import { MockAdapter, __internal } from '@contember/react-bindx'
 
 const {
 	FieldAccessorImpl,

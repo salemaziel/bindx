@@ -1,7 +1,7 @@
 /**
  * Interoperability Tests
  *
- * These tests verify that fragments, useEntity, Entity, and createEntityFragment
+ * These tests verify that fragments, useEntity, Entity, and createComponent
  * work correctly together at runtime, ensuring data flows properly through
  * the selection system.
  */
@@ -9,10 +9,10 @@
 import { describe, test, expect, beforeAll, afterEach } from 'bun:test'
 import React from 'react'
 import { renderToString } from 'react-dom/server'
-import type { EntityRef, FluentFragment } from '../src/index.js'
+import type { EntityRef, FluentFragment, SelectionBuilder } from '@contember/react-bindx'
 import {
 	createFragment,
-	createEntityFragment,
+	createComponent,
 	createBindx,
 	defineSchema,
 	scalar,
@@ -24,7 +24,7 @@ import {
 	HasMany,
 	HasOne,
 	mergeFragments,
-} from '../src/index.js'
+} from '@contember/react-bindx'
 
 // ============================================================================
 // Test Entity Types
@@ -135,17 +135,17 @@ describe('Fragment Interoperability', () => {
 		})
 	})
 
-	describe('createEntityFragment + createFragment composition', () => {
-		test('entity fragment can use fluent fragment in props', () => {
+	describe('createComponent + createFragment composition', () => {
+		test('component can use fluent fragment in props', () => {
 			// Create a fluent fragment
 			const AuthorFragment = createFragment<Author>()(e => e.id().name().email())
 
-			// Create an entity fragment component
+			// Create a component with implicit selection
 			interface ArticleHeaderProps {
 				article: EntityRef<Article, { title: string; author: { id: string; name: string; email: string } }>
 			}
 
-			const ArticleHeader = createEntityFragment<ArticleHeaderProps>(({ article }) => {
+			const ArticleHeader = createComponent<ArticleHeaderProps>(({ article }) => {
 				void article.fields.title
 				void article.fields.author.fields.name
 				return null
@@ -157,12 +157,12 @@ describe('Fragment Interoperability', () => {
 			expect(AuthorFragment.__meta.fields.has('name')).toBe(true)
 		})
 
-		test('entity fragment $propName matches declared selection', () => {
+		test('component $propName matches declared selection', () => {
 			interface TagCardProps {
 				tag: EntityRef<Tag, { name: string; color: string }>
 			}
 
-			const TagCard = createEntityFragment<TagCardProps>(({ tag }) => {
+			const TagCard = createComponent<TagCardProps>(({ tag }) => {
 				void tag.fields.name
 				void tag.fields.color
 				return null
@@ -178,13 +178,13 @@ describe('Fragment Interoperability', () => {
 		})
 	})
 
-	describe('mergeFragments with createEntityFragment', () => {
-		test('can merge entity fragment with fluent fragment', () => {
-			// Entity fragment
+	describe('mergeFragments with createComponent', () => {
+		test('can merge component fragment with fluent fragment', () => {
+			// Component with implicit selection
 			interface AuthorCardProps {
 				author: EntityRef<Author, { name: string }>
 			}
-			const AuthorCard = createEntityFragment<AuthorCardProps>(({ author }) => {
+			const AuthorCard = createComponent<AuthorCardProps>(({ author }) => {
 				void author.fields.name
 				return null
 			})
@@ -200,11 +200,11 @@ describe('Fragment Interoperability', () => {
 			expect(MergedFragment.__meta.fields.has('email')).toBe(true)
 		})
 
-		test('can merge multiple entity fragment props', () => {
+		test('can merge multiple component fragment props', () => {
 			interface AuthorNameProps {
 				author: EntityRef<Author, { name: string }>
 			}
-			const AuthorName = createEntityFragment<AuthorNameProps>(({ author }) => {
+			const AuthorName = createComponent<AuthorNameProps>(({ author }) => {
 				void author.fields.name
 				return null
 			})
@@ -212,7 +212,7 @@ describe('Fragment Interoperability', () => {
 			interface AuthorEmailProps {
 				author: EntityRef<Author, { email: string }>
 			}
-			const AuthorEmail = createEntityFragment<AuthorEmailProps>(({ author }) => {
+			const AuthorEmail = createComponent<AuthorEmailProps>(({ author }) => {
 				void author.fields.email
 				return null
 			})
@@ -313,12 +313,12 @@ describe('Type Inference Chain', () => {
 // ============================================================================
 
 describe('Component Integration', () => {
-	test('createEntityFragment creates valid React component', () => {
+	test('createComponent creates valid React component', () => {
 		interface AuthorViewProps {
 			author: EntityRef<Author, { name: string }>
 		}
 
-		const AuthorView = createEntityFragment<AuthorViewProps>(({ author }) => {
+		const AuthorView = createComponent<AuthorViewProps>(({ author }) => {
 			void author.fields.name
 			return React.createElement('div', null, 'Author View')
 		})
@@ -333,7 +333,7 @@ describe('Component Integration', () => {
 		interface AuthorNameProps {
 			author: EntityRef<Author, { name: string }>
 		}
-		const AuthorName = createEntityFragment<AuthorNameProps>(({ author }) => {
+		const AuthorName = createComponent<AuthorNameProps>(({ author }) => {
 			void author.fields.name
 			return null
 		})
@@ -341,7 +341,7 @@ describe('Component Integration', () => {
 		interface AuthorFullProps {
 			author: EntityRef<Author, { name: string; email: string; bio: string }>
 		}
-		const AuthorFull = createEntityFragment<AuthorFullProps>(({ author }) => {
+		const AuthorFull = createComponent<AuthorFullProps>(({ author }) => {
 			void author.fields.name
 			void author.fields.email
 			void author.fields.bio

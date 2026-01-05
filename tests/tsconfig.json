@@ -1,17 +1,16 @@
 {
-	"extends": "../tsconfig.json",
+	"extends": "../tsconfig.base.json",
 	"compilerOptions": {
-		"composite": true,
-		"declaration": true,
-		"declarationMap": true,
-		"sourceMap": true,
 		"noEmit": true,
-		"rootDir": ".",
-		"outDir": "../dist/tests",
-		"types": ["bun-types"]
+		"types": ["bun-types"],
+		"paths": {
+			"@contember/bindx": ["../packages/bindx/src/index.ts"],
+			"@contember/react-bindx": ["../packages/react-bindx/src/index.ts"]
+		}
 	},
 	"include": ["./**/*"],
 	"references": [
-		{ "path": "../src" }
+		{ "path": "../packages/bindx"},
+		{ "path": "../packages/react-bindx"},
 	]
 }

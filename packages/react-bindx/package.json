@@ -1,0 +1,25 @@
+{
+	"name": "@contember/react-bindx",
+	"version": "0.1.0",
+	"description": "Type-safe React data binding framework",
+	"type": "module",
+	"main": "./src/index.ts",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"build": "tsc --build",
+		"typecheck": "tsc --build"
+	},
+	"peerDependencies": {
+		"react": ">=18.0.0"
+	},
+	"dependencies": {
+		"@contember/bindx": "workspace:*"
+	},
+	"files": [
+		"dist",
+		"src"
+	],
+	"license": "MIT"
+}

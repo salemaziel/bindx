@@ -11,7 +11,7 @@ import {
 	scalar,
 	hasOne,
 	hasMany,
-} from '../src/index.js'
+} from '@contember/react-bindx'
 
 afterEach(() => {
 	cleanup()

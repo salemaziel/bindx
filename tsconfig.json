@@ -1,24 +1,10 @@
 {
-  "compilerOptions": {
-    "target": "ES2022",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "jsx": "react-jsx",
-    "strict": true,
-    "noUncheckedIndexedAccess": true,
-    "noImplicitOverride": true,
-    "noPropertyAccessFromIndexSignature": true,
-    "forceConsistentCasingInFileNames": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true
-  },
-  "references": [
-    { "path": "./src" },
-    { "path": "./example" },
-    { "path": "./tests" }
-  ],
-  "files": []
+	"extends": "./tsconfig.base.json",
+	"references": [
+		{ "path": "./tests" },
+		{ "path": "./packages/bindx" },
+		{ "path": "./packages/example" },
+		{ "path": "./packages/react-bindx" }
+	],
+	"files": []
 }

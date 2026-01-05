@@ -1,0 +1,141 @@
+/**
+ * Bindx - Core data binding framework (framework-agnostic)
+ *
+ * @packageDocumentation
+ */
+
+// ============================================================================
+// Public API - Types
+// ============================================================================
+
+// Schema types
+export type {
+	RelationType,
+	ScalarFieldDef,
+	HasOneRelationDef,
+	HasManyRelationDef,
+	FieldDef,
+	EntitySchemaDef,
+	SchemaDefinition,
+	InferModel,
+	InferEntityNames,
+} from './schema/index.js'
+
+// Selection types
+export type {
+	SelectionBuilder,
+	SelectionMeta,
+	SelectionFieldMeta,
+	FluentFragment,
+	FluentDefiner,
+	HasManyOptions,
+	InferSelection,
+	QuerySpec,
+	QueryFieldSpec,
+} from './selection/index.js'
+
+// Accessor types (interfaces only)
+export type {
+	FieldAccessor,
+	EntityAccessor,
+	EntityAccessorBase,
+	RootEntityAccessor,
+	HasOneAccessor,
+	HasOneRelationState,
+	PlaceholderEntityAccessor,
+	EntityListAccessor,
+	EntityListItem,
+	AccessorFromShape,
+	AccessorFromShapeInternal,
+	RelationChange,
+} from './accessors/index.js'
+
+// Handle types
+export type {
+	InputProps,
+	EntityFields,
+	SelectedEntityFields,
+	ScalarKeys,
+	HasManyKeys,
+	HasOneKeys,
+	FieldRefMeta,
+	FieldRef,
+	HasManyRef,
+	HasOneRef,
+	EntityRef,
+} from './handles/index.js'
+
+// Adapter types
+export type {
+	BackendAdapter,
+	FetchOptions,
+	MockDataStore,
+	MockAdapterOptions,
+} from './adapter/index.js'
+
+// Core types
+export type {
+	EntityLoadResult,
+	EntityListLoadResult,
+	LoadEntityOptions,
+	LoadEntityListOptions,
+	SelectionInput,
+	FluentDefiner as CoreFluentDefiner,
+} from './core/index.js'
+
+// Store types
+export type {
+	EntitySnapshot,
+	FieldSnapshot,
+	HasOneRelationSnapshot,
+	HasManySnapshot,
+	EntityState,
+	LoadStatus,
+} from './store/snapshots.js'
+
+// ============================================================================
+// Public API - Functions & Classes
+// ============================================================================
+
+// Schema utilities
+export { scalar, hasOne, hasMany, defineSchema, SchemaRegistry } from './schema/index.js'
+
+// Selection utilities
+export { createFragment, buildQueryFromSelection, SELECTION_META, createSelectionBuilder, SelectionMetaCollector, mergeSelections, createEmptySelection } from './selection/index.js'
+
+// Handles
+export { EntityHandle, HasOneHandle, HasManyListHandle, FieldHandle } from './handles/index.js'
+
+// Handle symbols
+export { FIELD_REF_META } from './handles/index.js'
+
+// Adapter
+export { MockAdapter } from './adapter/index.js'
+
+// Core
+export { createEntityLoader, resolveSelectionMeta, buildQuery } from './core/index.js'
+
+// Actions
+export { setEntityData, setLoadState, setField, resetEntity, commitEntity } from './core/actions.js'
+
+// Store
+export { SnapshotStore } from './store/SnapshotStore.js'
+export { ActionDispatcher } from './core/ActionDispatcher.js'
+export { PersistenceManager } from './core/PersistenceManager.js'
+
+// Utils
+export { deepEqual } from './utils/deepEqual.js'
+
+// ============================================================================
+// Internal API (for advanced use cases)
+// ============================================================================
+
+/**
+ * Internal exports for advanced use cases.
+ *
+ * @internal
+ * @remarks
+ * These exports are implementation details and may change without notice.
+ * Use the public API whenever possible.
+ */
+export * as __internal from './internal.js'
