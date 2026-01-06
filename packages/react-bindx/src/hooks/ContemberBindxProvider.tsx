@@ -1,7 +1,7 @@
 import { createContext, memo, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
 import { GraphQlClient } from '@contember/graphql-client'
 import type { SchemaNames } from '@contember/client-content'
-import { ContemberAdapter, SnapshotStore, ActionDispatcher, PersistenceManager } from '@contember/bindx'
+import { ContemberAdapter, SnapshotStore, ActionDispatcher, PersistenceManager, MutationCollector } from '@contember/bindx'
 import type { BindxContextValue } from './BackendAdapterContext.js'
 
 /**
@@ -116,7 +116,13 @@ export const ContemberBindxProvider = memo(function ContemberBindxProvider({
 
 		const store = customStore ?? new SnapshotStore()
 		const dispatcher = new ActionDispatcher(store)
-		const persistence = new PersistenceManager(adapter, store, dispatcher)
+
+		// Create mutation collector for proper nested operations
+		const mutationCollector = new MutationCollector(store, schema)
+
+		const persistence = new PersistenceManager(adapter, store, dispatcher, {
+			mutationCollector,
+		})
 
 		return {
 			adapter,

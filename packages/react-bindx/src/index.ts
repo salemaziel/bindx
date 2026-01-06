@@ -29,6 +29,15 @@ export type {
 	InferSelection,
 	QuerySpec,
 	QueryFieldSpec,
+	// Query types (typed filter/orderBy)
+	EntityWhere,
+	EntityOrderBy,
+	ScalarCondition,
+	StringCondition,
+	ConditionFor,
+	OrderDirection,
+	TypedHasManyOptions,
+	AliasOptions,
 	// Accessor types
 	FieldAccessor,
 	EntityAccessor,

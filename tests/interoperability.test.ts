@@ -257,11 +257,11 @@ describe('Selection Resolution', () => {
 
 	test('has-many with options', () => {
 		const fragment = createFragment<Article>()(e =>
-			e.tags({ filter: { color: 'red' }, limit: 5 }, t => t.name()),
+			e.tags({ filter: { color: { eq: 'red' } }, limit: 5 }, t => t.name()),
 		)
 
 		const tagsField = fragment.__meta.fields.get('tags')
-		expect(tagsField?.hasManyParams?.filter).toEqual({ color: 'red' })
+		expect(tagsField?.hasManyParams?.filter).toEqual({ color: { eq: 'red' } })
 		expect(tagsField?.hasManyParams?.limit).toBe(5)
 	})
 })

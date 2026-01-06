@@ -18,6 +18,32 @@ interface EntityLoadState {
 }
 
 /**
+ * Entity metadata for mutation generation
+ */
+interface EntityMeta {
+	/** Whether the entity exists on the server */
+	existsOnServer: boolean
+	/** Whether the entity is scheduled for deletion */
+	isScheduledForDeletion: boolean
+}
+
+/**
+ * Removal type for has-many items
+ */
+export type HasManyRemovalType = 'disconnect' | 'delete'
+
+/**
+ * Has-many list state stored in SnapshotStore
+ */
+interface StoredHasManyState {
+	/** IDs of items from server */
+	serverIds: Set<string>
+	/** Planned removals (disconnect or delete) keyed by entity ID */
+	plannedRemovals: Map<string, HasManyRemovalType>
+	version: number
+}
+
+/**
  * Relation state stored in SnapshotStore
  */
 interface StoredRelationState {
@@ -45,8 +71,14 @@ export class SnapshotStore {
 	/** Load states keyed by "entityType:id" */
 	private readonly loadStates = new Map<string, EntityLoadState>()
 
+	/** Entity metadata keyed by "entityType:id" */
+	private readonly entityMetas = new Map<string, EntityMeta>()
+
 	/** Relation states keyed by "parentType:parentId:fieldName" */
 	private readonly relationStates = new Map<string, StoredRelationState>()
+
+	/** Has-many list states keyed by "parentType:parentId:fieldName" */
+	private readonly hasManyStates = new Map<string, StoredHasManyState>()
 
 	/** Persisting status keyed by "entityType:id" */
 	private readonly persistingEntities = new Set<string>()
@@ -249,6 +281,213 @@ export class SnapshotStore {
 		const key = this.getEntityKey(entityType, id)
 		this.loadStates.set(key, { status, error })
 		this.notifyEntitySubscribers(key)
+	}
+
+	// ==================== Entity Meta ====================
+
+	/**
+	 * Gets entity metadata.
+	 */
+	getEntityMeta(entityType: string, id: string): EntityMeta | undefined {
+		const key = this.getEntityKey(entityType, id)
+		return this.entityMetas.get(key)
+	}
+
+	/**
+	 * Sets whether an entity exists on the server.
+	 */
+	setExistsOnServer(entityType: string, id: string, existsOnServer: boolean): void {
+		const key = this.getEntityKey(entityType, id)
+		const existing = this.entityMetas.get(key) ?? { existsOnServer: false, isScheduledForDeletion: false }
+		this.entityMetas.set(key, { ...existing, existsOnServer })
+		this.notifyEntitySubscribers(key)
+	}
+
+	/**
+	 * Checks if an entity exists on the server.
+	 */
+	existsOnServer(entityType: string, id: string): boolean {
+		const key = this.getEntityKey(entityType, id)
+		return this.entityMetas.get(key)?.existsOnServer ?? false
+	}
+
+	/**
+	 * Schedules an entity for deletion.
+	 */
+	scheduleForDeletion(entityType: string, id: string): void {
+		const key = this.getEntityKey(entityType, id)
+		const existing = this.entityMetas.get(key) ?? { existsOnServer: false, isScheduledForDeletion: false }
+		this.entityMetas.set(key, { ...existing, isScheduledForDeletion: true })
+		this.notifyEntitySubscribers(key)
+	}
+
+	/**
+	 * Unschedules an entity from deletion.
+	 */
+	unscheduleForDeletion(entityType: string, id: string): void {
+		const key = this.getEntityKey(entityType, id)
+		const existing = this.entityMetas.get(key) ?? { existsOnServer: false, isScheduledForDeletion: false }
+		this.entityMetas.set(key, { ...existing, isScheduledForDeletion: false })
+		this.notifyEntitySubscribers(key)
+	}
+
+	/**
+	 * Checks if an entity is scheduled for deletion.
+	 */
+	isScheduledForDeletion(entityType: string, id: string): boolean {
+		const key = this.getEntityKey(entityType, id)
+		return this.entityMetas.get(key)?.isScheduledForDeletion ?? false
+	}
+
+	// ==================== Has-Many State ====================
+
+	/**
+	 * Gets or creates has-many list state.
+	 */
+	getOrCreateHasMany(
+		parentType: string,
+		parentId: string,
+		fieldName: string,
+		serverIds?: string[],
+	): StoredHasManyState {
+		const key = this.getRelationKey(parentType, parentId, fieldName)
+
+		if (!this.hasManyStates.has(key)) {
+			this.hasManyStates.set(key, {
+				serverIds: new Set(serverIds ?? []),
+				plannedRemovals: new Map(),
+				version: 0,
+			})
+		}
+
+		return this.hasManyStates.get(key)!
+	}
+
+	/**
+	 * Gets has-many list state.
+	 */
+	getHasMany(
+		parentType: string,
+		parentId: string,
+		fieldName: string,
+	): StoredHasManyState | undefined {
+		const key = this.getRelationKey(parentType, parentId, fieldName)
+		return this.hasManyStates.get(key)
+	}
+
+	/**
+	 * Sets server IDs for a has-many relation.
+	 */
+	setHasManyServerIds(
+		parentType: string,
+		parentId: string,
+		fieldName: string,
+		serverIds: string[],
+	): void {
+		const key = this.getRelationKey(parentType, parentId, fieldName)
+		const existing = this.hasManyStates.get(key)
+
+		if (!existing) {
+			this.hasManyStates.set(key, {
+				serverIds: new Set(serverIds),
+				plannedRemovals: new Map(),
+				version: 0,
+			})
+		} else {
+			this.hasManyStates.set(key, {
+				...existing,
+				serverIds: new Set(serverIds),
+				version: existing.version + 1,
+			})
+		}
+
+		this.notifyRelationSubscribers(key)
+	}
+
+	/**
+	 * Plans a removal for a has-many item.
+	 */
+	planHasManyRemoval(
+		parentType: string,
+		parentId: string,
+		fieldName: string,
+		itemId: string,
+		type: HasManyRemovalType,
+	): void {
+		const key = this.getRelationKey(parentType, parentId, fieldName)
+		const existing = this.hasManyStates.get(key)
+
+		if (!existing) {
+			this.hasManyStates.set(key, {
+				serverIds: new Set(),
+				plannedRemovals: new Map([[itemId, type]]),
+				version: 0,
+			})
+		} else {
+			existing.plannedRemovals.set(itemId, type)
+			this.hasManyStates.set(key, {
+				...existing,
+				version: existing.version + 1,
+			})
+		}
+
+		this.notifyRelationSubscribers(key)
+	}
+
+	/**
+	 * Cancels a planned removal for a has-many item.
+	 */
+	cancelHasManyRemoval(
+		parentType: string,
+		parentId: string,
+		fieldName: string,
+		itemId: string,
+	): void {
+		const key = this.getRelationKey(parentType, parentId, fieldName)
+		const existing = this.hasManyStates.get(key)
+
+		if (!existing) return
+
+		existing.plannedRemovals.delete(itemId)
+		this.hasManyStates.set(key, {
+			...existing,
+			version: existing.version + 1,
+		})
+
+		this.notifyRelationSubscribers(key)
+	}
+
+	/**
+	 * Gets planned removals for a has-many relation.
+	 */
+	getHasManyPlannedRemovals(
+		parentType: string,
+		parentId: string,
+		fieldName: string,
+	): Map<string, HasManyRemovalType> | undefined {
+		const key = this.getRelationKey(parentType, parentId, fieldName)
+		return this.hasManyStates.get(key)?.plannedRemovals
+	}
+
+	/**
+	 * Commits has-many state after successful persist.
+	 */
+	commitHasMany(
+		parentType: string,
+		parentId: string,
+		fieldName: string,
+		newServerIds: string[],
+	): void {
+		const key = this.getRelationKey(parentType, parentId, fieldName)
+		const existing = this.hasManyStates.get(key)
+
+		this.hasManyStates.set(key, {
+			serverIds: new Set(newServerIds),
+			plannedRemovals: new Map(),
+			version: (existing?.version ?? 0) + 1,
+		})
+
+		this.notifyRelationSubscribers(key)
 	}
 
 	// ==================== Persisting State ====================
@@ -474,7 +713,9 @@ export class SnapshotStore {
 	clear(): void {
 		this.entitySnapshots.clear()
 		this.loadStates.clear()
+		this.entityMetas.clear()
 		this.relationStates.clear()
+		this.hasManyStates.clear()
 		this.persistingEntities.clear()
 		this.globalVersion++
 

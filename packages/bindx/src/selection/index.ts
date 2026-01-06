@@ -13,6 +13,18 @@ export {
 	type HasManyMethod,
 } from './types.js'
 
+// Query types for typed filter/orderBy
+export {
+	type EntityWhere,
+	type EntityOrderBy,
+	type ScalarCondition,
+	type StringCondition,
+	type ConditionFor,
+	type OrderDirection,
+	type TypedHasManyOptions,
+	type AliasOptions,
+} from './queryTypes.js'
+
 // Runtime
 export { createSelectionBuilder, getSelectionMeta } from './createSelectionBuilder.js'
 export { createFragment } from './createFragment.js'

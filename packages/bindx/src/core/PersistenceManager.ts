@@ -13,6 +13,29 @@ interface PendingPersist {
 }
 
 /**
+ * Interface for custom mutation data collectors.
+ * Used by ContemberAdapter to build proper nested mutations.
+ */
+export interface MutationDataCollector {
+	/**
+	 * Collects mutation data for an entity.
+	 * Returns the mutation input or null if no changes.
+	 */
+	collectUpdateData(entityType: string, entityId: string): Record<string, unknown> | null
+}
+
+/**
+ * Options for PersistenceManager
+ */
+export interface PersistenceManagerOptions {
+	/**
+	 * Custom mutation collector for building complex mutation inputs.
+	 * If provided, will be used instead of simple field diff.
+	 */
+	mutationCollector?: MutationDataCollector
+}
+
+/**
  * PersistenceManager handles entity persistence with concurrency control.
  *
  * Key features:
@@ -20,16 +43,21 @@ interface PendingPersist {
  * - Optimistic updates (changes visible immediately)
  * - Abort support for cleanup
  * - Proper error handling
+ * - Optional custom mutation collector for nested operations
  */
 export class PersistenceManager {
 	/** Pending persist operations keyed by "entityType:id" */
 	private readonly pending = new Map<string, PendingPersist>()
+	private readonly mutationCollector?: MutationDataCollector
 
 	constructor(
 		private readonly adapter: BackendAdapter,
 		private readonly store: SnapshotStore,
 		private readonly dispatcher: ActionDispatcher,
-	) {}
+		options?: PersistenceManagerOptions,
+	) {
+		this.mutationCollector = options?.mutationCollector
+	}
 
 	/**
 	 * Gets the key for an entity.
@@ -88,13 +116,21 @@ export class PersistenceManager {
 			throw new Error(`Entity ${entityType}:${id} not found`)
 		}
 
-		// Collect changes (fields that differ from server data)
-		const changes = this.collectChanges(
-			snapshot.data as Record<string, unknown>,
-			snapshot.serverData as Record<string, unknown>,
-		)
+		// Collect changes using custom collector or simple field diff
+		let changes: Record<string, unknown> | null
 
-		if (Object.keys(changes).length === 0) {
+		if (this.mutationCollector) {
+			// Use custom mutation collector (e.g., for Contember nested operations)
+			changes = this.mutationCollector.collectUpdateData(entityType, id)
+		} else {
+			// Simple field diff
+			changes = this.collectChanges(
+				snapshot.data as Record<string, unknown>,
+				snapshot.serverData as Record<string, unknown>,
+			)
+		}
+
+		if (!changes || Object.keys(changes).length === 0) {
 			// Nothing to persist
 			return
 		}

@@ -32,6 +32,15 @@ export type {
 	InferSelection,
 	QuerySpec,
 	QueryFieldSpec,
+	// Query types (typed filter/orderBy)
+	EntityWhere,
+	EntityOrderBy,
+	ScalarCondition,
+	StringCondition,
+	ConditionFor,
+	OrderDirection,
+	TypedHasManyOptions,
+	AliasOptions,
 } from './selection/index.js'
 
 // Accessor types (interfaces only)
@@ -86,6 +95,8 @@ export type {
 	LoadEntityListOptions,
 	SelectionInput,
 	FluentDefiner as CoreFluentDefiner,
+	MutationDataCollector,
+	PersistenceManagerOptions,
 } from './core/index.js'
 
 // Store types
@@ -124,12 +135,18 @@ export { createEntityLoader, resolveSelectionMeta, buildQuery } from './core/ind
 export { setEntityData, setLoadState, setField, resetEntity, commitEntity } from './core/actions.js'
 
 // Store
-export { SnapshotStore } from './store/SnapshotStore.js'
+export { SnapshotStore, type HasManyRemovalType } from './store/SnapshotStore.js'
 export { ActionDispatcher } from './core/ActionDispatcher.js'
 export { PersistenceManager } from './core/PersistenceManager.js'
 
 // Utils
 export { deepEqual } from './utils/deepEqual.js'
+
+// Contember integration
+export { MutationCollector } from './contember/index.js'
+
+// Re-export Contember types for convenience
+export type { SchemaNames, SchemaEntityNames } from '@contember/client-content'
 
 // ============================================================================
 // Internal API (for advanced use cases)

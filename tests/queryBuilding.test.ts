@@ -97,14 +97,14 @@ describe('Query Building with Fluent API', () => {
 
 		test('should build query with has-many parameters', () => {
 			const builder = createSelectionBuilder<Article>()
-			const result = builder.tags({ filter: { active: true }, limit: 10 }, t => t.name())
+			const result = builder.tags({ filter: { name: { eq: 'featured' } }, limit: 10 }, t => t.name())
 			const meta = getSelectionMeta(result)
 			const query = buildQueryFromSelection(meta)
 
 			expect(query.fields.length).toBe(1)
 			expect(query.fields[0]?.name).toBe('tags')
 			expect(query.fields[0]?.isArray).toBe(true)
-			expect(query.fields[0]?.filter).toEqual({ active: true })
+			expect(query.fields[0]?.filter).toEqual({ name: { eq: 'featured' } })
 			expect(query.fields[0]?.limit).toBe(10)
 		})
 	})

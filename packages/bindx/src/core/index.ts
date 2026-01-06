@@ -15,3 +15,9 @@ export {
 	type SelectionInput,
 	type FluentDefiner,
 } from './SelectionResolver.js'
+
+// Persistence
+export {
+	type MutationDataCollector,
+	type PersistenceManagerOptions,
+} from './PersistenceManager.js'

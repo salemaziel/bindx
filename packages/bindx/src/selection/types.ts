@@ -1,4 +1,5 @@
 import type { ComponentBrand, AnyBrand } from '../brand/ComponentBrand.js'
+import type { EntityWhere, EntityOrderBy } from './queryTypes.js'
 
 /**
  * Symbol used to store selection metadata on builder objects
@@ -6,16 +7,18 @@ import type { ComponentBrand, AnyBrand } from '../brand/ComponentBrand.js'
 export const SELECTION_META = Symbol('SELECTION_META')
 
 /**
- * Options for has-many relation selection
+ * Options for has-many relation selection with typed filter/orderBy
+ *
+ * @typeParam TItem - The related entity type (array item type)
+ * @typeParam TAlias - Optional alias for the field
  */
 export interface HasManyOptions<
+	TItem = unknown,
 	TAlias extends string = string,
-	TFilter = unknown,
-	TOrderBy = unknown,
 > {
 	as?: TAlias
-	filter?: TFilter
-	orderBy?: TOrderBy
+	filter?: EntityWhere<TItem>
+	orderBy?: readonly EntityOrderBy<TItem>[]
 	limit?: number
 	offset?: number
 }
@@ -209,7 +212,7 @@ export interface HasManyMethod<
 	>
 
 	/** Select with options and callback */
-	<TOptions extends HasManyOptions, TNestedSelected extends object>(
+	<TOptions extends HasManyOptions<TItem>, TNestedSelected extends object>(
 		options: TOptions,
 		selector: (builder: SelectionBuilder<TItem>) => SelectionBuilder<TItem, TNestedSelected, object>,
 	): SelectionBuilder<
@@ -219,7 +222,7 @@ export interface HasManyMethod<
 	>
 
 	/** Select with options and fragment */
-	<TOptions extends HasManyOptions, TFragmentResult extends object>(
+	<TOptions extends HasManyOptions<TItem>, TFragmentResult extends object>(
 		options: TOptions,
 		fragment: FluentFragment<TItem, TFragmentResult>,
 	): SelectionBuilder<
@@ -229,7 +232,7 @@ export interface HasManyMethod<
 	>
 
 	/** Select with options and two fragments (merged) */
-	<TOptions extends HasManyOptions, T1 extends object, T2 extends object>(
+	<TOptions extends HasManyOptions<TItem>, T1 extends object, T2 extends object>(
 		options: TOptions,
 		fragment1: FluentFragment<TItem, T1>,
 		fragment2: FluentFragment<TItem, T2>,
@@ -240,7 +243,7 @@ export interface HasManyMethod<
 	>
 
 	/** Select with options and three fragments (merged) */
-	<TOptions extends HasManyOptions, T1 extends object, T2 extends object, T3 extends object>(
+	<TOptions extends HasManyOptions<TItem>, T1 extends object, T2 extends object, T3 extends object>(
 		options: TOptions,
 		fragment1: FluentFragment<TItem, T1>,
 		fragment2: FluentFragment<TItem, T2>,
