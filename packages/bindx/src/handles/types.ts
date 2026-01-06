@@ -7,6 +7,7 @@
 
 import type { FieldHandle } from './FieldHandle.js'
 import type { HasOneHandle, HasManyListHandle } from './EntityHandle.js'
+import type { ComponentBrand, AnyBrand } from '../brand/ComponentBrand.js'
 
 // ============================================================================
 // Field Type Detection Utilities
@@ -214,8 +215,9 @@ export interface FieldRef<T> {
  *
  * @typeParam TEntity - The full entity type
  * @typeParam TSelected - The selected subset of fields (defaults to TEntity for backwards compatibility)
+ * @typeParam TBrand - Component brand type for validation (defaults to AnyBrand)
  */
-export interface HasManyRef<TEntity, TSelected = TEntity> {
+export interface HasManyRef<TEntity, TSelected = TEntity, TBrand extends AnyBrand = AnyBrand> {
 	/** Internal metadata for collection phase */
 	readonly [FIELD_REF_META]: FieldRefMeta
 
@@ -226,7 +228,7 @@ export interface HasManyRef<TEntity, TSelected = TEntity> {
 	readonly isDirty: boolean
 
 	/** Iterate over items - returns selection-aware entity refs */
-	map<R>(fn: (item: EntityRef<TEntity, TSelected>, index: number) => R): R[]
+	map<R>(fn: (item: EntityRef<TEntity, TSelected, TBrand>, index: number) => R): R[]
 
 	/** Add a new item */
 	add(data?: Partial<TEntity>): void
@@ -236,6 +238,9 @@ export interface HasManyRef<TEntity, TSelected = TEntity> {
 
 	/** Type brand - ensures HasManyRef<Author> is not assignable to HasManyRef<Tag> */
 	readonly __entityType: TEntity
+
+	/** Runtime brand symbols for validation */
+	readonly __brands?: Set<symbol>
 }
 
 /**
@@ -243,8 +248,9 @@ export interface HasManyRef<TEntity, TSelected = TEntity> {
  *
  * @typeParam TEntity - The full entity type
  * @typeParam TSelected - The selected subset of fields (defaults to TEntity for backwards compatibility)
+ * @typeParam TBrand - Component brand type for validation (defaults to AnyBrand)
  */
-export interface HasOneRef<TEntity, TSelected = TEntity> {
+export interface HasOneRef<TEntity, TSelected = TEntity, TBrand extends AnyBrand = AnyBrand> {
 	/** Internal metadata for collection phase */
 	readonly [FIELD_REF_META]: FieldRefMeta
 
@@ -257,8 +263,8 @@ export interface HasOneRef<TEntity, TSelected = TEntity> {
 	/** Nested entity fields - only selected fields are accessible */
 	readonly fields: SelectedEntityFields<TEntity, TSelected>
 
-	/** Related entity reference (null if disconnected) */
-	readonly entity: EntityRef<TEntity, TSelected> | null
+	/** Related entity reference (always available, may be placeholder with id=null) */
+	readonly entity: EntityRef<TEntity, TSelected, TBrand>
 
 	/** Connect to existing entity */
 	connect(id: string): void
@@ -268,6 +274,9 @@ export interface HasOneRef<TEntity, TSelected = TEntity> {
 
 	/** Type brand - ensures HasOneRef<Author> is not assignable to HasOneRef<Tag> */
 	readonly __entityType: TEntity
+
+	/** Runtime brand symbols for validation */
+	readonly __brands?: Set<symbol>
 }
 
 /**
@@ -276,6 +285,7 @@ export interface HasOneRef<TEntity, TSelected = TEntity> {
  *
  * @typeParam TEntity - The full entity type
  * @typeParam TSelected - The selected subset of fields (defaults to TEntity for backwards compatibility)
+ * @typeParam TBrand - Component brand type for validation (defaults to AnyBrand)
  *
  * @example
  * ```ts
@@ -286,9 +296,9 @@ export interface HasOneRef<TEntity, TSelected = TEntity> {
  * EntityRef<Author, { name: string; email: string }>  // Only name and email accessible
  * ```
  */
-export interface EntityRef<TEntity, TSelected = TEntity> {
-	/** Entity ID */
-	readonly id: string
+export interface EntityRef<TEntity, TSelected = TEntity, TBrand extends AnyBrand = AnyBrand> {
+	/** Entity ID (null for placeholder entities) */
+	readonly id: string | null
 
 	/** Typed field accessors - only selected fields are accessible */
 	readonly fields: SelectedEntityFields<TEntity, TSelected>
@@ -301,4 +311,7 @@ export interface EntityRef<TEntity, TSelected = TEntity> {
 
 	/** Type brand - ensures EntityRef<Author> is not assignable to EntityRef<Tag> */
 	readonly __entityType: TEntity
+
+	/** Runtime brand symbols for validation */
+	readonly __brands?: Set<symbol>
 }

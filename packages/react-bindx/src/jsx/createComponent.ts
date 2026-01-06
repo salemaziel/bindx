@@ -2,8 +2,8 @@ import type { ReactNode, ComponentType } from 'react'
 import { memo } from 'react'
 import type { EntityRef, SelectionProvider } from './types.js'
 import { BINDX_COMPONENT, FIELD_REF_META } from './types.js'
-import type { FluentFragment, SelectionMeta, SelectionFieldMeta, SelectionBuilder } from '@contember/bindx'
-import { SELECTION_META } from '@contember/bindx'
+import type { FluentFragment, SelectionMeta, SelectionFieldMeta, SelectionBuilder, AnyBrand } from '@contember/bindx'
+import { SELECTION_META, ComponentBrand } from '@contember/bindx'
 import { createSelectionBuilder } from '@contember/bindx'
 import { createCollectorProxy } from './proxy.js'
 import { collectSelection } from './analyzer.js'
@@ -17,6 +17,11 @@ import { SelectionMetaCollector, mergeSelections } from './SelectionMeta.js'
  * Marker symbol for identifying components created with createComponent
  */
 export const COMPONENT_MARKER = Symbol('BINDX_COMPONENT')
+
+/**
+ * Symbol for storing component brand on the component
+ */
+export const COMPONENT_BRAND = Symbol('COMPONENT_BRAND')
 
 /**
  * Symbol for stored selection metadata
@@ -226,14 +231,19 @@ export function createComponentFactory<TModels extends Record<string, object>>()
 		render: (props: CombinedPropsWithFragments<TScalarProps, TConfig>) => ReactNode,
 	) => ExplicitFragmentComponent<TScalarProps, TConfig>
 
-	// Implementation - handles both cases
+	// Signature 3: Implicit mode - single render function (same as standalone createComponent)
+	function schemaCreateComponent<P extends object>(
+		render: (props: P) => ReactNode,
+	): ImplicitComponent<P>
+
+	// Implementation - handles all cases
 	function schemaCreateComponent<TScalarPropsOrConfig extends object, TConfig extends object = TScalarPropsOrConfig>(
-		definerOrNothing?: ((factory: FragmentFactory<TModels>) => TConfig),
+		definerOrRenderOrNothing?: ((factory: FragmentFactory<TModels>) => TConfig) | ((props: TScalarPropsOrConfig) => ReactNode),
 		maybeRender?: (props: FragmentConfigToProps<TConfig>) => ReactNode,
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	): any {
 		// Signature 2: createComponent<ScalarProps>() - returns builder
-		if (definerOrNothing === undefined) {
+		if (definerOrRenderOrNothing === undefined) {
 			return <TConfig extends object>(
 				definer: (factory: FragmentFactory<TModels>) => TConfig,
 				render: (props: CombinedPropsWithFragments<TScalarPropsOrConfig, TConfig>) => ReactNode,
@@ -247,10 +257,15 @@ export function createComponentFactory<TModels extends Record<string, object>>()
 			}
 		}
 
+		// Signature 3: createComponent(render) - implicit mode
+		if (maybeRender === undefined) {
+			return createImplicitComponent(definerOrRenderOrNothing as (props: TScalarPropsOrConfig) => ReactNode)
+		}
+
 		// Signature 1: createComponent(definer, render)
 		return createExplicitFragmentComponent<object, TConfig>(
 			fragmentFactory as unknown as FragmentFactory<object>,
-			definerOrNothing as unknown as (factory: FragmentFactory<object>) => TConfig,
+			definerOrRenderOrNothing as unknown as (factory: FragmentFactory<object>) => TConfig,
 			maybeRender as unknown as (props: CombinedPropsWithFragments<object, TConfig>) => ReactNode,
 		)
 	}
@@ -266,6 +281,9 @@ function createImplicitComponent<P extends object>(
 	render: (props: P) => ReactNode,
 ): ImplicitComponent<P> {
 	const selectionsMap = new Map<string, SelectionPropMeta>()
+
+	// Generate unique brand for this component
+	const componentBrand = new ComponentBrand(`implicit_${Math.random().toString(36).slice(2)}`)
 
 	// Collect selections from JSX at component creation time
 	const collectEntityProps = (): void => {
@@ -295,11 +313,13 @@ function createImplicitComponent<P extends object>(
 			if (collector.fields.size > 0) {
 				mergeSelections(collector, jsxSelection)
 
-				const fragment: FluentFragment<unknown, object> = {
+				const fragment: FluentFragment<unknown, object, typeof componentBrand> = {
 					__meta: collector,
 					__resultType: {} as object,
 					__modelType: undefined as unknown,
 					__isFragment: true,
+					__brand: componentBrand,
+					__brands: new Set([componentBrand.brandSymbol]),
 				}
 				selectionsMap.set(propName, { selection: collector, fragment })
 			}
@@ -320,6 +340,10 @@ function createImplicitComponent<P extends object>(
 
 	// Add markers
 	assignMarkers(MemoizedComponent, selectionsMap)
+
+	// Store component brand for runtime validation
+	const comp = MemoizedComponent as unknown as Record<symbol, unknown>
+	comp[COMPONENT_BRAND] = componentBrand
 
 	// Add $propName properties
 	const result = MemoizedComponent as unknown as Record<string, unknown>
@@ -344,6 +368,9 @@ function createExplicitFragmentComponent<
 ): ExplicitFragmentComponent<TScalarProps, TConfig> {
 	const selectionsMap = new Map<string, SelectionPropMeta>()
 
+	// Generate unique brand for this component
+	const componentBrand = new ComponentBrand(`explicit_${Math.random().toString(36).slice(2)}`)
+
 	// Execute definer to get fragment config
 	const config = definer(factory)
 
@@ -352,11 +379,13 @@ function createExplicitFragmentComponent<
 		// Get SelectionMeta from the builder
 		const selection = (builder as SelectionBuilder<object, object, object>)[SELECTION_META]
 
-		const fragment: FluentFragment<unknown, object> = {
+		const fragment: FluentFragment<unknown, object, typeof componentBrand> = {
 			__meta: selection,
 			__resultType: {} as object,
 			__modelType: undefined as unknown,
 			__isFragment: true,
+			__brand: componentBrand,
+			__brands: new Set([componentBrand.brandSymbol]),
 		}
 
 		selectionsMap.set(propName, { selection, fragment })
@@ -375,6 +404,10 @@ function createExplicitFragmentComponent<
 
 	// Add markers
 	assignMarkers(MemoizedComponent, selectionsMap)
+
+	// Store component brand for runtime validation
+	const comp = MemoizedComponent as unknown as Record<symbol, unknown>
+	comp[COMPONENT_BRAND] = componentBrand
 
 	// Add $propName properties
 	const result = MemoizedComponent as unknown as Record<string, unknown>
@@ -460,7 +493,73 @@ export function isBindxComponent(value: unknown): value is BindxComponentBase<ob
 }
 
 /**
+ * Flag to enable/disable brand validation.
+ * Set to false in production for performance.
+ */
+let brandValidationEnabled = true
+
+/**
+ * Enables or disables brand validation.
+ * Call with false in production to disable warnings.
+ */
+export function setBrandValidation(enabled: boolean): void {
+	brandValidationEnabled = enabled
+}
+
+/**
+ * Validates that an EntityRef has the required component brand.
+ * Logs a warning in development mode if the brand is missing.
+ *
+ * @param entityRef - The EntityRef to validate
+ * @param component - The component that requires the brand
+ * @param propName - The prop name for error messages
+ */
+export function validateBrand(
+	entityRef: { __brands?: Set<symbol> } | null | undefined,
+	component: { [COMPONENT_BRAND]?: ComponentBrand },
+	propName: string,
+): void {
+	if (!brandValidationEnabled) {
+		return
+	}
+
+	if (!entityRef) {
+		return
+	}
+
+	const componentBrand = component[COMPONENT_BRAND]
+	if (!componentBrand) {
+		return
+	}
+
+	const entityBrands = entityRef.__brands
+	if (!entityBrands) {
+		// EntityRef doesn't have brands yet (might be from legacy code)
+		return
+	}
+
+	if (!entityBrands.has(componentBrand.brandSymbol)) {
+		console.warn(
+			`[bindx] EntityRef passed to "${propName}" is missing the required component brand. ` +
+			`Use mergeFragments() to combine fragment selections when using multiple components. ` +
+			`Expected brand: ${componentBrand.name}`,
+		)
+	}
+}
+
+/**
+ * Gets the component brand from a bindx component
+ */
+export function getComponentBrand(component: unknown): ComponentBrand | undefined {
+	if (!isBindxComponent(component)) {
+		return undefined
+	}
+	return (component as unknown as Record<symbol, ComponentBrand>)[COMPONENT_BRAND]
+}
+
+/**
  * Merges multiple fragment selections into one.
+ * Combines both the selection metadata and brand symbols.
  *
  * @example
  * ```tsx
@@ -469,21 +568,21 @@ export function isBindxComponent(value: unknown): value is BindxComponentBase<ob
  * )
  * ```
  */
-export function mergeFragments<T, R1 extends object>(
-	fragment1: FluentFragment<T, R1>,
-): FluentFragment<T, R1>
-export function mergeFragments<T, R1 extends object, R2 extends object>(
-	fragment1: FluentFragment<T, R1>,
-	fragment2: FluentFragment<T, R2>,
-): FluentFragment<T, R1 & R2>
-export function mergeFragments<T, R1 extends object, R2 extends object, R3 extends object>(
-	fragment1: FluentFragment<T, R1>,
-	fragment2: FluentFragment<T, R2>,
-	fragment3: FluentFragment<T, R3>,
-): FluentFragment<T, R1 & R2 & R3>
+export function mergeFragments<T, R1 extends object, B1 extends AnyBrand>(
+	fragment1: FluentFragment<T, R1, B1>,
+): FluentFragment<T, R1, B1>
+export function mergeFragments<T, R1 extends object, R2 extends object, B1 extends AnyBrand, B2 extends AnyBrand>(
+	fragment1: FluentFragment<T, R1, B1>,
+	fragment2: FluentFragment<T, R2, B2>,
+): FluentFragment<T, R1 & R2, B1 | B2>
+export function mergeFragments<T, R1 extends object, R2 extends object, R3 extends object, B1 extends AnyBrand, B2 extends AnyBrand, B3 extends AnyBrand>(
+	fragment1: FluentFragment<T, R1, B1>,
+	fragment2: FluentFragment<T, R2, B2>,
+	fragment3: FluentFragment<T, R3, B3>,
+): FluentFragment<T, R1 & R2 & R3, B1 | B2 | B3>
 export function mergeFragments<T>(
-	...fragments: FluentFragment<T, object>[]
-): FluentFragment<T, object> {
+	...fragments: FluentFragment<T, object, AnyBrand>[]
+): FluentFragment<T, object, AnyBrand> {
 	if (fragments.length === 0) {
 		throw new Error('mergeFragments requires at least one fragment')
 	}
@@ -493,9 +592,14 @@ export function mergeFragments<T>(
 	}
 
 	const mergedSelection = new SelectionMetaCollector()
+	const mergedBrands = new Set<symbol>()
 
 	for (const fragment of fragments) {
 		mergeSelections(mergedSelection, fragment.__meta)
+		// Merge brand symbols from all fragments
+		if (fragment.__brands) {
+			fragment.__brands.forEach(b => mergedBrands.add(b))
+		}
 	}
 
 	return {
@@ -503,5 +607,6 @@ export function mergeFragments<T>(
 		__resultType: {} as object,
 		__modelType: undefined as unknown as T,
 		__isFragment: true,
+		__brands: mergedBrands,
 	}
 }

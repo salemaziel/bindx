@@ -19,15 +19,9 @@ import { SelectionMetaCollector, mergeSelections } from '../SelectionMeta.js'
  * </HasOne>
  * ```
  */
-function HasOneImpl<T, TSelected = T>({ field, children }: HasOneProps<T, TSelected>): ReactElement | null {
-	// Get the related entity reference
-	// Returns null if the relation is disconnected
-	const entity = field.entity
-	if (!entity) {
-		return null
-	}
-
-	return <>{children(entity)}</>
+function HasOneImpl<T, TSelected = T>({ field, children }: HasOneProps<T, TSelected>): ReactElement {
+	// Get the related entity reference (always available, may be placeholder with id=null)
+	return <>{children(field.entity)}</>
 }
 
 export const HasOne = memo(HasOneImpl) as typeof HasOneImpl

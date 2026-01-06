@@ -1,5 +1,5 @@
-import { Entity } from '../../bindx.js'
-import { Field, HasMany, HasOne, createComponent, type EntityRef } from '@contember/react-bindx'
+import { Entity, createComponent } from '../../bindx.js'
+import { Field, HasMany, HasOne, type EntityRef } from '@contember/react-bindx'
 import type { Author, Article } from '../../types.js'
 
 // ============================================================================
@@ -36,6 +36,40 @@ export const AuthorInfo = createComponent<AuthorInfoProps>(({ author, showEmail 
 		)}
 	</div>
 ))
+
+export const AuthorArticles = createComponent((it) => ({
+	author: it.fragment('Author').articles({ limit: 5 }, it => it.title().id())
+}), props => {
+	return (
+		<ul>
+			<HasMany field={props.author.fields.articles}>
+				{article => (
+					<li key={article.id}>
+						<Field field={article.fields.title} />
+					</li>
+				)}
+			</HasMany>
+		</ul>
+	)
+})
+
+
+export const AuthorArticlesImplicit = createComponent<{
+	author: EntityRef<Author>
+}>(props => {
+	return (
+		<ul>
+			<HasMany field={props.author.fields.articles} limit={5}>
+				{article => (
+					<li key={article.id}>
+						<Field field={article.fields.title} />
+					</li>
+				)}
+			</HasMany>
+		</ul>
+	)
+})
+
 
 /**
  * Props for AuthorBio component
@@ -126,7 +160,7 @@ export function ArticleDetailWithFragments({ articleId }: { articleId: string })
 							<Field field={article.fields.title} />
 						</h1>
 
-						{/* <AuthorInfo author={article.fields.author} showEmail /> */}
+						<AuthorInfo author={article.fields.author.entity} showEmail />
 
 						{/* Use fragment component for author */}
 						<HasOne field={article.fields.author}>

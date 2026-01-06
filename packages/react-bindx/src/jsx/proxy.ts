@@ -138,7 +138,7 @@ function createCollectorFieldRef(
 				return createCollectorFieldRef(nestedSelection, [nestedFieldName], nestedFieldName)
 			},
 		}),
-		get entity(): EntityRef<unknown> | null {
+		get entity(): EntityRef<unknown> {
 			// For collection phase, return a collector proxy as EntityRef
 			// Update selection to mark as has-one relation
 			selection.addField({
@@ -337,10 +337,11 @@ function createRuntimeFieldRef(
 			)
 			return relatedAccessor.fields
 		},
-		get entity(): EntityRef<unknown> | null {
+		get entity(): EntityRef<unknown> {
 			const value = getValue()
 			if (typeof value !== 'object' || value === null || !('id' in value)) {
-				return null
+				// Return placeholder accessor with id=null
+				return createPlaceholderAccessor<unknown>()
 			}
 			const relatedId = (value as { id: string }).id
 			const nestedEntityType = `${entityType}_${fieldName}`
@@ -407,5 +408,43 @@ function getNestedValue(obj: unknown, path: string[]): unknown {
 		current = (current as Record<string, unknown>)[key]
 	}
 	return current
+}
+
+/**
+ * Creates a placeholder accessor for disconnected hasOne relations.
+ * Returns an EntityRef with id=null and empty fields.
+ */
+function createPlaceholderAccessor<T>(): EntityRef<T> {
+	const fieldsProxy = new Proxy({} as EntityFields<T>, {
+		get(_, fieldName: string) {
+			return {
+				[FIELD_REF_META]: {
+					path: [fieldName as string],
+					fieldName: fieldName as string,
+					isArray: false,
+					isRelation: false,
+				},
+				value: null,
+				serverValue: null,
+				isDirty: false,
+				setValue: () => {},
+				inputProps: {
+					value: null,
+					setValue: () => {},
+					onChange: () => {},
+				},
+				path: [fieldName],
+				fieldName,
+			}
+		},
+	})
+
+	return {
+		id: null,
+		fields: fieldsProxy,
+		data: null,
+		isDirty: false,
+		__entityType: undefined as unknown as T,
+	}
 }
 

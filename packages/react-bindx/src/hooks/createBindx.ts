@@ -65,7 +65,7 @@ export function createBindx<TModels extends { [K in keyof TModels]: object }>(
 		entityType: TEntityName,
 		options: UseEntityOptions,
 		definer: SelectionInput<TModels[TEntityName], TResult>,
-	): EntityAccessorResult<TResult> {
+	): EntityAccessorResult<TModels[TEntityName], TResult> {
 		// Resolve selection metadata
 		const selectionMeta = useMemo(
 			() => resolveSelectionMeta(definer),
@@ -73,7 +73,7 @@ export function createBindx<TModels extends { [K in keyof TModels]: object }>(
 			[entityType], // Only recreate if entity type changes
 		)
 
-		return useEntityImpl<TResult>(
+		return useEntityImpl<TModels[TEntityName], TResult>(
 			entityType,
 			options,
 			selectionMeta,

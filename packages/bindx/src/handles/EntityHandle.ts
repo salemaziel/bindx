@@ -31,14 +31,19 @@ export class EntityHandle<T extends object = object, TSelected = T> extends Enti
 	/** Cache for relation handles */
 	private readonly relationHandleCache = new Map<string, RelationHandle>()
 
+	/** Runtime brand symbols for validation */
+	readonly __brands?: Set<symbol>
+
 	constructor(
 		id: string,
 		entityType: string,
 		store: SnapshotStore,
 		dispatcher: ActionDispatcher,
 		private readonly schema: SchemaRegistry,
+		brands?: Set<symbol>,
 	) {
 		super(entityType, id, store, dispatcher)
+		this.__brands = brands
 	}
 
 	/**
@@ -303,6 +308,10 @@ export class EntityHandle<T extends object = object, TSelected = T> extends Enti
  */
 export class HasOneHandle<TEntity extends object = object, TSelected = TEntity> extends EntityRelatedHandle implements HasOneRef<TEntity, TSelected> {
 	private entityHandleCache: EntityHandle<TEntity, TSelected> | null = null
+	private placeholderCache: PlaceholderHandle<TEntity, TSelected> | null = null
+
+	/** Runtime brand symbols for validation */
+	readonly __brands?: Set<symbol>
 
 	constructor(
 		parentEntityType: string,
@@ -312,8 +321,10 @@ export class HasOneHandle<TEntity extends object = object, TSelected = TEntity> 
 		store: SnapshotStore,
 		dispatcher: ActionDispatcher,
 		private readonly schema: SchemaRegistry,
+		brands?: Set<symbol>,
 	) {
 		super(parentEntityType, parentEntityId, store, dispatcher)
+		this.__brands = brands
 	}
 
 	/**
@@ -383,37 +394,48 @@ export class HasOneHandle<TEntity extends object = object, TSelected = TEntity> 
 	/**
 	 * Gets the nested entity fields.
 	 * Implements HasOneRef interface.
-	 * Returns proxy with null values if relation is disconnected.
+	 * Delegates to the entity (either real EntityHandle or PlaceholderHandle).
 	 */
 	get fields(): SelectedEntityFields<TEntity, TSelected> {
-		const entity = this.entity
-		if (!entity) {
-			// Return proxy that returns null FieldHandles for disconnected relations
-			return createNullFieldsProxy<TEntity>() as SelectedEntityFields<TEntity, TSelected>
-		}
-		return entity.fields as unknown as SelectedEntityFields<TEntity, TSelected>
+		return this.entity.fields
 	}
 
 	/**
-	 * Gets the related entity reference if connected.
+	 * Gets the related entity reference.
 	 * Implements HasOneRef.entity - returns EntityRef for the related entity.
-	 * Returns null if the relation is disconnected.
+	 * Returns PlaceholderHandle (with id=null) if the relation is disconnected.
 	 */
-	get entity(): EntityRef<TEntity, TSelected> | null {
+	get entity(): EntityRef<TEntity, TSelected> {
 		const id = this.relatedId
-		if (!id) return null
 
-		if (!this.entityHandleCache || this.entityHandleCache.id !== id) {
-			this.entityHandleCache = new EntityHandle<TEntity, TSelected>(
-				id,
+		if (id) {
+			// Connected - return real entity handle
+			if (!this.entityHandleCache || this.entityHandleCache.id !== id) {
+				this.entityHandleCache = new EntityHandle<TEntity, TSelected>(
+					id,
+					this.targetType,
+					this.store,
+					this.dispatcher,
+					this.schema,
+					this.__brands,
+				)
+			}
+			return this.entityHandleCache
+		}
+
+		// Disconnected - return placeholder handle
+		if (!this.placeholderCache) {
+			this.placeholderCache = new PlaceholderHandle<TEntity, TSelected>(
+				this.entityType,
+				this.entityId,
+				this.fieldName,
 				this.targetType,
 				this.store,
 				this.dispatcher,
-				this.schema,
+				this.__brands,
 			)
 		}
-
-		return this.entityHandleCache
+		return this.placeholderCache
 	}
 
 	/**
@@ -504,6 +526,9 @@ export class HasOneHandle<TEntity extends object = object, TSelected = TEntity> 
 export class HasManyListHandle<TEntity extends object = object, TSelected = TEntity> extends EntityRelatedHandle implements HasManyRef<TEntity, TSelected> {
 	private itemHandleCache = new Map<string, EntityHandle<TEntity, TSelected>>()
 
+	/** Runtime brand symbols for validation */
+	readonly __brands?: Set<symbol>
+
 	constructor(
 		parentEntityType: string,
 		parentEntityId: string,
@@ -512,8 +537,10 @@ export class HasManyListHandle<TEntity extends object = object, TSelected = TEnt
 		store: SnapshotStore,
 		dispatcher: ActionDispatcher,
 		private readonly schema: SchemaRegistry,
+		brands?: Set<symbol>,
 	) {
 		super(parentEntityType, parentEntityId, store, dispatcher)
+		this.__brands = brands
 	}
 
 	/**
@@ -564,6 +591,7 @@ export class HasManyListHandle<TEntity extends object = object, TSelected = TEnt
 				this.store,
 				this.dispatcher,
 				this.schema,
+				this.__brands,
 			)
 			this.itemHandleCache.set(itemId, handle)
 		}
@@ -627,11 +655,169 @@ export class HasManyListHandle<TEntity extends object = object, TSelected = TEnt
 	}
 }
 
+// ==================== Placeholder Handle ====================
+
+/**
+ * PlaceholderHandle provides access to a placeholder entity (for creating new entities).
+ * Implements EntityRef interface with id = null.
+ * Reads/writes from placeholderData in the relation state.
+ *
+ * @typeParam TEntity - The full entity type
+ * @typeParam TSelected - The selected subset of fields
+ */
+export class PlaceholderHandle<TEntity extends object = object, TSelected = TEntity>
+	implements EntityRef<TEntity, TSelected>
+{
+	/** Runtime brand symbols for validation */
+	readonly __brands?: Set<symbol>
+
+	constructor(
+		private readonly parentEntityType: string,
+		private readonly parentEntityId: string,
+		private readonly fieldName: string,
+		private readonly targetType: string,
+		private readonly store: SnapshotStore,
+		private readonly dispatcher: ActionDispatcher,
+		brands?: Set<symbol>,
+	) {
+		this.__brands = brands
+	}
+
+	/**
+	 * Placeholder entities have no ID.
+	 */
+	get id(): null {
+		return null
+	}
+
+	/**
+	 * Gets placeholder data from the relation state.
+	 */
+	get data(): TSelected | null {
+		const relation = this.store.getRelation(
+			this.parentEntityType,
+			this.parentEntityId,
+			this.fieldName,
+		)
+		if (!relation || Object.keys(relation.placeholderData).length === 0) {
+			return null
+		}
+		return relation.placeholderData as TSelected
+	}
+
+	/**
+	 * Placeholder is dirty if it has any data.
+	 */
+	get isDirty(): boolean {
+		const relation = this.store.getRelation(
+			this.parentEntityType,
+			this.parentEntityId,
+			this.fieldName,
+		)
+		return relation ? Object.keys(relation.placeholderData).length > 0 : false
+	}
+
+	/**
+	 * Gets field accessors that read/write placeholder data.
+	 */
+	get fields(): SelectedEntityFields<TEntity, TSelected> {
+		return new Proxy({} as SelectedEntityFields<TEntity, TSelected>, {
+			get: (_, fieldName: string) => {
+				return this.createPlaceholderFieldHandle(fieldName)
+			},
+		})
+	}
+
+	/**
+	 * Creates a field handle for placeholder data.
+	 */
+	private createPlaceholderFieldHandle(fieldName: string): unknown {
+		const self = this
+
+		return {
+			get [FIELD_REF_META](): FieldRefMeta {
+				return {
+					path: [fieldName],
+					fieldName,
+					isArray: false,
+					isRelation: false,
+				}
+			},
+			get value(): unknown {
+				const relation = self.store.getRelation(
+					self.parentEntityType,
+					self.parentEntityId,
+					self.fieldName,
+				)
+				return relation?.placeholderData[fieldName] ?? null
+			},
+			get serverValue(): unknown {
+				return null
+			},
+			get isDirty(): boolean {
+				const relation = self.store.getRelation(
+					self.parentEntityType,
+					self.parentEntityId,
+					self.fieldName,
+				)
+				return fieldName in (relation?.placeholderData ?? {})
+			},
+			setValue: (value: unknown): void => {
+				self.dispatcher.dispatch({
+					type: 'SET_PLACEHOLDER_DATA',
+					entityType: self.parentEntityType,
+					entityId: self.parentEntityId,
+					fieldName: self.fieldName,
+					fieldPath: [fieldName],
+					value,
+				})
+			},
+			get inputProps() {
+				const getValue = () => {
+					const relation = self.store.getRelation(
+						self.parentEntityType,
+						self.parentEntityId,
+						self.fieldName,
+					)
+					return relation?.placeholderData[fieldName] ?? null
+				}
+				const setValue = (value: unknown) => {
+					self.dispatcher.dispatch({
+						type: 'SET_PLACEHOLDER_DATA',
+						entityType: self.parentEntityType,
+						entityId: self.parentEntityId,
+						fieldName: self.fieldName,
+						fieldPath: [fieldName],
+						value,
+					})
+				}
+				return {
+					get value() {
+						return getValue()
+					},
+					setValue,
+					onChange: setValue,
+				}
+			},
+			path: [fieldName],
+			fieldName,
+		}
+	}
+
+	/**
+	 * Type brand for EntityRef compatibility.
+	 */
+	get __entityType(): TEntity {
+		return undefined as unknown as TEntity
+	}
+}
+
 // ==================== Helper Functions ====================
 
 /**
  * Creates a proxy that returns null FieldHandle-like objects for disconnected relations.
  * Used when a HasOneHandle's relation is disconnected but code still accesses fields.
+ * @deprecated Use PlaceholderHandle instead
  */
 function createNullFieldsProxy<T extends object>(): EntityFields<T> {
 	return new Proxy({} as EntityFields<T>, {

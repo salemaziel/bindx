@@ -5,7 +5,7 @@ import { useBindxContext } from './BackendAdapterContext.js'
 import { useEntityCore } from './useEntityCore.js'
 import { resolveSelectionMeta, type SelectionInput } from '@contember/bindx'
 import type { SelectionMeta } from '@contember/bindx'
-import type { EntityFields } from '@contember/bindx'
+import type { EntityFields, SelectedEntityFields } from '@contember/bindx'
 import { deepEqual } from '@contember/bindx'
 
 /**
@@ -53,27 +53,33 @@ export interface ErrorEntityAccessor {
 
 /**
  * Ready state for entity accessor
+ *
+ * @typeParam TEntity - The full entity type
+ * @typeParam TSelected - The selected subset of fields (defaults to TEntity for backwards compatibility)
  */
-export interface ReadyEntityAccessor<T extends object> {
+export interface ReadyEntityAccessor<TEntity extends object, TSelected extends object = TEntity> {
 	readonly status: 'ready'
 	readonly isLoading: false
 	readonly isError: false
 	readonly isPersisting: boolean
 	readonly isDirty: boolean
 	readonly id: string
-	readonly fields: EntityFields<T>
-	readonly data: T
+	readonly fields: SelectedEntityFields<TEntity, TSelected>
+	readonly data: TSelected
 	persist(): Promise<void>
 	reset(): void
 }
 
 /**
  * Union of all entity accessor states
+ *
+ * @typeParam TEntity - The full entity type
+ * @typeParam TSelected - The selected subset of fields (defaults to TEntity for backwards compatibility)
  */
-export type EntityAccessorResult<T extends object> =
+export type EntityAccessorResult<TEntity extends object, TSelected extends object = TEntity> =
 	| LoadingEntityAccessor
 	| ErrorEntityAccessor
-	| ReadyEntityAccessor<T>
+	| ReadyEntityAccessor<TEntity, TSelected>
 
 /**
  * Creates a loading accessor placeholder
@@ -132,14 +138,16 @@ function createErrorAccessor(id: string, error: Error): ErrorEntityAccessor {
  * Generic implementation of useEntity hook.
  * Used by createBindx to create typed versions.
  *
+ * @typeParam TEntity - The full entity type
+ * @typeParam TSelected - The selected subset of fields
  * @internal
  */
-export function useEntityImpl<TResult extends object>(
+export function useEntityImpl<TEntity extends object, TSelected extends object>(
 	entityType: string,
 	options: UseEntityOptions,
 	selectionMeta: SelectionMeta,
 	schema: SchemaRegistry<Record<string, object>>,
-): EntityAccessorResult<TResult> {
+): EntityAccessorResult<TEntity, TSelected> {
 	const { store, dispatcher, persistence } = useBindxContext()
 
 	// Use core hook for data loading
@@ -152,7 +160,7 @@ export function useEntityImpl<TResult extends object>(
 
 	// Create stable handle (memoized on id/type)
 	const handle = useMemo(
-		() => new EntityHandle<TResult>(options.id, entityType, store, dispatcher, schema),
+		() => new EntityHandle<TEntity, TSelected>(options.id, entityType, store, dispatcher, schema),
 		[options.id, entityType, store, dispatcher, schema],
 	)
 
@@ -164,7 +172,7 @@ export function useEntityImpl<TResult extends object>(
 	}, [handle])
 
 	// Build accessor from core result
-	const accessor = useMemo((): EntityAccessorResult<TResult> => {
+	const accessor = useMemo((): EntityAccessorResult<TEntity, TSelected> => {
 		if (coreResult.status === 'loading') {
 			return createLoadingAccessor(options.id)
 		}
@@ -188,8 +196,8 @@ export function useEntityImpl<TResult extends object>(
 			isPersisting: coreResult.isPersisting,
 			isDirty,
 			id: options.id,
-			fields: handle.fields as EntityFields<TResult>,
-			data: snapshot.data as TResult,
+			fields: handle.fields as SelectedEntityFields<TEntity, TSelected>,
+			data: snapshot.data as TSelected,
 			async persist() {
 				await persistence.persist(entityType, options.id)
 			},

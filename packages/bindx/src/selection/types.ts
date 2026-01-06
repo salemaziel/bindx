@@ -1,3 +1,5 @@
+import type { ComponentBrand, AnyBrand } from '../brand/ComponentBrand.js'
+
 /**
  * Symbol used to store selection metadata on builder objects
  */
@@ -57,8 +59,12 @@ type ArrayItemType<T> = T extends Array<infer U> ? U : never
 
 /**
  * A fragment defined with the fluent builder
+ *
+ * @typeParam TModel - The entity model type
+ * @typeParam TResult - The selected fields result type
+ * @typeParam TBrand - Component brand type for validation (defaults to AnyBrand)
  */
-export interface FluentFragment<TModel, TResult> {
+export interface FluentFragment<TModel, TResult, TBrand extends AnyBrand = AnyBrand> {
 	/** Runtime metadata */
 	readonly __meta: SelectionMeta
 	/** Type brand for result type */
@@ -67,6 +73,10 @@ export interface FluentFragment<TModel, TResult> {
 	readonly __modelType: TModel
 	/** Marker for type checking */
 	readonly __isFragment: true
+	/** Component brand for type-level tracking */
+	readonly __brand?: TBrand
+	/** Runtime brand symbols for validation */
+	readonly __brands?: Set<symbol>
 }
 
 /**

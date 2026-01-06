@@ -65,6 +65,10 @@ export type {
 	EntityRef,
 } from './handles/index.js'
 
+// Brand types
+export type { AnyBrand } from './brand/ComponentBrand.js'
+export { ComponentBrand } from './brand/ComponentBrand.js'
+
 // Adapter types
 export type {
 	BackendAdapter,

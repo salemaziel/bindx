@@ -292,3 +292,16 @@ export function setPersisting(
 ): SetPersistingAction {
 	return { type: 'SET_PERSISTING', entityType, entityId, isPersisting }
 }
+
+/**
+ * Creates a SET_PLACEHOLDER_DATA action
+ */
+export function setPlaceholderData(
+	entityType: string,
+	entityId: string,
+	fieldName: string,
+	fieldPath: string[],
+	value: unknown,
+): SetPlaceholderDataAction {
+	return { type: 'SET_PLACEHOLDER_DATA', entityType, entityId, fieldName, fieldPath, value }
+}

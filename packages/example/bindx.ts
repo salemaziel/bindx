@@ -87,4 +87,4 @@ const schema = defineSchema<Schema>({
  * - `e` is automatically typed as ModelProxy<Article>
  * - Result fields are fully typed
  */
-export const { useEntity, useEntityList, Entity } = createBindx(schema)
+export const { useEntity, useEntityList, Entity, createComponent } = createBindx(schema)
