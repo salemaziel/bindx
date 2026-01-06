@@ -59,6 +59,7 @@ export type {
 	FetchOptions,
 	MockDataStore,
 	MockAdapterOptions,
+	ContemberAdapterOptions,
 	// Core types
 	EntityLoadResult,
 	EntityListLoadResult,
@@ -94,6 +95,7 @@ export {
 	FIELD_REF_META,
 	// Adapter
 	MockAdapter,
+	ContemberAdapter,
 	// Core
 	createEntityLoader,
 	resolveSelectionMeta,
@@ -124,6 +126,9 @@ export type {
 	ErrorEntityListAccessor,
 	ReadyEntityListAccessor,
 	EntityListAccessorResult,
+	// Contember types
+	ContemberBindxProviderProps,
+	ContemberContextValue,
 } from './hooks/index.js'
 
 // JSX types
@@ -156,6 +161,15 @@ export {
 	useBindxContext,
 	useIdentityMap,
 	createBindx,
+	// Contember
+	ContemberBindxProvider,
+	useContember,
+	useContemberBindxContext,
+	useContemberSessionToken,
+	useSetContemberSessionToken,
+	useContemberApiBaseUrl,
+	useContemberProject,
+	useContemberStage,
 } from './hooks/index.js'
 
 // JSX Components

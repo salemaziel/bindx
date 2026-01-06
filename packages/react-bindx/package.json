@@ -15,7 +15,9 @@
 		"react": ">=18.0.0"
 	},
 	"dependencies": {
-		"@contember/bindx": "workspace:*"
+		"@contember/bindx": "workspace:*",
+		"@contember/client-content": "^2.0.4",
+		"@contember/graphql-client": "^2.0.4"
 	},
 	"files": [
 		"dist",

@@ -22,12 +22,19 @@
     "packages/bindx": {
       "name": "@contember/bindx",
       "version": "0.1.0",
+      "dependencies": {
+        "@contember/client-content": "^2.0.4",
+        "@contember/graphql-builder": "^2.0.4",
+        "@contember/graphql-client": "^2.0.4",
+      },
     },
     "packages/example": {
       "name": "@contember/bindx-example",
       "version": "0.1.0",
       "dependencies": {
         "@contember/bindx": "workspace:*",
+        "@contember/client-content": "^2.0.4",
+        "@contember/graphql-client": "^2.0.4",
         "@contember/react-bindx": "workspace:*",
         "react": "^19.0.0",
         "react-dom": "^19.0.0",
@@ -45,6 +52,8 @@
       "version": "0.1.0",
       "dependencies": {
         "@contember/bindx": "workspace:*",
+        "@contember/client-content": "^2.0.4",
+        "@contember/graphql-client": "^2.0.4",
       },
       "peerDependencies": {
         "react": ">=18.0.0",
@@ -96,7 +105,15 @@
 
     "@contember/bindx-example": ["@contember/bindx-example@workspace:packages/example"],
 
+    "@contember/client-content": ["@contember/client-content@2.0.4", "", { "dependencies": { "@contember/graphql-builder": "2.0.4", "@contember/graphql-client": "2.0.4", "@contember/schema": "2.0.4" } }, "sha512-9GQCo/t5dOFiUjP0Gcxl12IynEE9N0Wt2y9fGrdG0/Jy1y6psxXc2GsIXDt0GDKWePCUurFURXACbLdeXYBw1A=="],
+
+    "@contember/graphql-builder": ["@contember/graphql-builder@2.0.4", "", { "dependencies": { "@contember/schema": "2.0.4" } }, "sha512-PeQ9enssFgCpUjKYwex3GKVal6xhAoB5yIoZ4dtZ11NMJJlisQ85D+0JQv3bfTXGd1Efszy8JUAb5rfHW0DA0Q=="],
+
+    "@contember/graphql-client": ["@contember/graphql-client@2.0.4", "", {}, "sha512-lqOWqe2MNumBuuUTd7fa/pOvwiASCMcbQe1/nT2IUj1AG+vD0O2scvddU9qHWipPiNxFgV1u3d1gl9u5YNY1WA=="],
+
     "@contember/react-bindx": ["@contember/react-bindx@workspace:packages/react-bindx"],
+
+    "@contember/schema": ["@contember/schema@2.0.4", "", {}, "sha512-cMMgnJDrz9QjOmVPH5IQmm+7k4PQbTTBE8kg2qCQxNXTOr+g98gju6VBIsEGBd+3cRxRsFerKO4z4skmvKh9YQ=="],
 
     "@esbuild/aix-ppc64": ["@esbuild/aix-ppc64@0.27.2", "", { "os": "aix", "cpu": "ppc64" }, "sha512-GZMB+a0mOMZs4MpDbj8RJp4cw+w1WV5NYD6xzgvzUJ5Ek2jerwfO2eADyI6ExDSUED+1X8aMbegahsJi+8mgpw=="],
 
