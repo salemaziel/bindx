@@ -145,6 +145,9 @@ export class PersistenceManager {
 
 		// Commit changes (serverData = data)
 		this.dispatcher.dispatch(commitEntity(entityType, id))
+
+		// Commit all relations (hasOne and hasMany)
+		this.store.commitAllRelations(entityType, id)
 	}
 
 	/**

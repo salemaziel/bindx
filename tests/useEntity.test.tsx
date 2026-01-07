@@ -27,6 +27,14 @@ interface Author {
 interface Tag {
 	id: string
 	name: string
+	color: string
+}
+
+interface Location {
+	id: string
+	label: string
+	lat: number
+	lng: number
 }
 
 interface Article {
@@ -34,6 +42,7 @@ interface Article {
 	title: string
 	content: string
 	author: Author
+	location: Location
 	tags: Tag[]
 }
 
@@ -42,6 +51,7 @@ interface TestSchema {
 	Article: Article
 	Author: Author
 	Tag: Tag
+	Location: Location
 }
 
 const schema = defineSchema<TestSchema>({
@@ -52,6 +62,7 @@ const schema = defineSchema<TestSchema>({
 				title: scalar(),
 				content: scalar(),
 				author: hasOne('Author'),
+				location: hasOne('Location'),
 				tags: hasMany('Tag'),
 			},
 		},
@@ -66,6 +77,15 @@ const schema = defineSchema<TestSchema>({
 			fields: {
 				id: scalar(),
 				name: scalar(),
+				color: scalar(),
+			},
+		},
+		Location: {
+			fields: {
+				id: scalar(),
+				label: scalar(),
+				lat: scalar(),
+				lng: scalar(),
 			},
 		},
 	},
@@ -97,9 +117,15 @@ function createMockData() {
 					name: 'John Doe',
 					email: 'john@example.com',
 				},
+				location: {
+					id: 'location-1',
+					label: 'New York',
+					lat: 40.7128,
+					lng: -74.006,
+				},
 				tags: [
-					{ id: 'tag-1', name: 'JavaScript' },
-					{ id: 'tag-2', name: 'React' },
+					{ id: 'tag-1', name: 'JavaScript', color: '#f7df1e' },
+					{ id: 'tag-2', name: 'React', color: '#61dafb' },
 				],
 			},
 		},
@@ -109,6 +135,18 @@ function createMockData() {
 				name: 'John Doe',
 				email: 'john@example.com',
 			},
+		},
+		Location: {
+			'location-1': {
+				id: 'location-1',
+				label: 'New York',
+				lat: 40.7128,
+				lng: -74.006,
+			},
+		},
+		Tag: {
+			'tag-1': { id: 'tag-1', name: 'JavaScript', color: '#f7df1e' },
+			'tag-2': { id: 'tag-2', name: 'React', color: '#61dafb' },
 		},
 	}
 }
@@ -283,7 +321,199 @@ describe('useEntity hook', () => {
 			expect(tags.children.length).toBe(2)
 		})
 
-		test('data snapshot should reflect current values', async () => {
+		test('should render location via article.data (ArticleEditor pattern)', async () => {
+			const adapter = new MockAdapter(createMockData(), { delay: 0 })
+
+			function TestComponent() {
+				const article = useEntity(
+					'Article',
+					{ id: 'article-1' },
+					e => e.title().location(l => l.id().label().lat().lng()).tags(t => t.id().name().color()),
+				)
+
+				if (article.isLoading) {
+					return <div>Loading...</div>
+				}
+
+				return (
+					<div>
+						<h1 data-testid="title">{article.fields.title.value}</h1>
+						<p data-testid="location-label">{article.data.location?.label ?? 'N/A'}</p>
+						<p data-testid="location-lat">{article.data.location?.lat ?? 'N/A'}</p>
+						<p data-testid="tags-count">{article.data.tags?.length ?? 0}</p>
+						<ul data-testid="tags">
+							{article.data.tags?.map(tag => (
+								<li key={tag.id} data-testid={`tag-${tag.id}`}>
+									{tag.name}
+								</li>
+							))}
+						</ul>
+					</div>
+				)
+			}
+
+			const { container } = render(
+				<BindxProvider adapter={adapter}>
+					<TestComponent />
+				</BindxProvider>,
+			)
+
+			await waitFor(() => {
+				expect(queryByTestId(container, 'title')).not.toBeNull()
+			})
+
+			expect(getByTestId(container, 'title').textContent).toBe('Hello World')
+			expect(getByTestId(container, 'location-label').textContent).toBe('New York')
+			expect(getByTestId(container, 'location-lat').textContent).toBe('40.7128')
+			expect(getByTestId(container, 'tags-count').textContent).toBe('2')
+			expect(getByTestId(container, 'tag-tag-1').textContent).toBe('JavaScript')
+		})
+
+		test('data snapshot should reflect current values including relations with delay', async () => {
+			// Test with delay similar to the example app
+			const adapter = new MockAdapter(createMockData(), { delay: 200 })
+
+			function TestComponent() {
+				const article = useEntity(
+					'Article',
+					{ id: 'article-1' },
+					e => e.title().location(l => l.id().label()).tags(t => t.id().name()),
+				)
+
+				if (article.isLoading) {
+					return <div data-testid="loading">Loading...</div>
+				}
+
+				return (
+					<div>
+						<span data-testid="location-label">{article.data.location?.label ?? 'N/A'}</span>
+						<span data-testid="tags-count">{article.data.tags?.length ?? 0}</span>
+					</div>
+				)
+			}
+
+			const { container } = render(
+				<BindxProvider adapter={adapter}>
+					<TestComponent />
+				</BindxProvider>,
+			)
+
+			// Initially loading
+			expect(queryByTestId(container, 'loading')).not.toBeNull()
+
+			// Wait for data to load
+			await waitFor(() => {
+				expect(queryByTestId(container, 'location-label')).not.toBeNull()
+			}, { timeout: 1000 })
+
+			expect(getByTestId(container, 'location-label').textContent).toBe('New York')
+			expect(getByTestId(container, 'tags-count').textContent).toBe('2')
+		})
+
+		test('multiple components fetching same entity with different selections', async () => {
+			// This simulates the example app scenario where multiple components
+			// fetch the same entity but with different selections
+			const adapter = new MockAdapter(createMockData(), { delay: 50 })
+
+			function ArticleEditorComponent() {
+				const article = useEntity(
+					'Article',
+					{ id: 'article-1' },
+					e => e.title().author(a => a.id().name()).location(l => l.id().label()).tags(t => t.id().name()),
+				)
+
+				if (article.isLoading) {
+					return <div data-testid="editor-loading">Loading editor...</div>
+				}
+
+				return (
+					<div data-testid="editor">
+						<span data-testid="editor-title">{article.fields.title.value}</span>
+						<span data-testid="editor-author">{article.fields.author.fields.name.value}</span>
+						<span data-testid="editor-location">{article.data.location?.label ?? 'N/A'}</span>
+						<span data-testid="editor-tags">{article.data.tags?.length ?? 0}</span>
+					</div>
+				)
+			}
+
+			function ArticleViewComponent() {
+				const article = useEntity(
+					'Article',
+					{ id: 'article-1' },
+					e => e.title().content(),
+				)
+
+				if (article.isLoading) {
+					return <div data-testid="view-loading">Loading view...</div>
+				}
+
+				return (
+					<div data-testid="view">
+						<span data-testid="view-title">{article.fields.title.value}</span>
+					</div>
+				)
+			}
+
+			const { container } = render(
+				<BindxProvider adapter={adapter}>
+					<ArticleEditorComponent />
+					<ArticleViewComponent />
+				</BindxProvider>,
+			)
+
+			// Wait for both to load
+			await waitFor(() => {
+				expect(queryByTestId(container, 'editor')).not.toBeNull()
+				expect(queryByTestId(container, 'view')).not.toBeNull()
+			}, { timeout: 1000 })
+
+			// Check editor
+			expect(getByTestId(container, 'editor-title').textContent).toBe('Hello World')
+			expect(getByTestId(container, 'editor-author').textContent).toBe('John Doe')
+			expect(getByTestId(container, 'editor-location').textContent).toBe('New York')
+			expect(getByTestId(container, 'editor-tags').textContent).toBe('2')
+
+			// Check view
+			expect(getByTestId(container, 'view-title').textContent).toBe('Hello World')
+		})
+
+		test('data snapshot should reflect current values including relations', async () => {
+			const adapter = new MockAdapter(createMockData(), { delay: 0 })
+
+			function TestComponent() {
+				const article = useEntity(
+					'Article',
+					{ id: 'article-1' },
+					e => e.title().location(l => l.id().label()).tags(t => t.id().name()),
+				)
+
+				if (article.isLoading) {
+					return <div>Loading...</div>
+				}
+
+				return <div data-testid="data">{JSON.stringify(article.data)}</div>
+			}
+
+			const { container } = render(
+				<BindxProvider adapter={adapter}>
+					<TestComponent />
+				</BindxProvider>,
+			)
+
+			await waitFor(() => {
+				expect(queryByTestId(container, 'data')).not.toBeNull()
+			})
+
+			const data = JSON.parse(getByTestId(container, 'data').textContent!)
+			expect(data.title).toBe('Hello World')
+			expect(data.location).toBeDefined()
+			expect(data.location.label).toBe('New York')
+			expect(data.tags).toBeDefined()
+			expect(data.tags.length).toBe(2)
+			expect(data.tags[0].name).toBe('JavaScript')
+		})
+
+		test('data snapshot should reflect current scalar values', async () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent() {
@@ -967,6 +1197,200 @@ describe('useEntity hook', () => {
 			expect(titleInput.value).toBe('Hello World')
 			expect(getByTestId(container, 'author-name').textContent).toBe('John Doe')
 			expect(getByTestId(container, 'author-email').textContent).toBe('john@example.com')
+		})
+	})
+
+	describe('has-many connect/disconnect', () => {
+		test('should disconnect items from has-many relation', async () => {
+			const adapter = new MockAdapter(createMockData(), { delay: 0 })
+
+			function TestComponent() {
+				const article = useEntity(
+					'Article',
+					{ id: 'article-1' },
+					e => e.title().tags(t => t.id().name()),
+				)
+
+				if (article.isLoading) {
+					return <div>Loading...</div>
+				}
+
+				return (
+					<div>
+						<span data-testid="tag-count">{article.fields.tags.length}</span>
+						<span data-testid="tags-dirty">{article.fields.tags.isDirty ? 'dirty' : 'clean'}</span>
+						<ul data-testid="tags">
+							{article.fields.tags.items.map(tag => (
+								<li key={tag.id} data-testid={`tag-${tag.id}`}>
+									{tag.fields.name.value}
+									<button
+										data-testid={`disconnect-${tag.id}`}
+										onClick={() => article.fields.tags.disconnect(tag.id)}
+									>
+										Disconnect
+									</button>
+								</li>
+							))}
+						</ul>
+					</div>
+				)
+			}
+
+			const { container } = render(
+				<BindxProvider adapter={adapter}>
+					<TestComponent />
+				</BindxProvider>,
+			)
+
+			await waitFor(() => {
+				expect(queryByTestId(container, 'tag-count')).not.toBeNull()
+			})
+
+			// Initially 2 tags
+			expect(getByTestId(container, 'tag-count').textContent).toBe('2')
+			expect(getByTestId(container, 'tags-dirty').textContent).toBe('clean')
+
+			// Disconnect first tag
+			act(() => {
+				;(getByTestId(container, 'disconnect-tag-1') as HTMLButtonElement).click()
+			})
+
+			// Now should have 1 tag and be dirty
+			expect(getByTestId(container, 'tag-count').textContent).toBe('1')
+			expect(getByTestId(container, 'tags-dirty').textContent).toBe('dirty')
+			expect(queryByTestId(container, 'tag-tag-1')).toBeNull()
+			expect(queryByTestId(container, 'tag-tag-2')).not.toBeNull()
+		})
+
+		test('should connect items to has-many relation', async () => {
+			const mockData = createMockData()
+			// Add additional tag that can be connected
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			;(mockData as any).Tag['tag-3'] = { id: 'tag-3', name: 'TypeScript', color: '#3178c6' }
+			const adapter = new MockAdapter(mockData, { delay: 0 })
+
+			function TestComponent() {
+				const article = useEntity(
+					'Article',
+					{ id: 'article-1' },
+					e => e.title().tags(t => t.id().name()),
+				)
+
+				if (article.isLoading) {
+					return <div>Loading...</div>
+				}
+
+				return (
+					<div>
+						<span data-testid="tag-count">{article.fields.tags.length}</span>
+						<span data-testid="tags-dirty">{article.fields.tags.isDirty ? 'dirty' : 'clean'}</span>
+						<button
+							data-testid="connect-tag-3"
+							onClick={() => article.fields.tags.connect('tag-3')}
+						>
+							Connect TypeScript
+						</button>
+						<ul data-testid="tags">
+							{article.fields.tags.items.map(tag => (
+								<li key={tag.id} data-testid={`tag-${tag.id}`}>
+									{tag.fields.name.value}
+								</li>
+							))}
+						</ul>
+					</div>
+				)
+			}
+
+			const { container } = render(
+				<BindxProvider adapter={adapter}>
+					<TestComponent />
+				</BindxProvider>,
+			)
+
+			await waitFor(() => {
+				expect(queryByTestId(container, 'tag-count')).not.toBeNull()
+			})
+
+			// Initially 2 tags
+			expect(getByTestId(container, 'tag-count').textContent).toBe('2')
+			expect(getByTestId(container, 'tags-dirty').textContent).toBe('clean')
+
+			// Connect new tag
+			act(() => {
+				;(getByTestId(container, 'connect-tag-3') as HTMLButtonElement).click()
+			})
+
+			// Now should have 3 tags and be dirty
+			expect(getByTestId(container, 'tag-count').textContent).toBe('3')
+			expect(getByTestId(container, 'tags-dirty').textContent).toBe('dirty')
+			expect(queryByTestId(container, 'tag-tag-3')).not.toBeNull()
+		})
+
+		test('should handle connect and disconnect together', async () => {
+			const mockData = createMockData()
+			// Add additional tag that can be connected
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			;(mockData as any).Tag['tag-3'] = { id: 'tag-3', name: 'TypeScript', color: '#3178c6' }
+			const adapter = new MockAdapter(mockData, { delay: 0 })
+
+			function TestComponent() {
+				const article = useEntity(
+					'Article',
+					{ id: 'article-1' },
+					e => e.title().tags(t => t.id().name()),
+				)
+
+				if (article.isLoading) {
+					return <div>Loading...</div>
+				}
+
+				const tagIds = article.fields.tags.items.map(t => t.id).sort().join(',')
+
+				return (
+					<div>
+						<span data-testid="tag-ids">{tagIds}</span>
+						<button
+							data-testid="disconnect-tag-1"
+							onClick={() => article.fields.tags.disconnect('tag-1')}
+						>
+							Disconnect tag-1
+						</button>
+						<button
+							data-testid="connect-tag-3"
+							onClick={() => article.fields.tags.connect('tag-3')}
+						>
+							Connect tag-3
+						</button>
+					</div>
+				)
+			}
+
+			const { container } = render(
+				<BindxProvider adapter={adapter}>
+					<TestComponent />
+				</BindxProvider>,
+			)
+
+			await waitFor(() => {
+				expect(queryByTestId(container, 'tag-ids')).not.toBeNull()
+			})
+
+			// Initially tag-1 and tag-2
+			expect(getByTestId(container, 'tag-ids').textContent).toBe('tag-1,tag-2')
+
+			// Disconnect tag-1
+			act(() => {
+				;(getByTestId(container, 'disconnect-tag-1') as HTMLButtonElement).click()
+			})
+
+			expect(getByTestId(container, 'tag-ids').textContent).toBe('tag-2')
+
+			// Connect tag-3
+			act(() => {
+				;(getByTestId(container, 'connect-tag-3') as HTMLButtonElement).click()
+			})
+
+			expect(getByTestId(container, 'tag-ids').textContent).toBe('tag-2,tag-3')
 		})
 	})
 })

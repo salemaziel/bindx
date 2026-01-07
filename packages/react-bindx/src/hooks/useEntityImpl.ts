@@ -6,7 +6,6 @@ import { useEntityCore } from './useEntityCore.js'
 import { resolveSelectionMeta, type SelectionInput } from '@contember/bindx'
 import type { SelectionMeta } from '@contember/bindx'
 import type { EntityFields, SelectedEntityFields } from '@contember/bindx'
-import { deepEqual } from '@contember/bindx'
 
 /**
  * Options for useEntity hook
@@ -187,14 +186,16 @@ export function useEntityImpl<TEntity extends object, TSelected extends object>(
 
 		// Ready state
 		const snapshot = coreResult.snapshot!
-		const isDirty = !deepEqual(snapshot.data, snapshot.serverData)
 
 		return {
 			status: 'ready',
 			isLoading: false,
 			isError: false,
 			isPersisting: coreResult.isPersisting,
-			isDirty,
+			get isDirty() {
+				// Use handle.isDirty which includes scalar and relation changes
+				return handle.isDirty
+			},
 			id: options.id,
 			fields: handle.fields as SelectedEntityFields<TEntity, TSelected>,
 			data: snapshot.data as TSelected,

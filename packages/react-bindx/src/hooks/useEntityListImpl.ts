@@ -274,6 +274,7 @@ export function useEntityListImpl<TResult extends object>(
 
 				listStateRef.current = { status: 'ready', items }
 				versionRef.current++
+				store.notify()
 			} catch (error) {
 				if (abortController.signal.aborted) return
 
@@ -283,6 +284,7 @@ export function useEntityListImpl<TResult extends object>(
 					error: error instanceof Error ? error : new Error(String(error)),
 				}
 				versionRef.current++
+				store.notify()
 			}
 		}
 

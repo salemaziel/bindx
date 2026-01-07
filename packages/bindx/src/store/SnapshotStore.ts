@@ -40,6 +40,8 @@ interface StoredHasManyState {
 	serverIds: Set<string>
 	/** Planned removals (disconnect or delete) keyed by entity ID */
 	plannedRemovals: Map<string, HasManyRemovalType>
+	/** Planned connections (IDs to add to the list) */
+	plannedConnections: Set<string>
 	version: number
 }
 
@@ -95,6 +97,9 @@ export class SnapshotStore {
 	/** Global subscribers (notified on any change) */
 	private readonly globalSubscribers = new Set<Subscriber>()
 
+	/** Parent-child relationships: childKey -> Set of parentKeys */
+	private readonly childToParents = new Map<string, Set<string>>()
+
 	// ==================== Key Generation ====================
 
 	private getEntityKey(entityType: string, id: string): string {
@@ -127,30 +132,40 @@ export class SnapshotStore {
 	/**
 	 * Sets entity data, creating a new immutable snapshot.
 	 * If isServerData is true, both data and serverData are set.
+	 * If skipNotify is true, subscribers are not notified (use when normalizing embedded data during render).
+	 * New data is merged with existing data to preserve fields from previous fetches with different selections.
 	 */
 	setEntityData<T extends object>(
 		entityType: string,
 		id: string,
 		data: T,
 		isServerData: boolean = false,
+		skipNotify: boolean = false,
 	): EntitySnapshot<T> {
 		const key = this.getEntityKey(entityType, id)
 		const existing = this.entitySnapshots.get(key)
 
+		// Merge new data with existing data to preserve fields from previous fetches
+		const mergedData = existing?.data
+			? { ...existing.data, ...data } as T
+			: data
+
 		const serverData = isServerData
-			? data
-			: (existing?.serverData as T) ?? data
+			? (existing?.serverData ? { ...existing.serverData, ...data } as T : data)
+			: (existing?.serverData as T) ?? mergedData
 
 		const newSnapshot = createEntitySnapshot(
 			id,
 			entityType,
-			data,
+			mergedData,
 			serverData,
 			(existing?.version ?? 0) + 1,
 		)
 
 		this.entitySnapshots.set(key, newSnapshot)
-		this.notifyEntitySubscribers(key)
+		if (!skipNotify) {
+			this.notifyEntitySubscribers(key)
+		}
 
 		return newSnapshot
 	}
@@ -356,6 +371,7 @@ export class SnapshotStore {
 			this.hasManyStates.set(key, {
 				serverIds: new Set(serverIds ?? []),
 				plannedRemovals: new Map(),
+				plannedConnections: new Set(),
 				version: 0,
 			})
 		}
@@ -391,6 +407,7 @@ export class SnapshotStore {
 			this.hasManyStates.set(key, {
 				serverIds: new Set(serverIds),
 				plannedRemovals: new Map(),
+				plannedConnections: new Set(),
 				version: 0,
 			})
 		} else {
@@ -421,12 +438,19 @@ export class SnapshotStore {
 			this.hasManyStates.set(key, {
 				serverIds: new Set(),
 				plannedRemovals: new Map([[itemId, type]]),
+				plannedConnections: new Set(),
 				version: 0,
 			})
 		} else {
-			existing.plannedRemovals.set(itemId, type)
+			const newPlannedRemovals = new Map(existing.plannedRemovals)
+			newPlannedRemovals.set(itemId, type)
+			// If it was planned for connection, cancel that
+			const newPlannedConnections = new Set(existing.plannedConnections)
+			newPlannedConnections.delete(itemId)
 			this.hasManyStates.set(key, {
 				...existing,
+				plannedRemovals: newPlannedRemovals,
+				plannedConnections: newPlannedConnections,
 				version: existing.version + 1,
 			})
 		}
@@ -448,9 +472,11 @@ export class SnapshotStore {
 
 		if (!existing) return
 
-		existing.plannedRemovals.delete(itemId)
+		const newPlannedRemovals = new Map(existing.plannedRemovals)
+		newPlannedRemovals.delete(itemId)
 		this.hasManyStates.set(key, {
 			...existing,
+			plannedRemovals: newPlannedRemovals,
 			version: existing.version + 1,
 		})
 
@@ -470,6 +496,79 @@ export class SnapshotStore {
 	}
 
 	/**
+	 * Plans a connection for a has-many item.
+	 */
+	planHasManyConnection(
+		parentType: string,
+		parentId: string,
+		fieldName: string,
+		itemId: string,
+	): void {
+		const key = this.getRelationKey(parentType, parentId, fieldName)
+		const existing = this.hasManyStates.get(key)
+
+		if (!existing) {
+			this.hasManyStates.set(key, {
+				serverIds: new Set(),
+				plannedRemovals: new Map(),
+				plannedConnections: new Set([itemId]),
+				version: 0,
+			})
+		} else {
+			const newPlannedConnections = new Set(existing.plannedConnections)
+			newPlannedConnections.add(itemId)
+			// If it was planned for removal, cancel that
+			const newPlannedRemovals = new Map(existing.plannedRemovals)
+			newPlannedRemovals.delete(itemId)
+			this.hasManyStates.set(key, {
+				...existing,
+				plannedConnections: newPlannedConnections,
+				plannedRemovals: newPlannedRemovals,
+				version: existing.version + 1,
+			})
+		}
+
+		this.notifyRelationSubscribers(key)
+	}
+
+	/**
+	 * Cancels a planned connection for a has-many item.
+	 */
+	cancelHasManyConnection(
+		parentType: string,
+		parentId: string,
+		fieldName: string,
+		itemId: string,
+	): void {
+		const key = this.getRelationKey(parentType, parentId, fieldName)
+		const existing = this.hasManyStates.get(key)
+
+		if (!existing) return
+
+		const newPlannedConnections = new Set(existing.plannedConnections)
+		newPlannedConnections.delete(itemId)
+		this.hasManyStates.set(key, {
+			...existing,
+			plannedConnections: newPlannedConnections,
+			version: existing.version + 1,
+		})
+
+		this.notifyRelationSubscribers(key)
+	}
+
+	/**
+	 * Gets planned connections for a has-many relation.
+	 */
+	getHasManyPlannedConnections(
+		parentType: string,
+		parentId: string,
+		fieldName: string,
+	): Set<string> | undefined {
+		const key = this.getRelationKey(parentType, parentId, fieldName)
+		return this.hasManyStates.get(key)?.plannedConnections
+	}
+
+	/**
 	 * Commits has-many state after successful persist.
 	 */
 	commitHasMany(
@@ -484,7 +583,31 @@ export class SnapshotStore {
 		this.hasManyStates.set(key, {
 			serverIds: new Set(newServerIds),
 			plannedRemovals: new Map(),
+			plannedConnections: new Set(),
 			version: (existing?.version ?? 0) + 1,
+		})
+
+		this.notifyRelationSubscribers(key)
+	}
+
+	/**
+	 * Resets has-many state to server state (clears planned operations).
+	 */
+	resetHasMany(
+		parentType: string,
+		parentId: string,
+		fieldName: string,
+	): void {
+		const key = this.getRelationKey(parentType, parentId, fieldName)
+		const existing = this.hasManyStates.get(key)
+
+		if (!existing) return
+
+		this.hasManyStates.set(key, {
+			serverIds: existing.serverIds,
+			plannedRemovals: new Map(),
+			plannedConnections: new Set(),
+			version: existing.version + 1,
 		})
 
 		this.notifyRelationSubscribers(key)
@@ -547,6 +670,7 @@ export class SnapshotStore {
 
 	/**
 	 * Updates relation state.
+	 * If the relation state doesn't exist, creates it with the provided updates.
 	 */
 	setRelation(
 		parentType: string,
@@ -557,13 +681,37 @@ export class SnapshotStore {
 		const key = this.getRelationKey(parentType, parentId, fieldName)
 		const existing = this.relationStates.get(key)
 
-		if (!existing) return
+		if (!existing) {
+			// Initialize relation state with server data from entity snapshot
+			const entityKey = this.getEntityKey(parentType, parentId)
+			const entitySnapshot = this.entitySnapshots.get(entityKey)
+			let serverId: string | null = null
+			let serverState: HasOneRelationState = 'disconnected'
 
-		this.relationStates.set(key, {
-			...existing,
-			...updates,
-			version: existing.version + 1,
-		})
+			if (entitySnapshot?.serverData) {
+				const relatedData = (entitySnapshot.serverData as Record<string, unknown>)[fieldName]
+				if (relatedData && typeof relatedData === 'object' && 'id' in relatedData) {
+					serverId = (relatedData as { id: string }).id
+					serverState = 'connected'
+				}
+			}
+
+			this.relationStates.set(key, {
+				// Use 'in' check to distinguish between explicit null and undefined
+				currentId: 'currentId' in updates ? updates.currentId! : serverId,
+				serverId,
+				state: 'state' in updates ? updates.state! : serverState,
+				serverState,
+				placeholderData: updates.placeholderData ?? {},
+				version: 0,
+			})
+		} else {
+			this.relationStates.set(key, {
+				...existing,
+				...updates,
+				version: existing.version + 1,
+			})
+		}
 
 		this.notifyRelationSubscribers(key)
 	}
@@ -606,6 +754,39 @@ export class SnapshotStore {
 		})
 
 		this.notifyRelationSubscribers(key)
+	}
+
+	/**
+	 * Commits all relations (hasOne and hasMany) for an entity.
+	 * Called after successful persist to update server state.
+	 */
+	commitAllRelations(entityType: string, entityId: string): void {
+		const keyPrefix = `${entityType}:${entityId}:`
+
+		// Commit all hasOne relations
+		for (const [key, state] of this.relationStates) {
+			if (key.startsWith(keyPrefix)) {
+				const fieldName = key.slice(keyPrefix.length)
+				this.commitRelation(entityType, entityId, fieldName)
+			}
+		}
+
+		// Commit all hasMany relations
+		for (const [key, state] of this.hasManyStates) {
+			if (key.startsWith(keyPrefix)) {
+				// Compute new server IDs: serverIds - removals + connections
+				const newServerIds = new Set(state.serverIds)
+				for (const removedId of state.plannedRemovals.keys()) {
+					newServerIds.delete(removedId)
+				}
+				for (const connectedId of state.plannedConnections) {
+					newServerIds.add(connectedId)
+				}
+
+				const fieldName = key.slice(keyPrefix.length)
+				this.commitHasMany(entityType, entityId, fieldName, Array.from(newServerIds))
+			}
+		}
 	}
 
 	// ==================== Subscriptions ====================
@@ -669,9 +850,58 @@ export class SnapshotStore {
 		return this.globalVersion
 	}
 
+	/**
+	 * Triggers a global notification to all subscribers.
+	 * Use when external state changes need to trigger re-renders.
+	 */
+	notify(): void {
+		this.globalVersion++
+		for (const sub of this.globalSubscribers) {
+			sub()
+		}
+	}
+
+	// ==================== Parent-Child Relationships ====================
+
+	/**
+	 * Registers a parent-child relationship for change propagation.
+	 * When the child entity changes, parent entity subscribers will be notified.
+	 */
+	registerParentChild(parentType: string, parentId: string, childType: string, childId: string): void {
+		const parentKey = this.getEntityKey(parentType, parentId)
+		const childKey = this.getEntityKey(childType, childId)
+
+		let parents = this.childToParents.get(childKey)
+		if (!parents) {
+			parents = new Set()
+			this.childToParents.set(childKey, parents)
+		}
+		parents.add(parentKey)
+	}
+
+	/**
+	 * Unregisters a parent-child relationship.
+	 */
+	unregisterParentChild(parentType: string, parentId: string, childType: string, childId: string): void {
+		const parentKey = this.getEntityKey(parentType, parentId)
+		const childKey = this.getEntityKey(childType, childId)
+
+		const parents = this.childToParents.get(childKey)
+		if (parents) {
+			parents.delete(parentKey)
+			if (parents.size === 0) {
+				this.childToParents.delete(childKey)
+			}
+		}
+	}
+
 	// ==================== Notification ====================
 
-	private notifyEntitySubscribers(key: string): void {
+	private notifyEntitySubscribers(key: string, notifiedKeys: Set<string> = new Set()): void {
+		// Prevent infinite recursion
+		if (notifiedKeys.has(key)) return
+		notifiedKeys.add(key)
+
 		this.globalVersion++
 
 		// Notify entity-specific subscribers
@@ -682,9 +912,31 @@ export class SnapshotStore {
 			}
 		}
 
-		// Notify global subscribers
-		for (const sub of this.globalSubscribers) {
-			sub()
+		// Notify parent entity subscribers (propagate change up the tree)
+		const parents = this.childToParents.get(key)
+		if (parents) {
+			for (const parentKey of parents) {
+				// Bump parent snapshot version so useSyncExternalStore detects a change
+				const parentSnapshot = this.entitySnapshots.get(parentKey)
+				if (parentSnapshot) {
+					const newSnapshot = createEntitySnapshot(
+						parentSnapshot.id,
+						parentSnapshot.entityType,
+						parentSnapshot.data,
+						parentSnapshot.serverData,
+						parentSnapshot.version + 1,
+					)
+					this.entitySnapshots.set(parentKey, newSnapshot)
+				}
+				this.notifyEntitySubscribers(parentKey, notifiedKeys)
+			}
+		}
+
+		// Notify global subscribers (only once, not for each parent)
+		if (notifiedKeys.size === 1) {
+			for (const sub of this.globalSubscribers) {
+				sub()
+			}
 		}
 	}
 
@@ -696,6 +948,33 @@ export class SnapshotStore {
 		if (relationSubs) {
 			for (const sub of relationSubs) {
 				sub()
+			}
+		}
+
+		// Also notify the parent entity's subscribers and update entity snapshot version
+		// key format is "parentType:parentId:fieldName", entity key is "parentType:parentId"
+		const parts = key.split(':')
+		if (parts.length >= 2) {
+			const entityKey = `${parts[0]}:${parts[1]}`
+
+			// Bump entity snapshot version so isEqual detects a change
+			const existingSnapshot = this.entitySnapshots.get(entityKey)
+			if (existingSnapshot) {
+				const newSnapshot = createEntitySnapshot(
+					existingSnapshot.id,
+					existingSnapshot.entityType,
+					existingSnapshot.data,
+					existingSnapshot.serverData,
+					existingSnapshot.version + 1,
+				)
+				this.entitySnapshots.set(entityKey, newSnapshot)
+			}
+
+			const entitySubs = this.entitySubscribers.get(entityKey)
+			if (entitySubs) {
+				for (const sub of entitySubs) {
+					sub()
+				}
 			}
 		}
 

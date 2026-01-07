@@ -38,7 +38,10 @@ export function ArticleWithAuthorSelectExample({ id }: { id: string }) {
 		}
 	}
 
-	const currentAuthorId = article.data.author?.id ?? ''
+	// Use fields.author.id for reactive value (tracks local changes)
+	const currentAuthorId = article.fields.author.id ?? ''
+	// Get author entity for display (reactive to connect/disconnect)
+	const authorEntity = article.fields.author.entity
 
 	return (
 		<div className="article-with-select">
@@ -71,9 +74,9 @@ export function ArticleWithAuthorSelectExample({ id }: { id: string }) {
 			</div>
 
 			<div className="current-author">
-				{article.data.author ? (
+				{currentAuthorId ? (
 					<p>
-						<strong>Current author:</strong> {article.data.author.name} ({article.data.author.email})
+						<strong>Current author:</strong> {authorEntity.fields.name.value} ({authorEntity.fields.email.value})
 					</p>
 				) : (
 					<p>

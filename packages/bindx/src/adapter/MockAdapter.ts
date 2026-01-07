@@ -147,9 +147,166 @@ export class MockAdapter implements BackendAdapter {
 			throw new Error(`Entity '${entityType}:${id}' not found`)
 		}
 
-		// Merge changes into entity
-		this.mergeDeep(entity, changes)
+		// Process changes with Contember-style operation support
+		this.applyChanges(entity, changes)
 		this.log('persist result', entity)
+	}
+
+	/**
+	 * Applies changes to an entity, handling Contember-style relation operations.
+	 * Supports:
+	 * - Scalar fields: direct assignment
+	 * - HasOne: { connect: { id } }, { disconnect: true }, { delete: true }, { create: {...} }, { update: {...} }
+	 * - HasMany: [{ connect: { id } }, { disconnect: { id } }, { delete: { id } }, { create: {...} }, { update: { by: { id }, data: {...} } }]
+	 */
+	private applyChanges(entity: Record<string, unknown>, changes: Record<string, unknown>): void {
+		for (const [key, value] of Object.entries(changes)) {
+			if (value === null || value === undefined) {
+				entity[key] = value
+				continue
+			}
+
+			// Check if it's a Contember-style relation operation
+			if (typeof value === 'object' && !Array.isArray(value)) {
+				const operation = value as Record<string, unknown>
+
+				if ('connect' in operation) {
+					// HasOne connect: { connect: { id: '...' } }
+					const connectData = operation['connect'] as Record<string, unknown>
+					const targetId = connectData['id'] as string
+					entity[key] = this.resolveRelatedEntity(targetId)
+				} else if ('disconnect' in operation && operation['disconnect'] === true) {
+					// HasOne disconnect: { disconnect: true }
+					entity[key] = null
+				} else if ('delete' in operation && operation['delete'] === true) {
+					// HasOne delete: { delete: true }
+					// Delete the related entity and set to null
+					const existingRelation = entity[key] as Record<string, unknown> | null
+					if (existingRelation?.['id']) {
+						this.deleteRelatedEntity(existingRelation['id'] as string)
+					}
+					entity[key] = null
+				} else if ('create' in operation) {
+					// HasOne create: { create: { name: '...', ... } }
+					const createData = operation['create'] as Record<string, unknown>
+					entity[key] = this.createRelatedEntity(createData)
+				} else if ('update' in operation) {
+					// HasOne update: { update: { name: '...', ... } }
+					const updateData = operation['update'] as Record<string, unknown>
+					const existingRelation = entity[key] as Record<string, unknown> | null
+					if (existingRelation) {
+						this.applyChanges(existingRelation, updateData)
+					}
+				} else {
+					// Regular object value (not a Contember operation)
+					entity[key] = value
+				}
+			} else if (Array.isArray(value)) {
+				// HasMany operations: [{ connect: { id } }, { disconnect: { id } }, ...]
+				entity[key] = this.applyHasManyOperations(
+					entity[key] as Array<Record<string, unknown>> | undefined,
+					value as Array<Record<string, unknown>>,
+				)
+			} else {
+				// Scalar field
+				entity[key] = value
+			}
+		}
+	}
+
+	/**
+	 * Applies hasMany relation operations.
+	 */
+	private applyHasManyOperations(
+		currentItems: Array<Record<string, unknown>> | undefined,
+		operations: Array<Record<string, unknown>>,
+	): Array<Record<string, unknown>> {
+		const items = [...(currentItems ?? [])]
+
+		for (const operation of operations) {
+			if ('connect' in operation) {
+				// Connect: { connect: { id: '...' } }
+				const connectData = operation['connect'] as Record<string, unknown>
+				const targetId = connectData['id'] as string
+				// Only add if not already present
+				if (!items.some(item => item['id'] === targetId)) {
+					const relatedEntity = this.resolveRelatedEntity(targetId)
+					if (relatedEntity) {
+						items.push(relatedEntity)
+					}
+				}
+			} else if ('disconnect' in operation) {
+				// Disconnect: { disconnect: { id: '...' } }
+				const disconnectData = operation['disconnect'] as Record<string, unknown>
+				const targetId = disconnectData['id'] as string
+				const index = items.findIndex(item => item['id'] === targetId)
+				if (index >= 0) {
+					items.splice(index, 1)
+				}
+			} else if ('delete' in operation) {
+				// Delete: { delete: { id: '...' } }
+				const deleteData = operation['delete'] as Record<string, unknown>
+				const targetId = deleteData['id'] as string
+				const index = items.findIndex(item => item['id'] === targetId)
+				if (index >= 0) {
+					items.splice(index, 1)
+					this.deleteRelatedEntity(targetId)
+				}
+			} else if ('create' in operation) {
+				// Create: { create: { name: '...', ... } }
+				const createData = operation['create'] as Record<string, unknown>
+				const newEntity = this.createRelatedEntity(createData)
+				if (newEntity) {
+					items.push(newEntity)
+				}
+			} else if ('update' in operation) {
+				// Update: { update: { by: { id: '...' }, data: { ... } } }
+				const updateOp = operation['update'] as Record<string, unknown>
+				const by = updateOp['by'] as Record<string, unknown>
+				const data = updateOp['data'] as Record<string, unknown>
+				const targetId = by['id'] as string
+				const item = items.find(item => item['id'] === targetId)
+				if (item) {
+					this.applyChanges(item, data)
+				}
+			}
+		}
+
+		return items
+	}
+
+	/**
+	 * Resolves a related entity by ID from any entity store.
+	 * Returns a copy of the entity data or { id } if not found.
+	 */
+	private resolveRelatedEntity(id: string): Record<string, unknown> | null {
+		for (const entityStore of Object.values(this.store)) {
+			if (entityStore[id]) {
+				return { ...entityStore[id] }
+			}
+		}
+		// Entity not found - return just the ID
+		return { id }
+	}
+
+	/**
+	 * Creates a related entity with a generated ID.
+	 */
+	private createRelatedEntity(data: Record<string, unknown>): Record<string, unknown> {
+		const id = this.generateId()
+		return { id, ...data }
+	}
+
+	/**
+	 * Deletes a related entity from any entity store.
+	 */
+	private deleteRelatedEntity(id: string): void {
+		for (const entityStore of Object.values(this.store)) {
+			if (entityStore[id]) {
+				delete entityStore[id]
+				return
+			}
+		}
 	}
 
 	async create(

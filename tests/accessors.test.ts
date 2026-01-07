@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test'
-import { MockAdapter, __internal } from '@contember/react-bindx'
+import { MockAdapter, buildQueryFromSelection, __internal } from '@contember/react-bindx'
 
 const {
 	FieldAccessorImpl,
@@ -18,12 +18,21 @@ interface Author {
 interface Tag {
 	id: string
 	name: string
+	color: string
+}
+
+interface Location {
+	id: string
+	label: string
+	lat: number
+	lng: number
 }
 
 interface Article {
 	id: string
 	title: string
 	author: Author
+	location: Location
 	tags: Tag[]
 }
 
@@ -336,5 +345,105 @@ describe('EntityListAccessorImpl', () => {
 		accessor.items[0]?.fields.name.setValue('Modified')
 
 		expect(accessor.isDirty).toBe(true)
+	})
+})
+
+describe('MockAdapter projection', () => {
+	test('should project has-one relation data', async () => {
+		const mockData = {
+			Article: {
+				'article-1': {
+					id: 'article-1',
+					title: 'Test',
+					location: {
+						id: 'location-1',
+						label: 'New York',
+						lat: 40.7128,
+						lng: -74.006,
+					},
+				},
+			},
+		}
+
+		const adapter = new MockAdapter(mockData, { delay: 0 })
+
+		const builder = createSelectionBuilder<Article>()
+		const result = builder.title().location(l => l.id().label().lat().lng())
+		const meta = getSelectionMeta(result)
+		const query = buildQueryFromSelection(meta)
+
+		const data = await adapter.fetchOne('Article', 'article-1', query)
+
+		expect(data['title']).toBe('Test')
+		expect(data['location']).toBeDefined()
+		expect((data['location'] as Location).label).toBe('New York')
+		expect((data['location'] as Location).lat).toBe(40.7128)
+	})
+
+	test('should project has-many relation data', async () => {
+		const mockData = {
+			Article: {
+				'article-1': {
+					id: 'article-1',
+					title: 'Test',
+					tags: [
+						{ id: 'tag-1', name: 'React', color: '#61dafb' },
+						{ id: 'tag-2', name: 'JavaScript', color: '#f7df1e' },
+					],
+				},
+			},
+		}
+
+		const adapter = new MockAdapter(mockData, { delay: 0 })
+
+		const builder = createSelectionBuilder<Article>()
+		const result = builder.title().tags(t => t.id().name().color())
+		const meta = getSelectionMeta(result)
+		const query = buildQueryFromSelection(meta)
+
+		const data = await adapter.fetchOne('Article', 'article-1', query)
+
+		expect(data['title']).toBe('Test')
+		expect(data['tags']).toBeDefined()
+		expect(Array.isArray(data['tags'])).toBe(true)
+		expect((data['tags'] as Tag[]).length).toBe(2)
+		expect((data['tags'] as Tag[])[0]?.name).toBe('React')
+		expect((data['tags'] as Tag[])[1]?.name).toBe('JavaScript')
+	})
+
+	test('should project both has-one and has-many in same query', async () => {
+		const mockData = {
+			Article: {
+				'article-1': {
+					id: 'article-1',
+					title: 'Test',
+					location: {
+						id: 'location-1',
+						label: 'New York',
+						lat: 40.7128,
+						lng: -74.006,
+					},
+					tags: [
+						{ id: 'tag-1', name: 'React', color: '#61dafb' },
+						{ id: 'tag-2', name: 'JavaScript', color: '#f7df1e' },
+					],
+				},
+			},
+		}
+
+		const adapter = new MockAdapter(mockData, { delay: 0 })
+
+		const builder = createSelectionBuilder<Article>()
+		const result = builder.title().location(l => l.id().label().lat().lng()).tags(t => t.id().name().color())
+		const meta = getSelectionMeta(result)
+		const query = buildQueryFromSelection(meta)
+
+		const data = await adapter.fetchOne('Article', 'article-1', query)
+
+		expect(data['title']).toBe('Test')
+		expect(data['location']).toBeDefined()
+		expect((data['location'] as Location).label).toBe('New York')
+		expect(data['tags']).toBeDefined()
+		expect((data['tags'] as Tag[]).length).toBe(2)
 	})
 })

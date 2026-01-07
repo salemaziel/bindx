@@ -96,6 +96,10 @@ Bindx is a type-safe data binding framework for React, designed to work with Con
 
 Tests use Bun's test runner with `@testing-library/react` and `happy-dom` for DOM simulation. Test preload is configured in `bunfig.toml`.
 
+
+## Debugging
+- If you are debugging something, it is better to write a test instead of some temp debug file
+
 ## TypeScript Configuration
 
 - Strict mode enabled with `noUncheckedIndexedAccess`

@@ -124,12 +124,36 @@ export class EntityHandle<T extends object = object, TSelected = T> extends Enti
 
 	/**
 	 * Checks if any field on the entity has been modified.
+	 * This includes scalar field changes and relation changes (hasOne, hasMany).
 	 */
 	get isDirty(): boolean {
 		const snapshot = this.getSnapshot()
 		if (!snapshot) return false
 
-		return !deepEqual(snapshot.data, snapshot.serverData)
+		// Check scalar field changes
+		if (!deepEqual(snapshot.data, snapshot.serverData)) {
+			return true
+		}
+
+		// Check if any relation is dirty
+		const relationFields = this.schema.getRelationFields(this.entityType)
+		for (const fieldName of relationFields) {
+			const relationType = this.schema.getRelationType(this.entityType, fieldName)
+
+			if (relationType === 'hasOne') {
+				const handle = this.hasOne(fieldName)
+				if (handle.isDirty) {
+					return true
+				}
+			} else if (relationType === 'hasMany') {
+				const handle = this.hasMany(fieldName)
+				if (handle.isDirty) {
+					return true
+				}
+			}
+		}
+
+		return false
 	}
 
 	/**
@@ -222,10 +246,16 @@ export class EntityHandle<T extends object = object, TSelected = T> extends Enti
 
 	/**
 	 * Resets the entity to server data.
+	 * Also resets all relation states (hasOne, hasMany).
 	 */
 	reset(): void {
 		this.assertNotDisposed()
 		this.dispatcher.dispatch(resetEntity(this.entityType, this.entityId))
+
+		// Reset all cached relation handles
+		for (const handle of this.relationHandleCache.values()) {
+			handle.reset()
+		}
 	}
 
 	/**
@@ -463,6 +493,10 @@ export class HasOneHandle<TEntity extends object = object, TSelected = TEntity> 
 	 * creates a snapshot from the embedded data.
 	 */
 	private ensureRelatedEntitySnapshot(id: string): void {
+		// Register parent-child relationship for change propagation
+		// This needs to happen even if the snapshot already exists
+		this.store.registerParentChild(this.entityType, this.entityId, this.targetType, id)
+
 		// Check if snapshot already exists
 		if (this.store.hasEntity(this.targetType, id)) {
 			return
@@ -480,11 +514,13 @@ export class HasOneHandle<TEntity extends object = object, TSelected = TEntity> 
 		}
 
 		// Create snapshot from embedded data
+		// Skip notification to avoid triggering React state updates during render
 		this.store.setEntityData(
 			this.targetType,
 			id,
 			embeddedData as Record<string, unknown>,
 			true, // isServerData
+			true, // skipNotify - called during render, data already exists embedded in parent
 		)
 	}
 
@@ -609,6 +645,7 @@ export class HasManyListHandle<TEntity extends object = object, TSelected = TEnt
 	/**
 	 * Gets the list of items as entity handles.
 	 * Returns selection-aware EntityHandles that implement EntityRef.
+	 * Includes planned connections and excludes planned removals.
 	 */
 	get items(): EntityHandle<TEntity, TSelected>[] {
 		const data = this.getEntityData()
@@ -620,7 +657,36 @@ export class HasManyListHandle<TEntity extends object = object, TSelected = TEnt
 		// Ensure snapshots exist for embedded items
 		this.ensureItemSnapshots(listData)
 
-		return listData.map((item) => this.getItemHandle(item.id))
+		// Get planned removals and connections
+		const plannedRemovals = this.store.getHasManyPlannedRemovals(
+			this.entityType,
+			this.entityId,
+			this.fieldName,
+		)
+		const plannedConnections = this.store.getHasManyPlannedConnections(
+			this.entityType,
+			this.entityId,
+			this.fieldName,
+		)
+
+		// Build the list: original items minus removals plus connections
+		const itemIds = new Set<string>()
+
+		// Add original items (excluding removals)
+		for (const item of listData) {
+			if (!plannedRemovals?.has(item.id)) {
+				itemIds.add(item.id)
+			}
+		}
+
+		// Add connected items
+		if (plannedConnections) {
+			for (const itemId of plannedConnections) {
+				itemIds.add(itemId)
+			}
+		}
+
+		return Array.from(itemIds).map((id) => this.getItemHandle(id))
 	}
 
 	/**
@@ -631,17 +697,23 @@ export class HasManyListHandle<TEntity extends object = object, TSelected = TEnt
 			const itemId = itemData['id'] as string
 			if (!itemId) continue
 
+			// Register parent-child relationship for change propagation
+			// This needs to happen even if the snapshot already exists
+			this.store.registerParentChild(this.entityType, this.entityId, this.itemType, itemId)
+
 			// Skip if snapshot already exists
 			if (this.store.hasEntity(this.itemType, itemId)) {
 				continue
 			}
 
 			// Create snapshot from embedded data
+			// Skip notification to avoid triggering React state updates during render
 			this.store.setEntityData(
 				this.itemType,
 				itemId,
 				itemData,
 				true, // isServerData
+				true, // skipNotify - called during render, data already exists embedded in parent
 			)
 		}
 	}
@@ -676,11 +748,21 @@ export class HasManyListHandle<TEntity extends object = object, TSelected = TEnt
 	}
 
 	/**
-	 * Checks if the list is dirty (items added/removed/reordered).
+	 * Checks if the list is dirty (items connected/disconnected).
 	 */
 	get isDirty(): boolean {
-		// TODO: Implement proper dirty tracking for lists
-		return false
+		const plannedRemovals = this.store.getHasManyPlannedRemovals(
+			this.entityType,
+			this.entityId,
+			this.fieldName,
+		)
+		const plannedConnections = this.store.getHasManyPlannedConnections(
+			this.entityType,
+			this.entityId,
+			this.fieldName,
+		)
+
+		return (plannedRemovals?.size ?? 0) > 0 || (plannedConnections?.size ?? 0) > 0
 	}
 
 	/**
@@ -693,21 +775,63 @@ export class HasManyListHandle<TEntity extends object = object, TSelected = TEnt
 	}
 
 	/**
+	 * Connects an existing entity to this has-many relation.
+	 */
+	connect(itemId: string): void {
+		this.assertNotDisposed()
+		this.store.planHasManyConnection(
+			this.entityType,
+			this.entityId,
+			this.fieldName,
+			itemId,
+		)
+	}
+
+	/**
+	 * Disconnects an entity from this has-many relation.
+	 */
+	disconnect(itemId: string): void {
+		this.assertNotDisposed()
+		this.store.planHasManyRemoval(
+			this.entityType,
+			this.entityId,
+			this.fieldName,
+			itemId,
+			'disconnect',
+		)
+	}
+
+	/**
 	 * Adds a new item to the list.
 	 * Implements HasManyRef interface.
+	 * For connecting existing entities, use connect() instead.
 	 */
 	add(_data?: Partial<TEntity>): void {
-		// TODO: Implement add - requires store support for list mutations
+		// TODO: Implement add for creating new entities
 		this.assertNotDisposed()
 	}
 
 	/**
 	 * Removes an item from the list by key.
 	 * Implements HasManyRef interface.
+	 * For disconnecting, use disconnect() instead.
 	 */
 	remove(_key: string): void {
-		// TODO: Implement remove - requires store support for list mutations
+		// TODO: Implement remove - for now, use disconnect()
 		this.assertNotDisposed()
+	}
+
+	/**
+	 * Resets the has-many relation to server state.
+	 * Clears all planned connections and removals.
+	 */
+	reset(): void {
+		this.assertNotDisposed()
+		this.store.resetHasMany(
+			this.entityType,
+			this.entityId,
+			this.fieldName,
+		)
 	}
 
 	/**

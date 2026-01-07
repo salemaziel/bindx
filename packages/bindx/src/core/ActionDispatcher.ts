@@ -140,19 +140,18 @@ export class ActionDispatcher {
 					action.entityId,
 					action.fieldName,
 				)
-				if (relation) {
-					const newPlaceholderData = setNestedValue(
-						{ ...relation.placeholderData },
-						action.fieldPath,
-						action.value,
-					)
-					this.store.setRelation(
-						action.entityType,
-						action.entityId,
-						action.fieldName,
-						{ placeholderData: newPlaceholderData },
-					)
-				}
+				const currentPlaceholderData = relation?.placeholderData ?? {}
+				const newPlaceholderData = setNestedValue(
+					{ ...currentPlaceholderData },
+					action.fieldPath,
+					action.value,
+				)
+				this.store.setRelation(
+					action.entityType,
+					action.entityId,
+					action.fieldName,
+					{ placeholderData: newPlaceholderData },
+				)
 				break
 			}
 

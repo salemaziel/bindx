@@ -1,9 +1,10 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react'
-import type { BackendAdapter } from '@contember/bindx'
+import type { BackendAdapter, MutationDataCollector, SchemaDefinition } from '@contember/bindx'
 import { SnapshotStore } from '@contember/bindx'
 import { ActionDispatcher } from '@contember/bindx'
 import { PersistenceManager } from '@contember/bindx'
-import type { SchemaRegistry } from '@contember/bindx'
+import { MockMutationCollector } from '@contember/bindx'
+import { SchemaRegistry } from '@contember/bindx'
 
 /**
  * Context value containing all bindx services
@@ -31,6 +32,10 @@ export interface BindxProviderProps {
 	adapter: BackendAdapter
 	/** Optional custom snapshot store (useful for testing) */
 	store?: SnapshotStore
+	/** Optional schema definition for mutation collection (enables relation persistence) */
+	schema?: SchemaDefinition<Record<string, object>>
+	/** Optional custom mutation collector (overrides default behavior) */
+	mutationCollector?: MutationDataCollector
 	children: ReactNode
 }
 
@@ -51,21 +56,37 @@ export interface BindxProviderProps {
  * }
  * ```
  */
-export function BindxProvider({ adapter, store: customStore, children }: BindxProviderProps) {
+export function BindxProvider({
+	adapter,
+	store: customStore,
+	schema: schemaDefinition,
+	mutationCollector: customMutationCollector,
+	children,
+}: BindxProviderProps) {
 	// Create services - memoized to maintain stable references
 	const services = useMemo(() => {
 		const store = customStore ?? new SnapshotStore()
 		const dispatcher = new ActionDispatcher(store)
-		const persistence = new PersistenceManager(adapter, store, dispatcher)
+
+		// Create schema registry from definition if provided
+		const schemaRegistry = schemaDefinition ? new SchemaRegistry(schemaDefinition) : null
+
+		// Create mutation collector - use custom, or auto-create from schema
+		const mutationCollector =
+			customMutationCollector ?? (schemaRegistry ? new MockMutationCollector(store, schemaRegistry) : undefined)
+
+		const persistence = new PersistenceManager(adapter, store, dispatcher, {
+			mutationCollector,
+		})
 
 		return {
 			adapter,
 			store,
 			dispatcher,
 			persistence,
-			schema: null, // Will be set by createBindx
+			schema: schemaRegistry,
 		}
-	}, [adapter, customStore])
+	}, [adapter, customStore, schemaDefinition, customMutationCollector])
 
 	return <BindxContext.Provider value={services}>{children}</BindxContext.Provider>
 }
