@@ -247,7 +247,7 @@ export type JSONArray = readonly JSONValue[]
 				if (!hasEntityReadPermission(targetEntityPerms)) {
 					return
 				}
-				hasManyCode += `\t\t${ctx.relation.name}: ${roleTypeName}${ctx.targetEntity.name}\n`
+				hasManyCode += `\t\t${ctx.relation.name}: ${roleTypeName}${ctx.targetEntity.name}[]\n`
 			},
 			visitHasOne: ctx => {
 				if (!hasFieldReadPermission(entityPerms, ctx.relation.name, this.options.allowPredicateAccess)) {
@@ -268,15 +268,9 @@ export type JSONArray = readonly JSONValue[]
 			},
 		})
 
-		code += '\tcolumns: {\n'
 		code += columnsCode
-		code += '\t}\n'
-		code += '\thasOne: {\n'
 		code += hasOneCode
-		code += '\t}\n'
-		code += '\thasMany: {\n'
 		code += hasManyCode
-		code += '\t}\n'
 		code += '}\n\n'
 
 		return code

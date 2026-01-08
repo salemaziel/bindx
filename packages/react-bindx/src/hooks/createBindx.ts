@@ -6,6 +6,7 @@ import { useEntityImpl, type UseEntityOptions, type EntityAccessorResult } from 
 import { useEntityListImpl, type UseEntityListOptions, type EntityListAccessorResult } from './useEntityListImpl.js'
 import { createComponentFactory, COMPONENT_MARKER, COMPONENT_SELECTIONS, type SelectionPropMeta } from '../jsx/createComponent.js'
 import { Entity, type EntityProps } from '../jsx/components/Entity.js'
+import { EntityList, type EntityListProps } from '../jsx/components/EntityList.js'
 
 // Re-export symbols needed for declaration files
 export { COMPONENT_MARKER, COMPONENT_SELECTIONS, type SelectionPropMeta } from '../jsx/createComponent.js'
@@ -110,6 +111,12 @@ export function createBindx<TModels extends { [K in keyof TModels]: object }>(
 	) => ReactElement | null
 	const TypedEntity = Entity as TypedEntityComponent
 
+	// Create typed EntityList component interface
+	type TypedEntityListComponent = <K extends keyof TModels & string>(
+		props: EntityListProps<TModels, K>
+	) => ReactElement | null
+	const TypedEntityList = EntityList as TypedEntityListComponent
+
 	// Create schema-aware createComponent
 	const createComponent = createComponentFactory<TModels>()
 
@@ -117,6 +124,7 @@ export function createBindx<TModels extends { [K in keyof TModels]: object }>(
 		useEntity,
 		useEntityList,
 		Entity: TypedEntity,
+		EntityList: TypedEntityList,
 		createComponent,
 		schema,
 	}

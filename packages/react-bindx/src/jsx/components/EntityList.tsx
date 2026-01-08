@@ -1,0 +1,132 @@
+import React, { memo, type ReactElement } from 'react'
+import { useBindxContext } from '../../hooks/BackendAdapterContext.js'
+import { useEntityListCore } from '../../hooks/useEntityListCore.js'
+import { useSelectionCollectionForList } from '../../hooks/useSelectionCollectionForList.js'
+import { createRuntimeAccessor } from '../proxy.js'
+import type { EntityRef } from '../types.js'
+
+/**
+ * Props for EntityList component
+ */
+export interface EntityListProps<TSchema, K extends keyof TSchema> {
+	/** Entity type name */
+	name: K
+	/** Optional filter criteria */
+	filter?: Record<string, unknown>
+	/** Render function receiving typed entity accessor and index */
+	children: (entity: EntityRef<TSchema[K]>, index: number) => React.ReactNode
+	/** Loading fallback */
+	loading?: React.ReactNode
+	/** Error fallback */
+	error?: (error: Error) => React.ReactNode
+	/** Empty state fallback (when list has no items) */
+	empty?: React.ReactNode
+}
+
+/**
+ * EntityList component - orchestrates the two-pass rendering approach for lists.
+ *
+ * Phase 1 (Collection): Renders children once with collector proxy to determine which fields are needed
+ * Phase 2 (Loading): Fetches data based on collected selection
+ * Phase 3 (Runtime): Renders children for each item with real data accessors
+ *
+ * @example
+ * ```tsx
+ * <EntityList name="Article" filter={{ published: true }}>
+ *   {(article, index) => (
+ *     <div key={article.id}>
+ *       <Field field={article.fields.title} />
+ *     </div>
+ *   )}
+ * </EntityList>
+ * ```
+ */
+function EntityListImpl<TSchema, K extends keyof TSchema>({
+	name,
+	filter,
+	children,
+	loading,
+	error: errorFallback,
+	empty,
+}: EntityListProps<TSchema, K>): ReactElement | null {
+	const { store } = useBindxContext()
+	const entityType = name as string
+
+	// Phase 1: Collect JSX selection
+	const { standardSelection, queryKey } = useSelectionCollectionForList({
+		entityType,
+		filter,
+		children,
+	})
+
+	// Phase 2: Load data using core hook
+	const result = useEntityListCore({
+		entityType,
+		filter,
+		selectionMeta: standardSelection,
+		queryKey,
+	})
+
+	// Render based on status
+	if (result.status === 'loading') {
+		return <>{loading ?? <DefaultLoading />}</>
+	}
+
+	if (result.status === 'error') {
+		if (errorFallback) {
+			return <>{errorFallback(result.error!)}</>
+		}
+		return <DefaultError error={result.error!} />
+	}
+
+	// Empty state
+	if (result.items.length === 0) {
+		return <>{empty ?? <DefaultEmpty entityType={entityType} />}</>
+	}
+
+	// Phase 3: Runtime render with real data
+	const items = result.items.map((item, index) => {
+		const accessor = createRuntimeAccessor<TSchema[K]>(
+			entityType,
+			item.id,
+			store,
+			() => {}, // Changes are automatically handled by useSyncExternalStore
+		)
+
+		return <React.Fragment key={item.id}>{children(accessor, index)}</React.Fragment>
+	})
+
+	return <>{items}</>
+}
+
+// Note: Using type assertion for generic memo component
+export const EntityList = memo(EntityListImpl) as unknown as typeof EntityListImpl
+
+/**
+ * Default loading component
+ */
+function DefaultLoading(): ReactElement {
+	return <div className="bindx-loading">Loading...</div>
+}
+
+/**
+ * Default error component
+ */
+function DefaultError({ error }: { error: Error }): ReactElement {
+	return (
+		<div className="bindx-error">
+			<strong>Error:</strong> {error.message}
+		</div>
+	)
+}
+
+/**
+ * Default empty component
+ */
+function DefaultEmpty({ entityType }: { entityType: string }): ReactElement {
+	return (
+		<div className="bindx-empty">
+			No {entityType} items found
+		</div>
+	)
+}

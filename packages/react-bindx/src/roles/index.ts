@@ -23,9 +23,12 @@ export {
 export type {
 	RoleAwareEntityProps,
 	RoleAwareEntityComponent,
+	RoleAwareEntityListProps,
+	RoleAwareEntityListComponent,
 	HasRoleProps,
 	HasRoleComponent,
 	RoleAwareUseEntity,
+	RoleAwareUseEntityList,
 	RoleAwareBindx,
 	RoleAwareFragmentFactory,
 	RoleAwareFragmentConfigToProps,

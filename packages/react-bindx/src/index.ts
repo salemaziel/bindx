@@ -142,8 +142,6 @@ export type {
 	ReadyEntityListAccessor,
 	EntityListAccessorResult,
 	// Contember types
-	ContemberBindxProviderProps,
-	ContemberContextValue,
 } from './hooks/index.js'
 
 // JSX types
@@ -180,13 +178,6 @@ export {
 	useUndo,
 	// Contember
 	ContemberBindxProvider,
-	useContember,
-	useContemberBindxContext,
-	useContemberSessionToken,
-	useSetContemberSessionToken,
-	useContemberApiBaseUrl,
-	useContemberProject,
-	useContemberStage,
 } from './hooks/index.js'
 
 // Undo hook types
@@ -201,6 +192,8 @@ export {
 	Show,
 	Entity,
 	type EntityProps,
+	EntityList,
+	type EntityListProps,
 	BINDX_COMPONENT,
 	// Component (unified API)
 	createComponent,
@@ -221,10 +214,19 @@ export type {
 	HasRoleProviderProps,
 	RoleAwareEntityProps,
 	RoleAwareEntityComponent,
+	RoleAwareEntityListProps,
+	RoleAwareEntityListComponent,
 	HasRoleProps,
 	HasRoleComponent,
 	RoleAwareUseEntity,
+	RoleAwareUseEntityList,
 	RoleAwareBindx,
+	RoleAwareFragmentFactory,
+	RoleAwareFragmentConfigToProps,
+	RoleAwareFragmentConfigToFragments,
+	RoleAwareExplicitFragmentComponent,
+	RoleAwareCreateComponentOptions,
+	RoleAwareCreateComponent,
 } from './roles/index.js'
 
 export {

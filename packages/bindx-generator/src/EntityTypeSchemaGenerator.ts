@@ -57,7 +57,7 @@ export type JSONArray = readonly JSONValue[]
 
 		acceptEveryFieldVisitor(model, entity, {
 			visitHasMany: ctx => {
-				hasManyCode += `\t\t${ctx.relation.name}: ${ctx.targetEntity.name}\n`
+				hasManyCode += `\t\t${ctx.relation.name}: ${ctx.targetEntity.name}[]\n`
 			},
 			visitHasOne: ctx => {
 				hasOneCode += `\t\t${ctx.relation.name}: ${ctx.targetEntity.name}\n`
@@ -67,15 +67,9 @@ export type JSONArray = readonly JSONValue[]
 			},
 		})
 
-		code += '\tcolumns: {\n'
 		code += columnsCode
-		code += '\t}\n'
-		code += '\thasOne: {\n'
 		code += hasOneCode
-		code += '\t}\n'
-		code += '\thasMany: {\n'
 		code += hasManyCode
-		code += '\t}\n'
 		code += '}\n\n'
 
 		return code

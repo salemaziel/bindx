@@ -49,6 +49,7 @@ export { HasOne, HasOneWithMeta } from './components/HasOne.js'
 export { If, IfWithMeta } from './components/If.js'
 export { Show, ShowWithMeta, type ShowProps } from './components/Show.js'
 export { Entity, type EntityProps } from './components/Entity.js'
+export { EntityList, type EntityListProps } from './components/EntityList.js'
 
 // Component (unified API for both implicit and explicit selection)
 export {

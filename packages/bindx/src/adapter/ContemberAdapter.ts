@@ -17,13 +17,12 @@ export interface ContemberAdapterOptions {
  * Backend adapter for Contember Content API.
  * Uses @contember/client-content for type-safe GraphQL operations.
  */
-export class ContemberAdapter implements BackendAdapter {
-	private readonly contentClient: ContentClient
-	private readonly queryBuilder: ContentQueryBuilder
+export class ContemberAdapter implements BackendAdapter {	
 
-	constructor(private readonly options: ContemberAdapterOptions) {
-		this.contentClient = new ContentClient(options.client)
-		this.queryBuilder = new ContentQueryBuilder(options.schema)
+	constructor(
+		private readonly contentClient: ContentClient,
+		private readonly queryBuilder: ContentQueryBuilder,
+	) {
 	}
 
 	async fetchOne(

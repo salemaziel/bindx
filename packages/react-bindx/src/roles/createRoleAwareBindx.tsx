@@ -35,12 +35,15 @@ import {
 	HasRoleProvider,
 } from './RoleContext.js'
 import { useBindxContext } from '../hooks/BackendAdapterContext.js'
-import { useEntityImpl, type UseEntityOptions, type EntityAccessorResult } from '../hooks/useEntityImpl.js'
+import { useEntityImpl } from '../hooks/useEntityImpl.js'
+import { useEntityListImpl } from '../hooks/useEntityListImpl.js'
+import type { UseEntityOptions, EntityAccessorResult, UseEntityListOptions, EntityListAccessorResult } from '../hooks/index.js'
 import {
 	COMPONENT_MARKER,
 	COMPONENT_SELECTIONS,
 	type SelectionPropMeta,
-	assignComponentMarkers,
+} from '../jsx/index.js'
+import {
 	assignFragmentProperties,
 } from '../jsx/createComponent.js'
 
@@ -276,6 +279,58 @@ export type RoleAwareEntityComponent<TRoleSchemas extends RoleSchemasBase<TRoleS
 ) => ReactElement | null
 
 // ============================================================================
+// EntityList Component Types
+// ============================================================================
+
+/**
+ * Props for EntityList component with optional roles.
+ */
+export interface RoleAwareEntityListProps<
+	TRoleSchemas extends RoleSchemasBase<TRoleSchemas>,
+	TEntityName extends string,
+	TRoles extends readonly (keyof TRoleSchemas & string)[] | undefined,
+> {
+	/** Entity type name */
+	name: TEntityName
+
+	/** Optional filter criteria */
+	filter?: Record<string, unknown>
+
+	/** Optional roles - when provided, entity type is narrowed to intersection of these roles */
+	roles?: TRoles
+
+	/** Render function receiving typed entity ref and index */
+	children: TRoles extends readonly (keyof TRoleSchemas & string)[]
+		? (entity: EntityRef<
+				EntityForRolesObject<TRoleSchemas, TRoles, TEntityName>,
+				EntityForRolesObject<TRoleSchemas, TRoles, TEntityName>,
+				AnyBrand,
+				TEntityName,
+				TRoles
+			>, index: number) => ReactNode
+		: (entity: EntityRef<object, object, AnyBrand, TEntityName, readonly string[]>, index: number) => ReactNode
+
+	/** Loading fallback */
+	loading?: ReactNode
+
+	/** Error fallback */
+	error?: (error: Error) => ReactNode
+
+	/** Empty state fallback */
+	empty?: ReactNode
+}
+
+/**
+ * EntityList component type that accepts optional roles prop.
+ */
+export type RoleAwareEntityListComponent<TRoleSchemas extends RoleSchemasBase<TRoleSchemas>> = <
+	TEntityName extends string,
+	const TRoles extends readonly (keyof TRoleSchemas & string)[] | undefined = undefined,
+>(
+	props: RoleAwareEntityListProps<TRoleSchemas, TEntityName, TRoles>,
+) => ReactElement | null
+
+// ============================================================================
 // HasRole Component Types
 // ============================================================================
 
@@ -349,6 +404,21 @@ export type RoleAwareUseEntity<TRoleSchemas extends RoleSchemasBase<TRoleSchemas
 	TResult
 >
 
+/**
+ * Role-aware useEntityList hook type.
+ */
+export type RoleAwareUseEntityList<TRoleSchemas extends RoleSchemasBase<TRoleSchemas>> = <
+	TEntityName extends string,
+	TResult extends object,
+	const TRoles extends readonly (keyof TRoleSchemas & string)[] | undefined = undefined,
+>(
+	entityType: TEntityName,
+	options: UseEntityListOptions & { roles?: TRoles },
+	definer: TRoles extends readonly (keyof TRoleSchemas & string)[]
+		? SelectionInput<EntityForRolesObject<TRoleSchemas, TRoles, TEntityName>, TResult>
+		: SelectionInput<object, TResult>,
+) => EntityListAccessorResult<TResult>
+
 // ============================================================================
 // Factory Return Type
 // ============================================================================
@@ -363,11 +433,17 @@ export interface RoleAwareBindx<TRoleSchemas extends RoleSchemasBase<TRoleSchema
 	/** Entity component with optional roles prop */
 	Entity: RoleAwareEntityComponent<TRoleSchemas>
 
+	/** EntityList component with optional roles prop */
+	EntityList: RoleAwareEntityListComponent<TRoleSchemas>
+
 	/** HasRole component for conditional rendering and type narrowing */
 	HasRole: HasRoleComponent<TRoleSchemas>
 
 	/** Hook for fetching entities with optional roles */
 	useEntity: RoleAwareUseEntity<TRoleSchemas>
+
+	/** Hook for fetching entity lists with optional roles */
+	useEntityList: RoleAwareUseEntityList<TRoleSchemas>
 
 	/** Hook to access role context */
 	useRoleContext: () => RoleContextValue<TRoleSchemas>
@@ -486,6 +562,42 @@ export function createRoleAwareBindx<TRoleSchemas extends RoleSchemasBase<TRoleS
 	}
 
 	/**
+	 * Role-aware useEntityList hook.
+	 */
+	function useEntityListHook<
+		TEntityName extends string,
+		TResult extends object,
+		const TRoles extends readonly (keyof TRoleSchemas & string)[] | undefined = undefined,
+	>(
+		entityType: TEntityName,
+		options: UseEntityListOptions & { roles?: TRoles },
+		definer: SelectionInput<object, TResult>,
+	): EntityListAccessorResult<TResult> {
+		const { roles, ...restOptions } = options
+
+		// Get schema for first role (or use first available)
+		const primaryRole = roles?.[0] ?? roleSchemaRegistry.getRoleNames()[0]
+		const primarySchema = primaryRole ? schemaRegistries.get(primaryRole) : undefined
+
+		if (!primarySchema) {
+			throw new Error('No schema available for roles')
+		}
+
+		const selectionMeta = useMemo(
+			() => resolveSelectionMeta(definer),
+			// eslint-disable-next-line react-hooks/exhaustive-deps
+			[entityType],
+		)
+
+		return useEntityListImpl<TResult>(
+			entityType,
+			restOptions,
+			selectionMeta,
+			primarySchema as SchemaRegistry<Record<string, object>>,
+		)
+	}
+
+	/**
 	 * Entity component with optional roles prop.
 	 */
 	function EntityComponent<
@@ -497,8 +609,6 @@ export function createRoleAwareBindx<TRoleSchemas extends RoleSchemasBase<TRoleS
 		roles,
 		children: renderFn,
 	}: RoleAwareEntityProps<TRoleSchemas, TEntityName, TRoles>): ReactElement | null {
-		const { store, dispatcher } = useBindxContext()
-
 		// Get schema for first role
 		const primaryRole = roles?.[0] ?? roleSchemaRegistry.getRoleNames()[0]
 		const primarySchema = primaryRole ? schemaRegistries.get(primaryRole) : undefined
@@ -541,6 +651,77 @@ export function createRoleAwareBindx<TRoleSchemas extends RoleSchemasBase<TRoleS
 				{(renderFn as (entity: typeof entityRef) => ReactNode)(entityRef)}
 			</EntityContext.Provider>
 		)
+	}
+
+	/**
+	 * EntityList component with optional roles prop.
+	 */
+	function EntityListComponent<
+		TEntityName extends string,
+		const TRoles extends readonly (keyof TRoleSchemas & string)[] | undefined = undefined,
+	>({
+		name,
+		filter,
+		roles,
+		children: renderFn,
+		loading,
+		error: errorFallback,
+		empty,
+	}: RoleAwareEntityListProps<TRoleSchemas, TEntityName, TRoles>): ReactElement | null {
+		const { store } = useBindxContext()
+
+		// Get schema for first role
+		const primaryRole = roles?.[0] ?? roleSchemaRegistry.getRoleNames()[0]
+		const primarySchema = primaryRole ? schemaRegistries.get(primaryRole) : undefined
+
+		if (!primarySchema) {
+			throw new Error('No schema available for roles')
+		}
+
+		// Use the list hook with roles
+		const result = useEntityListHook(
+			name,
+			{ filter, roles },
+			(e: any) => e.id(),
+		)
+
+		if (result.status === 'loading') {
+			return <>{loading ?? <div className="bindx-loading">Loading...</div>}</>
+		}
+
+		if (result.status === 'error') {
+			if (errorFallback) {
+				return <>{errorFallback(result.error)}</>
+			}
+			return <div className="bindx-error"><strong>Error:</strong> {result.error.message}</div>
+		}
+
+		// Empty state
+		if (result.items.length === 0) {
+			return <>{empty ?? <div className="bindx-empty">No {name} items found</div>}</>
+		}
+
+		// Render items
+		const items = result.items.map((item, index) => {
+			// Create EntityRef with available roles
+			const entityRef: EntityRef<object, object, AnyBrand, TEntityName, TRoles extends readonly string[] ? TRoles : readonly string[]> = {
+				id: item.id,
+				fields: item.fields as SelectedEntityFields<object, object>,
+				data: item.data,
+				isDirty: false,
+				__entityType: undefined as unknown as object,
+				__entityName: name,
+				__availableRoles: (roles ?? []) as TRoles extends readonly string[] ? TRoles : readonly string[],
+			}
+
+			return (
+				<React.Fragment key={item.id}>
+					{(renderFn as (entity: typeof entityRef, index: number) => ReactNode)(entityRef, index)}
+				</React.Fragment>
+			)
+		})
+
+		return <>{items}</>
 	}
 
 	/**
@@ -761,8 +942,10 @@ export function createRoleAwareBindx<TRoleSchemas extends RoleSchemasBase<TRoleS
 		roleSchemaRegistry,
 		RoleAwareProvider: HasRoleProvider,
 		Entity: EntityComponent as RoleAwareEntityComponent<TRoleSchemas>,
+		EntityList: EntityListComponent as RoleAwareEntityListComponent<TRoleSchemas>,
 		HasRole: HasRoleComponent as HasRoleComponent<TRoleSchemas>,
 		useEntity: useEntityHook as RoleAwareUseEntity<TRoleSchemas>,
+		useEntityList: useEntityListHook as RoleAwareUseEntityList<TRoleSchemas>,
 		useRoleContext,
 		createComponent: roleAwareCreateComponent as RoleAwareCreateComponent<TRoleSchemas>,
 	}

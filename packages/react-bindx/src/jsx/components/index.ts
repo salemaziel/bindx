@@ -15,3 +15,6 @@ export { Show, ShowWithMeta, type ShowProps } from './Show.js'
 
 // Entity component
 export { Entity, type EntityProps } from './Entity.js'
+
+// EntityList component
+export { EntityList, type EntityListProps } from './EntityList.js'
