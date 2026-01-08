@@ -367,7 +367,7 @@ describe('RoleSchemaGenerator', () => {
 		expect(code).toMatch(/AdminAuthor[\s\S]*?salary/)
 
 		// RoleSchemas mapping
-		expect(code).toContain('export interface RoleSchemas {')
+		expect(code).toContain('export type RoleSchemas = {')
 		expect(code).toContain('public: PublicSchema')
 		expect(code).toContain('editor: EditorSchema')
 		expect(code).toContain('admin: AdminSchema')
