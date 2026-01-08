@@ -14,7 +14,6 @@ import {
 	type EntityRef,
 	type SelectedEntityFields,
 	SchemaRegistry,
-	EntityHandle,
 	resolveSelectionMeta,
 	type SelectionInput,
 	type SelectionBuilder,
@@ -36,8 +35,14 @@ import {
 	HasRoleProvider,
 } from './RoleContext.js'
 import { useBindxContext } from '../hooks/BackendAdapterContext.js'
-import { useEntityCore } from '../hooks/useEntityCore.js'
-import type { UseEntityOptions, EntityAccessorResult } from '../hooks/useEntityImpl.js'
+import { useEntityImpl, type UseEntityOptions, type EntityAccessorResult } from '../hooks/useEntityImpl.js'
+import {
+	COMPONENT_MARKER,
+	COMPONENT_SELECTIONS,
+	type SelectionPropMeta,
+	assignComponentMarkers,
+	assignFragmentProperties,
+} from '../jsx/createComponent.js'
 
 // ============================================================================
 // Helper Types
@@ -141,24 +146,6 @@ interface SelectionProvider {
 		collectNested: (element: ReactNode) => void,
 	) => { fieldName: string; alias: string; path: string[]; isRelation: boolean; isArray: boolean; nested?: SelectionMeta }[] | null
 }
-
-/**
- * Metadata for entity prop selections
- */
-interface SelectionPropMeta {
-	selection: SelectionMeta
-	fragment: FluentFragment<unknown, object, AnyBrand, readonly string[]>
-}
-
-/**
- * Symbol for component marker
- */
-const COMPONENT_MARKER = Symbol('ROLE_AWARE_COMPONENT')
-
-/**
- * Symbol for component selections
- */
-const COMPONENT_SELECTIONS = Symbol('COMPONENT_SELECTIONS')
 
 /**
  * Base component type with markers
@@ -474,7 +461,6 @@ export function createRoleAwareBindx<TRoleSchemas extends RoleSchemasBase<TRoleS
 		options: UseEntityOptions & { roles?: TRoles },
 		definer: SelectionInput<object, TResult>,
 	): EntityAccessorResult<object, TResult> {
-		const { store, dispatcher } = useBindxContext()
 		const { roles } = options
 
 		// Get schema for first role (or use first available)
@@ -491,76 +477,12 @@ export function createRoleAwareBindx<TRoleSchemas extends RoleSchemasBase<TRoleS
 			[entityType],
 		)
 
-		// Use core hook for data loading
-		const coreResult = useEntityCore({
+		return useEntityImpl<object, TResult>(
 			entityType,
-			id: options.id,
+			options,
 			selectionMeta,
-			cache: options.cache,
-		})
-
-		// Create stable handle
-		const handle = useMemo(
-			() => new EntityHandle<object, TResult>(
-				options.id,
-				entityType,
-				store,
-				dispatcher,
-				primarySchema as SchemaRegistry<Record<string, object>>,
-			),
-			// eslint-disable-next-line react-hooks/exhaustive-deps
-			[options.id, entityType],
+			primarySchema as SchemaRegistry<Record<string, object>>,
 		)
-
-		// Build accessor from core result
-		return useMemo((): EntityAccessorResult<object, TResult> => {
-			if (coreResult.status === 'loading') {
-				return {
-					status: 'loading',
-					isLoading: true,
-					isError: false,
-					isPersisting: false,
-					isDirty: false,
-					id: options.id,
-					get fields(): never { throw new Error('Cannot access fields while loading') },
-					get data(): never { throw new Error('Cannot access data while loading') },
-					async persist() {},
-					reset() {},
-				}
-			}
-
-			if (coreResult.status === 'error' || coreResult.status === 'not_found') {
-				return {
-					status: 'error',
-					isLoading: false,
-					isError: true,
-					error: coreResult.error ?? new Error('Entity not found'),
-					isPersisting: false,
-					isDirty: false,
-					id: options.id,
-					get fields(): never { throw new Error('Cannot access fields after error') },
-					get data(): never { throw new Error('Cannot access data after error') },
-					async persist() {},
-					reset() {},
-				}
-			}
-
-			// Ready state
-			const snapshot = coreResult.snapshot!
-
-			return {
-				status: 'ready',
-				isLoading: false,
-				isError: false,
-				isPersisting: coreResult.isPersisting,
-				get isDirty() { return handle.isDirty },
-				id: options.id,
-				fields: handle.fields as SelectedEntityFields<object, TResult>,
-				data: snapshot.data as TResult,
-				async persist() {},
-				reset() { handle.reset() },
-			}
-		}, [coreResult, options.id, handle])
 	}
 
 	/**
@@ -775,19 +697,16 @@ export function createRoleAwareBindx<TRoleSchemas extends RoleSchemasBase<TRoleS
 			return fields.length > 0 ? fields : null
 		}
 
-		// Add markers
+		// Add markers (role-aware version uses COMPONENT_MARKER/COMPONENT_SELECTIONS but not BINDX_COMPONENT)
 		const comp = MemoizedComponent as unknown as Record<symbol, unknown>
 		comp[COMPONENT_MARKER] = true
 		comp[COMPONENT_SELECTIONS] = selectionsMap
 		;(MemoizedComponent as unknown as { __componentRoles: TRoles }).__componentRoles = roles
 
-		// Add $propName properties with role info
-		const result = MemoizedComponent as unknown as Record<string, unknown>
-		for (const [propName, meta] of selectionsMap) {
-			result[`$${propName}`] = meta.fragment
-		}
+		// Add $propName properties
+		assignFragmentProperties(MemoizedComponent, selectionsMap)
 
-		return result as RoleAwareExplicitFragmentComponent<TRoleSchemas, TScalarProps, TConfig, TRoles>
+		return MemoizedComponent as unknown as RoleAwareExplicitFragmentComponent<TRoleSchemas, TScalarProps, TConfig, TRoles>
 	}
 
 	// Wrapper function to match the overloaded signature

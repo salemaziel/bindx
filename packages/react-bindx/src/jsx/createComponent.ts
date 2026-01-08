@@ -346,12 +346,9 @@ function createImplicitComponent<P extends object>(
 	comp[COMPONENT_BRAND] = componentBrand
 
 	// Add $propName properties
-	const result = MemoizedComponent as unknown as Record<string, unknown>
-	for (const [propName, meta] of selectionsMap) {
-		result[`$${propName}`] = meta.fragment
-	}
+	assignFragmentProperties(MemoizedComponent, selectionsMap)
 
-	return result as ImplicitComponent<P>
+	return MemoizedComponent as unknown as ImplicitComponent<P>
 }
 
 // ============================================================================
@@ -410,12 +407,9 @@ function createExplicitFragmentComponent<
 	comp[COMPONENT_BRAND] = componentBrand
 
 	// Add $propName properties
-	const result = MemoizedComponent as unknown as Record<string, unknown>
-	for (const [propName, meta] of selectionsMap) {
-		result[`$${propName}`] = meta.fragment
-	}
+	assignFragmentProperties(MemoizedComponent, selectionsMap)
 
-	return result as ExplicitFragmentComponent<TScalarProps, TConfig>
+	return MemoizedComponent as unknown as ExplicitFragmentComponent<TScalarProps, TConfig>
 }
 
 // ============================================================================
@@ -461,9 +455,13 @@ function createGetSelection(
 	}
 }
 
-function assignMarkers(
+/**
+ * Assigns standard bindx component markers to a component.
+ * @internal
+ */
+export function assignComponentMarkers(
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	component: BindxComponentBase<any>,
+	component: ComponentType<any>,
 	selectionsMap: Map<string, SelectionPropMeta>,
 ): void {
 	const comp = component as unknown as Record<symbol, unknown>
@@ -471,6 +469,24 @@ function assignMarkers(
 	comp[COMPONENT_MARKER] = true
 	comp[COMPONENT_SELECTIONS] = selectionsMap
 }
+
+/**
+ * Assigns $propName fragment properties to a component.
+ * @internal
+ */
+export function assignFragmentProperties(
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	component: ComponentType<any>,
+	selectionsMap: Map<string, SelectionPropMeta>,
+): void {
+	const result = component as unknown as Record<string, unknown>
+	for (const [propName, meta] of selectionsMap) {
+		result[`$${propName}`] = meta.fragment
+	}
+}
+
+// Keep internal alias for backwards compatibility within this file
+const assignMarkers = assignComponentMarkers
 
 // ============================================================================
 // Type Guards & Utilities
