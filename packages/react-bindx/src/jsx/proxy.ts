@@ -49,6 +49,8 @@ export function createCollectorProxy<T>(
 		data: null,
 		isDirty: false,
 		__entityType: undefined as unknown as T,
+		__entityName: '__collector__',
+		__availableRoles: [] as readonly string[],
 	}
 }
 
@@ -188,6 +190,8 @@ export function createRuntimeAccessor<T>(
 			return !deepEqual(snap.data, snap.serverData)
 		},
 		__entityType: undefined as unknown as T,
+		__entityName: entityType,
+		__availableRoles: [] as readonly string[],
 	}
 }
 
@@ -445,6 +449,8 @@ function createPlaceholderAccessor<T>(): EntityRef<T> {
 		data: null,
 		isDirty: false,
 		__entityType: undefined as unknown as T,
+		__entityName: '__placeholder__',
+		__availableRoles: [] as readonly string[],
 	}
 }
 

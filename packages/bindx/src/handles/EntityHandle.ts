@@ -327,6 +327,24 @@ export class EntityHandle<T extends object = object, TSelected = T> extends Enti
 	get __entityType(): T {
 		return undefined as unknown as T
 	}
+
+	/**
+	 * Entity name for role-based type inference.
+	 * Carries the entity type name (e.g., 'Article', 'Author').
+	 * Implements EntityRef.__entityName.
+	 */
+	get __entityName(): string {
+		return this.entityType
+	}
+
+	/**
+	 * Available roles for HasRole constraint.
+	 * Default implementation returns empty array (no role constraints).
+	 * Role-aware code should create EntityRef with specific roles.
+	 */
+	get __availableRoles(): readonly string[] {
+		return []
+	}
 }
 
 /**
@@ -1009,6 +1027,21 @@ export class PlaceholderHandle<TEntity extends object = object, TSelected = TEnt
 	 */
 	get __entityType(): TEntity {
 		return undefined as unknown as TEntity
+	}
+
+	/**
+	 * Entity name for role-based type inference.
+	 */
+	get __entityName(): string {
+		return this.targetType
+	}
+
+	/**
+	 * Available roles for HasRole constraint.
+	 * Default implementation returns empty array (no role constraints).
+	 */
+	get __availableRoles(): readonly string[] {
+		return []
 	}
 }
 

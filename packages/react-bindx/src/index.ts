@@ -211,6 +211,49 @@ export {
 } from './jsx/index.js'
 
 // ============================================================================
+// Role-based schema types and components
+// ============================================================================
+
+export type {
+	RoleContextValue,
+	EntityContextValue,
+	HasRoleProviderValue,
+	HasRoleProviderProps,
+	RoleAwareEntityProps,
+	RoleAwareEntityComponent,
+	HasRoleProps,
+	HasRoleComponent,
+	RoleAwareUseEntity,
+	RoleAwareBindx,
+} from './roles/index.js'
+
+export {
+	EntityContext,
+	useEntityContext,
+	createRoleContext,
+	createUseRoleContext,
+	createRoleAwareBindx,
+	HasRoleProvider,
+	useHasRoleContext,
+	RoleAwareProvider,
+} from './roles/index.js'
+
+// Re-export role types from core
+export type {
+	UnionToIntersection,
+	RoleSchemaMap,
+	RoleNames,
+	IntersectRoleSchemas,
+	EntityForRoles,
+	SchemaForRole,
+	EntityNamesForRoles,
+	RoleSchemaDefinitions,
+	RoleBindxConfig,
+} from '@contember/bindx'
+
+export { isValidRole, RoleSchemaRegistry } from '@contember/bindx'
+
+// ============================================================================
 // Internal React API
 // ============================================================================
 

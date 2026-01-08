@@ -286,6 +286,8 @@ export interface HasOneRef<TEntity, TSelected = TEntity, TBrand extends AnyBrand
  * @typeParam TEntity - The full entity type
  * @typeParam TSelected - The selected subset of fields (defaults to TEntity for backwards compatibility)
  * @typeParam TBrand - Component brand type for validation (defaults to AnyBrand)
+ * @typeParam TEntityName - The entity name as a string literal type (defaults to string)
+ * @typeParam TAvailableRoles - Available roles for HasRole (defaults to readonly string[] for backwards compatibility)
  *
  * @example
  * ```ts
@@ -294,9 +296,18 @@ export interface HasOneRef<TEntity, TSelected = TEntity, TBrand extends AnyBrand
  *
  * // Selection-aware
  * EntityRef<Author, { name: string; email: string }>  // Only name and email accessible
+ *
+ * // With entity name and roles for role-based access
+ * EntityRef<Author, Author, AnyBrand, 'Author', readonly ['editor', 'admin']>
  * ```
  */
-export interface EntityRef<TEntity, TSelected = TEntity, TBrand extends AnyBrand = AnyBrand> {
+export interface EntityRef<
+	TEntity,
+	TSelected = TEntity,
+	TBrand extends AnyBrand = AnyBrand,
+	TEntityName extends string = string,
+	TAvailableRoles extends readonly string[] = readonly string[],
+> {
 	/** Entity ID (null for placeholder entities) */
 	readonly id: string | null
 
@@ -311,6 +322,12 @@ export interface EntityRef<TEntity, TSelected = TEntity, TBrand extends AnyBrand
 
 	/** Type brand - ensures EntityRef<Author> is not assignable to EntityRef<Tag> */
 	readonly __entityType: TEntity
+
+	/** Type brand for entity name - carries the entity name as a type */
+	readonly __entityName: TEntityName
+
+	/** Type brand for available roles - constrains what roles can be used in HasRole */
+	readonly __availableRoles: TAvailableRoles
 
 	/** Runtime brand symbols for validation */
 	readonly __brands?: Set<symbol>

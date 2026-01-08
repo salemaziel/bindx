@@ -165,6 +165,24 @@ export type {
 // Re-export Contember types for convenience
 export type { SchemaNames, SchemaEntityNames } from '@contember/client-content'
 
+// Role-based schema types
+export type {
+	UnionToIntersection,
+	RoleSchemaMap,
+	RoleNames,
+	IntersectRoleSchemas,
+	EntityForRoles,
+	SchemaForRole,
+	EntityNamesForRoles,
+	RoleSchemaDefinitions,
+	RoleBindxConfig,
+	RolesAreSubset,
+	RequireRoleSubset,
+	AssertRoleCompatibility,
+} from './roles/index.js'
+
+export { isValidRole, RoleSchemaRegistry } from './roles/index.js'
+
 // ============================================================================
 // Internal API (for advanced use cases)
 // ============================================================================
