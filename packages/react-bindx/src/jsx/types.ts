@@ -129,5 +129,5 @@ export type {
 	EntityFromProp,
 	SelectionFromProp,
 	ImplicitFragmentProperties,
-} from './createComponent.js'
-export { COMPONENT_MARKER, COMPONENT_SELECTIONS } from './createComponent.js'
+} from './legacyTypes.js'
+export { COMPONENT_MARKER, COMPONENT_SELECTIONS } from './componentBuilder.js'

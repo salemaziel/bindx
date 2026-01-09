@@ -197,11 +197,15 @@ export {
 	type EntityListProps,
 	BINDX_COMPONENT,
 	// Component (unified API)
-	createComponent,
 	isBindxComponent,
 	mergeFragments,
 	COMPONENT_MARKER,
+	COMPONENT_BRAND,
 	COMPONENT_SELECTIONS,
+	createComponentBuilder,
+	getComponentBrand,
+	setBrandValidation,
+	validateBrand,
 } from './jsx/index.js'
 
 // ============================================================================

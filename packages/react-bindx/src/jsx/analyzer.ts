@@ -59,7 +59,11 @@ export function analyzeJsx(node: ReactNode, selection: SelectionMetaCollector): 
 
 	// Check if it's a bindx component with pre-computed selection - needs special handling
 	if (isBindxComponent(component)) {
-		handleBindxComponent(component, element.props as Record<string, unknown>, selection)
+		handleBindxComponent(
+			component as { [COMPONENT_SELECTIONS]: Map<string, { selection: JsxSelectionMeta }> },
+			element.props as Record<string, unknown>,
+			selection,
+		)
 		return
 	}
 

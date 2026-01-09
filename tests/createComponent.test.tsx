@@ -6,7 +6,6 @@ import {
 	BindxProvider,
 	createBindx,
 	MockAdapter,
-	createComponent,
 	isBindxComponent,
 	mergeFragments,
 	defineSchema,
@@ -15,7 +14,6 @@ import {
 	hasMany,
 	COMPONENT_MARKER,
 	COMPONENT_SELECTIONS,
-	type EntityRef,
 } from '@contember/react-bindx'
 
 afterEach(() => {
@@ -88,11 +86,10 @@ const schema = defineSchema<TestSchema>({
 	},
 })
 
-// Get typed createComponent from createBindx
+// Get typed hooks and createComponent from createBindx
 const {
-	useEntity,
 	Entity,
-	createComponent: schemaCreateComponent,
+	createComponent,
 } = createBindx(schema)
 
 // ============================================================================
@@ -145,73 +142,59 @@ function createMockData() {
 }
 
 // ============================================================================
-// Component Definitions - Explicit Mode (factory-based)
+// Component Definitions - New Builder API
 // ============================================================================
 
-// Simple component with one entity prop - using factory.fragment()
-const AuthorCard = schemaCreateComponent(
-	it => ({
-		author: it.fragment('Author').name().email(),
-	}),
-	({ author }) => (
+// Simple component with one entity prop - explicit selection
+const AuthorCard = createComponent()
+	.entity('author', 'Author', e => e.name().email())
+	.render(({ author }) => (
 		<div data-testid="author-card">
 			<span data-testid="author-name">{author.data?.name}</span>
 			<span data-testid="author-email">{author.data?.email}</span>
 		</div>
-	),
-)
+	))
 
-// Component with scalar props - use builder pattern
-const AuthorCardWithOptions = schemaCreateComponent<{ showEmail?: boolean; className?: string }>()(
-	it => ({
-		author: it.fragment('Author').name().email().bio(),
-	}),
-	({ author, showEmail, className }) => (
+// Component with scalar props
+const AuthorCardWithOptions = createComponent()
+	.entity('author', 'Author', e => e.name().email().bio())
+	.props<{ showEmail?: boolean; className?: string }>()
+	.render(({ author, showEmail, className }) => (
 		<div data-testid="author-card" className={className}>
 			<span data-testid="author-name">{author.data?.name}</span>
 			{showEmail && <span data-testid="author-email">{author.data?.email}</span>}
 			<span data-testid="author-bio">{author.data?.bio}</span>
 		</div>
-	),
-)
+	))
 
 // Component with multiple entity props
-const ArticleWithAuthor = schemaCreateComponent(
-	it => ({
-		article: it.fragment('Article').title().content(),
-		author: it.fragment('Author').name(),
-	}),
-	({ article, author }) => (
+const ArticleWithAuthor = createComponent()
+	.entity('article', 'Article', e => e.title().content())
+	.entity('author', 'Author', e => e.name())
+	.render(({ article, author }) => (
 		<div data-testid="article-with-author">
 			<h1 data-testid="article-title">{article.data?.title}</h1>
 			<p data-testid="article-content">{article.data?.content}</p>
 			<span data-testid="author-name">{author.data?.name}</span>
 		</div>
-	),
-)
+	))
 
-// ============================================================================
-// Component Definitions - Implicit Mode (standalone createComponent)
-// ============================================================================
-
-interface ImplicitAuthorCardProps {
-	author: EntityRef<Author, { name: string; email: string }>
-}
-
-// Implicit mode collects fields through .fields access pattern
-const ImplicitAuthorCard = createComponent<ImplicitAuthorCardProps>(({ author }) => (
-	<div data-testid="implicit-author-card">
-		<span data-testid="author-name">{author.fields.name.value}</span>
-		<span data-testid="author-email">{author.fields.email.value}</span>
-	</div>
-))
+// Implicit mode - selection collected from JSX
+const ImplicitAuthorCard = createComponent()
+	.entity('author', 'Author')
+	.render(({ author }) => (
+		<div data-testid="implicit-author-card">
+			<span data-testid="author-name">{author.fields.name.value}</span>
+			<span data-testid="author-email">{author.fields.email.value}</span>
+		</div>
+	))
 
 // ============================================================================
 // Tests
 // ============================================================================
 
-describe('createComponent', () => {
-	describe('explicit mode (schema-aware)', () => {
+describe('createComponent builder API', () => {
+	describe('explicit mode', () => {
 		test('creates a component with fragment properties', () => {
 			expect(AuthorCard.$author).toBeDefined()
 			expect(AuthorCard.$author.__isFragment).toBe(true)
@@ -246,10 +229,16 @@ describe('createComponent', () => {
 		})
 	})
 
-	describe('implicit mode (standalone)', () => {
-		test('creates component from props interface', () => {
+	describe('implicit mode', () => {
+		test('creates component with fragment from JSX analysis', () => {
 			expect(ImplicitAuthorCard.$author).toBeDefined()
 			expect(ImplicitAuthorCard.$author.__isFragment).toBe(true)
+		})
+
+		test('collects fields from JSX field access', () => {
+			const meta = ImplicitAuthorCard.$author.__meta
+			expect(meta.fields.has('name')).toBe(true)
+			expect(meta.fields.has('email')).toBe(true)
 		})
 
 		test('isBindxComponent returns true', () => {
@@ -277,15 +266,13 @@ describe('createComponent', () => {
 
 	describe('fragment merging', () => {
 		test('can merge fragments from different components', () => {
-			const AuthorName = schemaCreateComponent(
-				it => ({ author: it.fragment('Author').name() }),
-				({ author }) => <span>{author.data?.name}</span>,
-			)
+			const AuthorName = createComponent()
+				.entity('author', 'Author', e => e.name())
+				.render(({ author }) => <span>{author.data?.name}</span>)
 
-			const AuthorEmail = schemaCreateComponent(
-				it => ({ author: it.fragment('Author').email() }),
-				({ author }) => <span>{author.data?.email}</span>,
-			)
+			const AuthorEmail = createComponent()
+				.entity('author', 'Author', e => e.email())
+				.render(({ author }) => <span>{author.data?.email}</span>)
 
 			const merged = mergeFragments(AuthorName.$author, AuthorEmail.$author)
 
@@ -298,17 +285,39 @@ describe('createComponent', () => {
 		test('author prop is correctly typed', () => {
 			// This test verifies compile-time type checking
 			// If types are wrong, this file won't compile
-			const _testComponent = schemaCreateComponent(
-				it => ({ author: it.fragment('Author').name().email() }),
-				({ author }) => {
+			const _testComponent = createComponent()
+				.entity('author', 'Author', e => e.name().email())
+				.render(({ author }) => {
 					// These should be typed correctly
 					const name: string | undefined = author.data?.name
 					const email: string | undefined = author.data?.email
 					return <div>{name} {email}</div>
-				},
-			)
+				})
 
 			expect(_testComponent.$author).toBeDefined()
+		})
+	})
+
+	describe('mixed implicit and explicit', () => {
+		test('can mix implicit and explicit entity props', () => {
+			const MixedComponent = createComponent()
+				.entity('author', 'Author')  // implicit
+				.entity('article', 'Article', e => e.title())  // explicit
+				.render(({ author, article }) => (
+					<div>
+						<span>{author.fields.name.value}</span>
+						<span>{article.data?.title}</span>
+					</div>
+				))
+
+			expect(MixedComponent.$author).toBeDefined()
+			expect(MixedComponent.$article).toBeDefined()
+
+			// Implicit should collect 'name' from JSX
+			expect(MixedComponent.$author.__meta.fields.has('name')).toBe(true)
+
+			// Explicit should have 'title'
+			expect(MixedComponent.$article.__meta.fields.has('title')).toBe(true)
 		})
 	})
 })
@@ -375,5 +384,23 @@ describe('createComponent rendering', () => {
 
 		// Email should NOT be rendered when showEmail=false
 		expect(queryByTestId(container, 'author-email')).toBeNull()
+	})
+
+	test('renders implicit mode component', async () => {
+		const adapter = new MockAdapter(createMockData())
+
+		const { container } = render(
+			<BindxProvider adapter={adapter}>
+				<Entity name="Author" id="author-1">
+					{author => <ImplicitAuthorCard author={author} />}
+				</Entity>
+			</BindxProvider>,
+		)
+
+		await waitFor(() => {
+			expect(getByTestId(container, 'author-name').textContent).toBe('John Doe')
+		})
+
+		expect(getByTestId(container, 'author-email').textContent).toBe('john@example.com')
 	})
 })

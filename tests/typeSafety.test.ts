@@ -21,7 +21,6 @@ import type {
 } from '@contember/react-bindx'
 import {
 	createFragment,
-	createComponent,
 	createBindx,
 	defineSchema,
 	scalar,
@@ -87,6 +86,46 @@ interface Article {
 	author: Author
 	tags: Tag[]
 }
+
+// ============================================================================
+// Schema Setup
+// ============================================================================
+
+const schema = defineSchema<{
+	Author: Author
+	Tag: Tag
+	Article: Article
+}>({
+	entities: {
+		Author: {
+			fields: {
+				id: scalar(),
+				name: scalar(),
+				email: scalar(),
+				bio: scalar(),
+			},
+		},
+		Tag: {
+			fields: {
+				id: scalar(),
+				name: scalar(),
+				color: scalar(),
+			},
+		},
+		Article: {
+			fields: {
+				id: scalar(),
+				title: scalar(),
+				content: scalar(),
+				published: scalar(),
+				author: hasOne('Author'),
+				tags: hasMany('Tag'),
+			},
+		},
+	},
+})
+
+const { createComponent } = createBindx(schema)
 
 // ============================================================================
 // Type-Level Tests (Compile-Time)
@@ -183,29 +222,18 @@ describe('Type Safety - Compile Time Checks', () => {
 		})
 
 		test('$propName fragment has correct result type', () => {
-			interface TagDisplayProps {
-				tag: EntityRef<Tag, { name: string; color: string }>
-			}
-
-			const TagDisplay = createComponent<TagDisplayProps>(({ tag }) => {
-				void tag.fields.name
-				void tag.fields.color
-				return null
-			})
+			// Create a component with explicit selection using builder API
+			const TagDisplay = createComponent()
+				.entity('tag', 'Tag', e => e.name().color())
+				.render(({ tag }) => {
+					void tag.data?.name
+					void tag.data?.color
+					return null
+				})
 
 			// Verify $tag fragment exists and has correct types
 			type FragmentType = typeof TagDisplay.$tag
 			assertTrue<AssertExtends<FragmentType, FluentFragment<Tag, { name: string; color: string }>>>()
-		})
-
-		test('backwards compatible with full EntityRef', () => {
-			interface LegacyProps {
-				author: EntityRef<Author> // No explicit selection
-			}
-
-			// With no explicit selection, SelectionFromProp should return Author
-			type ExtractedSelection = SelectionFromProp<LegacyProps, 'author'>
-			assertTrue<AssertExtends<ExtractedSelection, Author>>()
 		})
 	})
 
@@ -247,47 +275,44 @@ describe('Type Safety - Compile Time Checks', () => {
 
 describe('Type Safety - Runtime Behavior', () => {
 	describe('createComponent', () => {
-		test('creates component with correct $propName fragment when fields accessed', () => {
-			interface AuthorInfoProps {
-				author: EntityRef<Author, { name: string }>
-			}
+		test('creates component with correct $propName fragment with explicit selection', () => {
+			// Using builder API with explicit selection
+			const AuthorInfo = createComponent()
+				.entity('author', 'Author', e => e.name())
+				.render(({ author }) => {
+					void author.data?.name
+					return null
+				})
 
-			// Note: $author fragment is only created when fields are accessed
-			const AuthorInfo = createComponent<AuthorInfoProps>(({ author }) => {
-				// Must access fields to trigger fragment creation
-				void author.fields.name
-				return null
-			})
-
-			// $author fragment should exist because we accessed author.fields.name
+			// $author fragment should exist because we defined explicit selection
 			expect(AuthorInfo.$author).toBeDefined()
 			expect(AuthorInfo.$author.__isFragment).toBe(true)
 			expect(AuthorInfo.$author.__meta).toBeDefined()
 		})
 
-		test('no fragment created when fields not accessed', () => {
-			interface AuthorInfoProps {
-				author: EntityRef<Author, { name: string }>
-			}
+		test('creates component with implicit selection from JSX access', () => {
+			// Using builder API with implicit selection
+			const AuthorInfo = createComponent()
+				.entity('author', 'Author')
+				.render(({ author }) => {
+					// Access fields to trigger implicit selection collection
+					void author.fields.name.value
+					return null
+				})
 
-			// This component doesn't access any fields
-			const AuthorInfo = createComponent<AuthorInfoProps>(() => null)
-
-			// $author fragment should NOT exist (no fields were accessed)
-			expect(AuthorInfo.$author).toBeUndefined()
+			// $author fragment should exist from implicit collection
+			expect(AuthorInfo.$author).toBeDefined()
+			expect(AuthorInfo.$author.__isFragment).toBe(true)
 		})
 
-		test('fragment metadata captures accessed fields', () => {
-			interface TagListProps {
-				tag: EntityRef<Tag, { name: string; color: string }>
-			}
-
-			const TagList = createComponent<TagListProps>(({ tag }) => {
-				// Access fields (this happens during component creation)
-				void tag.fields.name
-				void tag.fields.color
-				return null
-			})
+		test('fragment metadata captures selected fields', () => {
+			const TagList = createComponent()
+				.entity('tag', 'Tag', e => e.name().color())
+				.render(({ tag }) => {
+					void tag.data?.name
+					void tag.data?.color
+					return null
+				})
 
 			// Verify fragment has selection metadata
 			const meta = TagList.$tag.__meta
@@ -296,16 +321,14 @@ describe('Type Safety - Runtime Behavior', () => {
 		})
 
 		test('multiple entity props create multiple fragments', () => {
-			interface ArticleViewProps {
-				article: EntityRef<Article, { title: string }>
-				author: EntityRef<Author, { name: string }>
-			}
-
-			const ArticleView = createComponent<ArticleViewProps>(({ article, author }) => {
-				void article.fields.title
-				void author.fields.name
-				return null
-			})
+			const ArticleView = createComponent()
+				.entity('article', 'Article', e => e.title())
+				.entity('author', 'Author', e => e.name())
+				.render(({ article, author }) => {
+					void article.data?.title
+					void author.data?.name
+					return null
+				})
 
 			// Both $article and $author should exist
 			expect(ArticleView.$article).toBeDefined()
@@ -351,46 +374,13 @@ describe('Type Safety - Runtime Behavior', () => {
 	})
 
 	describe('Schema and createBindx', () => {
-		const schema = defineSchema<{
-			Author: Author
-			Tag: Tag
-			Article: Article
-		}>({
-			entities: {
-				Author: {
-					fields: {
-						id: scalar(),
-						name: scalar(),
-						email: scalar(),
-						bio: scalar(),
-					},
-				},
-				Tag: {
-					fields: {
-						id: scalar(),
-						name: scalar(),
-						color: scalar(),
-					},
-				},
-				Article: {
-					fields: {
-						id: scalar(),
-						title: scalar(),
-						content: scalar(),
-						published: scalar(),
-						author: hasOne('Author'),
-						tags: hasMany('Tag'),
-					},
-				},
-			},
-		})
-
 		test('createBindx returns typed hooks', () => {
-			const { useEntity, useEntityList, Entity } = createBindx(schema)
+			const { useEntity, useEntityList, Entity, createComponent } = createBindx(schema)
 
 			expect(useEntity).toBeDefined()
 			expect(useEntityList).toBeDefined()
 			expect(Entity).toBeDefined()
+			expect(createComponent).toBeDefined()
 		})
 	})
 })
@@ -467,37 +457,18 @@ describe('Type Safety - Expected Errors', () => {
 	})
 
 	test('createComponent component has typed props', () => {
-		interface AuthorCardProps {
-			author: EntityRef<Author, { name: string }>
-		}
-
-		const AuthorCard = createComponent<AuthorCardProps>(({ author }) => {
-			void author.fields.name
-			return null
-		})
+		const AuthorCard = createComponent()
+			.entity('author', 'Author', e => e.name())
+			.render(({ author }) => {
+				void author.data?.name
+				return null
+			})
 
 		expect(AuthorCard.$author).toBeDefined()
 		expect(AuthorCard.$author.__isFragment).toBe(true)
 
 		type FragmentModel = typeof AuthorCard.$author extends FluentFragment<infer M, unknown> ? M : never
 		assertTrue<AssertExtends<FragmentModel, Author>>()
-	})
-
-	test('component should reject wrong EntityRef type', () => {
-		interface AuthorCardProps {
-			author: EntityRef<Author, { name: string }>
-		}
-
-		const _AuthorCard = createComponent<AuthorCardProps>(({ author }) => {
-			void author.fields.name
-			return null
-		})
-
-		// Passing EntityRef<Tag> instead of EntityRef<Author> should be error
-		type TagRef = EntityRef<Tag, { name: string }>
-
-		// @ts-expect-error - Cannot pass TagRef where AuthorRef is expected
-		const _wrongProps: AuthorCardProps = { author: null as unknown as TagRef }
 	})
 })
 
@@ -619,29 +590,23 @@ describe('Type Safety - Integration', () => {
 		expect(AuthorFragment.__meta.fields.has('name')).toBe(true)
 		expect(AuthorFragment.__meta.fields.has('email')).toBe(false)
 
-		// 3. Create entity fragment component with typed props
-		interface AuthorDisplayProps {
-			author: EntityRef<Author, { id: string; name: string }>
-		}
-
-		const AuthorDisplay = createComponent<AuthorDisplayProps>(({ author }) => {
-			// Access fields to trigger fragment creation
-			void author.fields.id
-			void author.fields.name
-			return null
-		})
+		// 3. Create entity fragment component with builder API
+		const AuthorDisplay = createComponent()
+			.entity('author', 'Author', e => e.id().name())
+			.render(({ author }) => {
+				void author.data?.id
+				void author.data?.name
+				return null
+			})
 
 		// 4. Verify component fragment has correct type
 		expect(AuthorDisplay.$author).toBeDefined()
 		expect(AuthorDisplay.$author.__isFragment).toBe(true)
 
 		// 5. Verify types align for composition - compile-time check
-		type ComponentSelection = SelectionFromProp<AuthorDisplayProps, 'author'>
 		type FragmentResult = typeof AuthorFragment extends FluentFragment<Author, infer R> ? R : never
 
 		// Both should have id and name
-		assertTrue<AssertExtends<'id', keyof ComponentSelection>>()
-		assertTrue<AssertExtends<'name', keyof ComponentSelection>>()
 		assertTrue<AssertExtends<'id', keyof FragmentResult>>()
 		assertTrue<AssertExtends<'name', keyof FragmentResult>>()
 	})

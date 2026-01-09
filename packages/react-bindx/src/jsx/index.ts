@@ -51,16 +51,34 @@ export { Show, ShowWithMeta, type ShowProps } from './components/Show.js'
 export { Entity, type EntityProps } from './components/Entity.js'
 export { EntityList, type EntityListProps } from './components/EntityList.js'
 
-// Component (unified API for both implicit and explicit selection)
+// Component builder (unified API)
 export {
-	createComponent,
 	isBindxComponent,
 	mergeFragments,
 	COMPONENT_MARKER,
+	COMPONENT_BRAND,
 	COMPONENT_SELECTIONS,
-	type SelectionPropMeta,
-	type EntityPropKeys,
-	type EntityFromProp,
-	type SelectionFromProp,
-	type ImplicitFragmentProperties,
+	createComponentBuilder,
+	ComponentBuilderImpl,
+	getComponentBrand,
+	setBrandValidation,
+	validateBrand,
 } from './createComponent.js'
+
+export type {
+	SelectionPropMeta,
+	BindxComponentBase,
+	BindxComponent,
+	ComponentBuilder,
+	ComponentBuilderState,
+	CreateComponentOptions,
+	CreateComponentFn,
+} from './createComponent.js'
+
+// Legacy type exports for backwards compatibility
+export type {
+	EntityPropKeys,
+	EntityFromProp,
+	SelectionFromProp,
+	ImplicitFragmentProperties,
+} from './legacyTypes.js'

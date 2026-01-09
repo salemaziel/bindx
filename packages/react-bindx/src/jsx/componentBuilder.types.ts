@@ -1,0 +1,331 @@
+/**
+ * Type definitions for the unified createComponent builder API.
+ *
+ * This provides a fluent builder interface for creating bindx components
+ * with support for both implicit (JSX-analyzed) and explicit (selector-based)
+ * entity props, scalar props, and optional role constraints.
+ */
+
+import type { ReactNode, ComponentType } from 'react'
+import type {
+	EntityRef,
+	FluentFragment,
+	SelectionBuilder,
+	AnyBrand,
+	SelectionMeta,
+} from '@contember/bindx'
+import type { SelectionProvider } from './types.js'
+
+// ============================================================================
+// Symbols (re-exported from createComponent.ts)
+// ============================================================================
+
+export declare const COMPONENT_MARKER: unique symbol
+export declare const COMPONENT_BRAND: unique symbol
+export declare const COMPONENT_SELECTIONS: unique symbol
+
+// ============================================================================
+// Entity Prop Configuration
+// ============================================================================
+
+/**
+ * Configuration for a single entity prop.
+ * Can be implicit (selection from JSX) or explicit (selection from selector).
+ */
+export interface EntityPropConfig<
+	TEntityName extends string = string,
+	TSelected extends object = object,
+	TIsImplicit extends boolean = boolean,
+> {
+	readonly entityName: TEntityName
+	readonly isImplicit: TIsImplicit
+	readonly __selected: TSelected
+}
+
+/**
+ * Creates an implicit entity prop config type.
+ */
+export type ImplicitEntityConfig<TEntityName extends string, TEntity extends object> =
+	EntityPropConfig<TEntityName, TEntity, true>
+
+/**
+ * Creates an explicit entity prop config type.
+ */
+export type ExplicitEntityConfig<TEntityName extends string, TSelected extends object> =
+	EntityPropConfig<TEntityName, TSelected, false>
+
+// ============================================================================
+// Builder State
+// ============================================================================
+
+/**
+ * Accumulated builder state (type-level).
+ * Grows as you chain builder methods.
+ */
+export interface ComponentBuilderState<
+	TSchema extends Record<string, object>,
+	// eslint-disable-next-line @typescript-eslint/ban-types
+	TEntityProps extends Record<string, EntityPropConfig> = {},
+	TScalarProps extends object = object,
+	TRoles extends readonly string[] = readonly string[],
+> {
+	readonly __schema: TSchema
+	readonly __entityProps: TEntityProps
+	readonly __scalarProps: TScalarProps
+	readonly __roles: TRoles
+}
+
+// ============================================================================
+// State Update Helpers
+// ============================================================================
+
+/**
+ * Add an implicit entity to builder state.
+ */
+export type AddImplicitEntity<
+	TState extends ComponentBuilderState<Record<string, object>>,
+	TPropName extends string,
+	TEntityName extends string,
+> = ComponentBuilderState<
+	TState['__schema'],
+	TState['__entityProps'] & {
+		readonly [K in TPropName]: ImplicitEntityConfig<
+			TEntityName,
+			TEntityName extends keyof TState['__schema'] ? TState['__schema'][TEntityName] : object
+		>
+	},
+	TState['__scalarProps'],
+	TState['__roles']
+>
+
+/**
+ * Add an explicit entity to builder state.
+ */
+export type AddExplicitEntity<
+	TState extends ComponentBuilderState<Record<string, object>>,
+	TPropName extends string,
+	TEntityName extends string,
+	TSelected extends object,
+> = ComponentBuilderState<
+	TState['__schema'],
+	TState['__entityProps'] & {
+		readonly [K in TPropName]: ExplicitEntityConfig<TEntityName, TSelected>
+	},
+	TState['__scalarProps'],
+	TState['__roles']
+>
+
+/**
+ * Set scalar props in builder state.
+ */
+export type SetScalarProps<
+	TState extends ComponentBuilderState<Record<string, object>>,
+	TNewScalarProps extends object,
+> = ComponentBuilderState<
+	TState['__schema'],
+	TState['__entityProps'],
+	TNewScalarProps,
+	TState['__roles']
+>
+
+// ============================================================================
+// Props Building
+// ============================================================================
+
+/**
+ * Build EntityRef props from entity config.
+ * Note: Uses `string` for entity name to be compatible with Entity component callback
+ * which provides EntityRef with generic string entity name.
+ */
+export type BuildEntityProps<
+	TEntityProps extends Record<string, EntityPropConfig>,
+	TSchema extends Record<string, object>,
+	TRoles extends readonly string[],
+> = {
+	readonly [K in keyof TEntityProps]: TEntityProps[K] extends EntityPropConfig<
+		infer TEntityName,
+		infer TSelected,
+		infer _TIsImplicit
+	>
+		? EntityRef<
+				TEntityName extends keyof TSchema ? TSchema[TEntityName] : object,
+				TSelected,
+				AnyBrand,
+				string,  // Use string to be compatible with Entity component
+				TRoles
+			>
+		: never
+}
+
+/**
+ * Build complete props type from builder state.
+ */
+export type BuildProps<TState extends ComponentBuilderState<Record<string, object>>> =
+	TState['__scalarProps'] &
+		BuildEntityProps<TState['__entityProps'], TState['__schema'], TState['__roles']>
+
+/**
+ * Build fragment properties ($propName) from entity config.
+ */
+export type BuildFragmentProps<
+	TEntityProps extends Record<string, EntityPropConfig>,
+	TSchema extends Record<string, object>,
+	TRoles extends readonly string[],
+> = {
+	readonly [K in keyof TEntityProps as `$${K & string}`]: TEntityProps[K] extends EntityPropConfig<
+		infer TEntityName,
+		infer TSelected,
+		infer _TIsImplicit
+	>
+		? FluentFragment<
+				TEntityName extends keyof TSchema ? TSchema[TEntityName] : object,
+				TSelected,
+				AnyBrand,
+				TRoles
+			>
+		: never
+}
+
+// ============================================================================
+// Result Component Types
+// ============================================================================
+
+/**
+ * Metadata for entity prop selections.
+ */
+export interface SelectionPropMeta {
+	readonly selection: SelectionMeta
+	readonly fragment: FluentFragment<unknown, object>
+}
+
+/**
+ * Base component type with markers.
+ */
+export type BindxComponentBase<TProps extends object> = ComponentType<TProps> &
+	SelectionProvider & {
+		readonly [COMPONENT_MARKER]: true
+		readonly [COMPONENT_SELECTIONS]: Map<string, SelectionPropMeta>
+		readonly __componentRoles?: readonly string[]
+	}
+
+/**
+ * Complete bindx component type with fragment properties.
+ */
+export type BindxComponent<
+	TState extends ComponentBuilderState<Record<string, object>>,
+> = BindxComponentBase<BuildProps<TState>> &
+	BuildFragmentProps<TState['__entityProps'], TState['__schema'], TState['__roles']>
+
+// ============================================================================
+// Builder Interface
+// ============================================================================
+
+/**
+ * Fluent builder for creating bindx components.
+ *
+ * @typeParam TSchema - The entity schema
+ * @typeParam TState - Accumulated builder state
+ *
+ * @example
+ * ```typescript
+ * createComponent({ roles: ['admin'] })
+ *   .entity('article', 'Article')  // implicit
+ *   .entity('author', 'Author', e => e.id().name())  // explicit
+ *   .props<{ className?: string }>()
+ *   .render(({ article, author, className }) => ...)
+ * ```
+ */
+export interface ComponentBuilder<
+	TSchema extends Record<string, object>,
+	TState extends ComponentBuilderState<TSchema> = ComponentBuilderState<TSchema>,
+> {
+	/**
+	 * Add an entity prop with implicit selection (collected from JSX).
+	 *
+	 * @param propName - Name of the prop
+	 * @param entityName - Name of the entity in the schema
+	 */
+	entity<TPropName extends string, TEntityName extends keyof TSchema & string>(
+		propName: TPropName,
+		entityName: TEntityName,
+	): ComponentBuilder<TSchema, AddImplicitEntity<TState, TPropName, TEntityName>>
+
+	/**
+	 * Add an entity prop with explicit selection (from selector function).
+	 *
+	 * @param propName - Name of the prop
+	 * @param entityName - Name of the entity in the schema
+	 * @param selector - Selection builder function
+	 */
+	entity<
+		TPropName extends string,
+		TEntityName extends keyof TSchema & string,
+		TSelected extends object,
+	>(
+		propName: TPropName,
+		entityName: TEntityName,
+		selector: (e: SelectionBuilder<TSchema[TEntityName]>) => SelectionBuilder<TSchema[TEntityName], TSelected, object>,
+	): ComponentBuilder<TSchema, AddExplicitEntity<TState, TPropName, TEntityName, TSelected>>
+
+	/**
+	 * Define additional scalar (non-entity) props.
+	 * This is a type-only operation - no runtime effect.
+	 *
+	 * @example
+	 * ```typescript
+	 * .props<{ className?: string; onClick?: () => void }>()
+	 * ```
+	 */
+	props<TNewScalarProps extends object>(): ComponentBuilder<TSchema, SetScalarProps<TState, TNewScalarProps>>
+
+	/**
+	 * Build the component with the render function.
+	 *
+	 * @param renderFn - React render function receiving typed props
+	 * @returns Bindx component with fragment properties
+	 */
+	render(renderFn: (props: BuildProps<TState>) => ReactNode): BindxComponent<TState>
+}
+
+// ============================================================================
+// Factory Types
+// ============================================================================
+
+/**
+ * Initial builder state with empty entity props and scalar props.
+ * Note: Uses {} instead of Record<string, never> to avoid index signature issues
+ * when combining with scalar props.
+ */
+export type InitialBuilderState<
+	TSchema extends Record<string, object>,
+	TRoles extends readonly string[] = readonly string[],
+	// eslint-disable-next-line @typescript-eslint/ban-types
+> = ComponentBuilderState<TSchema, {}, object, TRoles>
+
+/**
+ * Options for createComponent.
+ */
+export interface CreateComponentOptions<TRoles extends readonly string[] = readonly string[]> {
+	readonly roles?: TRoles
+}
+
+/**
+ * Type for the createComponent function returned by createBindx.
+ */
+export interface CreateComponentFn<
+	TSchema extends Record<string, object>,
+	TRoleNames extends string = never,
+> {
+	/**
+	 * Create a component builder without role constraints.
+	 */
+	(): ComponentBuilder<TSchema, InitialBuilderState<TSchema>>
+
+	/**
+	 * Create a component builder with role constraints.
+	 * Entity types are narrowed to fields accessible by the specified roles.
+	 */
+	<TRoles extends readonly TRoleNames[]>(
+		options: CreateComponentOptions<TRoles>,
+	): ComponentBuilder<TSchema, InitialBuilderState<TSchema, TRoles>>
+}

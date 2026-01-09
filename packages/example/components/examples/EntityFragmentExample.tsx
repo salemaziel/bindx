@@ -1,19 +1,9 @@
 import { Entity, createComponent } from '../../bindx.js'
-import { Field, HasMany, HasOne, type EntityRef } from '@contember/react-bindx'
-import type { Author, Article } from '../../types.js'
+import { Field, HasMany, HasOne } from '@contember/react-bindx'
 
 // ============================================================================
 // Fragment Component Definitions
 // ============================================================================
-
-/**
- * Props for the AuthorInfo component.
- * `author` is an EntityRef - this is what makes it an entity prop.
- */
-interface AuthorInfoProps {
-	author: EntityRef<Author>
-	showEmail?: boolean
-}
 
 /**
  * A reusable fragment component for displaying author information.
@@ -21,106 +11,99 @@ interface AuthorInfoProps {
  * This component:
  * 1. Can be used inside <Entity> with typed props
  * 2. Exposes `$author` fragment for use with useEntity hook
- * 3. Automatically collects field selections from JSX
+ * 3. Uses implicit selection (collected from JSX)
  */
-export const AuthorInfo = createComponent<AuthorInfoProps>(({ author, showEmail }) => (
-	<div className="author-info">
-		<strong>
-			<Field field={author.fields.name} />
-		</strong>
-		{showEmail && (
-			<span className="email">
-				{' '}
-				(<Field field={author.fields.email} />)
-			</span>
-		)}
-	</div>
-))
-
-export const AuthorArticles = createComponent((it) => ({
-	author: it.fragment('Author').articles({ limit: 5 }, it => it.title().id())
-}), props => {
-	return (
-		<ul>
-			<HasMany field={props.author.fields.articles}>
-				{article => (
-					<li key={article.id}>
-						<Field field={article.fields.title} />
-					</li>
-				)}
-			</HasMany>
-		</ul>
-	)
-})
-
-
-export const AuthorArticlesImplicit = createComponent<{
-	author: EntityRef<Author>
-}>(props => {
-	return (
-		<ul>
-			<HasMany field={props.author.fields.articles} limit={5}>
-				{article => (
-					<li key={article.id}>
-						<Field field={article.fields.title} />
-					</li>
-				)}
-			</HasMany>
-		</ul>
-	)
-})
-
+export const AuthorInfo = createComponent()
+	.entity('author', 'Author')
+	.props<{ showEmail?: boolean }>()
+	.render(({ author, showEmail }) => (
+		<div className="author-info">
+			<strong>
+				<Field field={author.fields.name} />
+			</strong>
+			{showEmail && (
+				<span className="email">
+					{' '}
+					(<Field field={author.fields.email} />)
+				</span>
+			)}
+		</div>
+	))
 
 /**
- * Props for AuthorBio component
+ * A component that uses explicit selection for has-many with limit.
  */
-interface AuthorBioProps {
-	author: EntityRef<Author>
-}
+export const AuthorArticles = createComponent()
+	.entity('author', 'Author', e => e.articles({ limit: 5 }, a => a.id().title()))
+	.render(({ author }) => (
+		<ul>
+			<HasMany field={author.fields.articles}>
+				{article => (
+					<li key={article.id}>
+						<Field field={article.fields.title} />
+					</li>
+				)}
+			</HasMany>
+		</ul>
+	))
+
+/**
+ * A component that uses implicit selection - limit is passed at render time.
+ */
+export const AuthorArticlesImplicit = createComponent()
+	.entity('author', 'Author')
+	.render(({ author }) => (
+		<ul>
+			<HasMany field={author.fields.articles} limit={5}>
+				{article => (
+					<li key={article.id}>
+						<Field field={article.fields.title} />
+					</li>
+				)}
+			</HasMany>
+		</ul>
+	))
 
 /**
  * Another fragment component for author - displays bio and articles.
  */
-export const AuthorBio = createComponent<AuthorBioProps>(({ author }) => (
-	<div className="author-bio">
-		<p>
-			<Field field={author.fields.bio} />
-		</p>
-		<h4>Recent Articles</h4>
-		<ul>
-			<HasMany field={author.fields.articles} limit={3}>
-				{article => (
-					<li key={article.id}>
-						<Field field={article.fields.title} />
-					</li>
-				)}
-			</HasMany>
-		</ul>
-	</div>
-))
-
-/**
- * Props for ArticleTags component
- */
-interface ArticleTagsProps {
-	article: EntityRef<Article>
-	className?: string
-}
+export const AuthorBio = createComponent()
+	.entity('author', 'Author')
+	.render(({ author }) => (
+		<div className="author-bio">
+			<p>
+				<Field field={author.fields.bio} />
+			</p>
+			<h4>Recent Articles</h4>
+			<ul>
+				<HasMany field={author.fields.articles} limit={3}>
+					{article => (
+						<li key={article.id}>
+							<Field field={article.fields.title} />
+						</li>
+					)}
+				</HasMany>
+			</ul>
+		</div>
+	))
 
 /**
  * Fragment component for displaying article tags.
  */
-export const ArticleTags = createComponent<ArticleTagsProps>(({ article, className }) => (
-	<div className={className ?? 'article-tags'}>
-		<HasMany field={article.fields.tags}>
-			{tag => (
-				<span key={tag.id} className="tag" style={{ backgroundColor: tag.fields.color.value ?? undefined }}>
-					<Field field={tag.fields.name} />
-				</span>
-			)}
-		</HasMany>
-	</div>
-))
+export const ArticleTags = createComponent()
+	.entity('article', 'Article')
+	.props<{ className?: string }>()
+	.render(({ article, className }) => (
+		<div className={className ?? 'article-tags'}>
+			<HasMany field={article.fields.tags}>
+				{tag => (
+					<span key={tag.id} className="tag" style={{ backgroundColor: tag.fields.color.value ?? undefined }}>
+						<Field field={tag.fields.name} />
+					</span>
+				)}
+			</HasMany>
+		</div>
+	))
 
 // ============================================================================
 // Usage Examples

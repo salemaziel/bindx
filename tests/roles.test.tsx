@@ -25,6 +25,7 @@ import {
 	type EntityForRoles,
 	type RolesAreSubset,
 	type EntityRef,
+	AnyBrand,
 } from '@contember/bindx'
 import {
 	createRoleAwareBindx,
@@ -548,16 +549,14 @@ describe('Role-aware createComponent', () => {
 	test('createComponent returns component with correct type', () => {
 		const { createComponent } = createRoleAwareBindx<RoleSchemas>(adminSchema)
 
-		// Create an admin-only component
-		const AdminArticleCard = createComponent({
-			roles: ['admin'] as const,
-		}, (it) => ({
-			article: it.fragment('Article').id().title().internalNotes(),
-		}), ({ article }) => (
-			<div>
-				<span>{article.data?.title}</span>
-			</div>
-		))
+		// Create an admin-only component using the new builder API
+		const AdminArticleCard = createComponent({ roles: ['admin'] as const })
+			.entity('article', 'Article', e => e.id().title().internalNotes())
+			.render(({ article }) => (
+				<div>
+					<span>{article.data?.title}</span>
+				</div>
+			))
 
 		// Component should have $article fragment property
 		expect(AdminArticleCard.$article).toBeDefined()
@@ -568,14 +567,12 @@ describe('Role-aware createComponent', () => {
 	test('createComponent fragment has correct role info', () => {
 		const { createComponent } = createRoleAwareBindx<RoleSchemas>(adminSchema)
 
-		// Create component with multiple roles
-		const EditorAdminCard = createComponent({
-			roles: ['editor', 'admin'] as const,
-		}, (it) => ({
-			article: it.fragment('Article').id().title(),
-		}), ({ article }) => (
-			<div>{article.data?.title}</div>
-		))
+		// Create component with multiple roles using the new builder API
+		const EditorAdminCard = createComponent({ roles: ['editor', 'admin'] })
+			.entity('article', 'Article', e => e.id().title())
+			.render(({ article }) => (
+				<div>{article.fields.title.value}</div>
+			))
 
 		// Fragment should carry role information
 		const fragment = EditorAdminCard.$article
@@ -586,17 +583,16 @@ describe('Role-aware createComponent', () => {
 	test('createComponent with scalar props works', () => {
 		const { createComponent } = createRoleAwareBindx<RoleSchemas>(adminSchema)
 
-		// Create component with scalar props
-		const AdminArticleCard = createComponent<{ showNotes?: boolean }>()({
-			roles: ['admin'] as const,
-		}, (it) => ({
-			article: it.fragment('Article').id().title(),
-		}), ({ article, showNotes }) => (
-			<div>
-				<span>{article.data?.title}</span>
-				{showNotes && <span>Notes visible</span>}
-			</div>
-		))
+		// Create component with scalar props using the new builder API
+		const AdminArticleCard = createComponent({ roles: ['admin'] as const })
+			.entity('article', 'Article', e => e.id().title())
+			.props<{ showNotes?: boolean }>()
+			.render(({ article, showNotes }) => (
+				<div>
+					<span>{article.data?.title}</span>
+					{showNotes && <span>Notes visible</span>}
+				</div>
+			))
 
 		expect(AdminArticleCard.$article).toBeDefined()
 		expect(AdminArticleCard.$article.__roles).toEqual(['admin'])
@@ -605,19 +601,16 @@ describe('Role-aware createComponent', () => {
 	test('component fragment type correctly narrows entity access', () => {
 		const { createComponent } = createRoleAwareBindx<RoleSchemas>(adminSchema)
 
-		// Create an admin-only component
-		const AdminArticleCard = createComponent({
-			roles: ['admin'] as const,
-		}, (it) => ({
-			// Admin has access to internalNotes
-			article: it.fragment('Article').id().title().internalNotes(),
-		}), ({ article }) => (
-			<div>
-				{/* article.data should have internalNotes */}
-				<span>{article.data?.title}</span>
-				<span>{article.data?.internalNotes}</span>
-			</div>
-		))
+		// Create an admin-only component using the new builder API
+		const AdminArticleCard = createComponent({ roles: ['admin'] as const })
+			.entity('article', 'Article', e => e.id().title().internalNotes())
+			.render(({ article }) => (
+				<div>
+					{/* article.data should have internalNotes */}
+					<span>{article.data?.title}</span>
+					<span>{article.data?.internalNotes}</span>
+				</div>
+			))
 
 		expect(AdminArticleCard.$article).toBeDefined()
 	})
@@ -626,18 +619,14 @@ describe('Role-aware createComponent', () => {
 		const { createComponent } = createRoleAwareBindx<RoleSchemas>(adminSchema)
 
 		// This should compile - Article exists in admin schema
-		const AdminArticleCard = createComponent({
-			roles: ['admin'] as const,
-		}, (it) => ({
-			article: it.fragment('Article').id(),
-		}), ({ article }) => <div>{article.data?.id}</div>)
+		const AdminArticleCard = createComponent({ roles: ['admin'] as const })
+			.entity('article', 'Article', e => e.id())
+			.render(({ article }) => <div>{article.data?.id}</div>)
 
 		// This should compile - Author exists in admin schema
-		const AdminAuthorCard = createComponent({
-			roles: ['admin'] as const,
-		}, (it) => ({
-			author: it.fragment('Author').id().name(),
-		}), ({ author }) => <div>{author.data?.name}</div>)
+		const AdminAuthorCard = createComponent({ roles: ['admin'] as const })
+			.entity('author', 'Author', e => e.id().name())
+			.render(({ author }) => <div>{author.data?.name}</div>)
 
 		expect(AdminArticleCard.$article).toBeDefined()
 		expect(AdminAuthorCard.$author).toBeDefined()
@@ -647,11 +636,9 @@ describe('Role-aware createComponent', () => {
 		// This is a compile-time test
 		const { createComponent } = createRoleAwareBindx<RoleSchemas>(adminSchema)
 
-		const AdminCard = createComponent({
-			roles: ['admin'] as const,
-		}, (it) => ({
-			article: it.fragment('Article').id(),
-		}), ({ article }) => <div>{article.data?.id}</div>)
+		const AdminCard = createComponent({ roles: ['admin'] as const })
+			.entity('article', 'Article', e => e.id())
+			.render(({ article }) => <div>{article.data?.id}</div>)
 
 		// The fragment should have ['admin'] as its available roles at type level
 		type FragmentRoles = typeof AdminCard.$article extends { __availableRoles?: infer R } ? R : never
@@ -662,16 +649,15 @@ describe('Role-aware createComponent', () => {
 	test('type error: public role cannot access admin-only fields', () => {
 		const { createComponent } = createRoleAwareBindx<RoleSchemas>(adminSchema)
 
-		// Create a public-only component
-		const PublicArticleCard = createComponent({
-			roles: ['public'] as const,
-		}, (it) => ({
-			article: it.fragment('Article')
+		// Create a public-only component using the new builder API
+		// The @ts-expect-error is on the selector - article.data type becomes invalid due to the error
+		const PublicArticleCard = createComponent({ roles: ['public'] as const })
+			.entity('article', 'Article', e => e
 				.id()
 				.title()
 				// @ts-expect-error - 'internalNotes' does not exist on PublicArticle (only on AdminArticle)
-				.internalNotes(),
-		}), ({ article }) => <div>{article.data?.title}</div>)
+				.internalNotes())
+			.render(({ article }) => <div>{article.id}</div>)
 
 		expect(PublicArticleCard.$article).toBeDefined()
 	})
@@ -679,17 +665,16 @@ describe('Role-aware createComponent', () => {
 	test('type error: editor role cannot access admin-only fields', () => {
 		const { createComponent } = createRoleAwareBindx<RoleSchemas>(adminSchema)
 
-		// Create an editor-only component
-		const EditorArticleCard = createComponent({
-			roles: ['editor'] as const,
-		}, (it) => ({
-			article: it.fragment('Article')
+		// Create an editor-only component using the new builder API
+		// The @ts-expect-error is on the selector - article.data type becomes invalid due to the error
+		const EditorArticleCard = createComponent({ roles: ['editor'] as const })
+			.entity('article', 'Article', e => e
 				.id()
 				.title()
 				.content() // OK - editor has content
 				// @ts-expect-error - 'internalNotes' does not exist on EditorArticle (only on AdminArticle)
-				.internalNotes(),
-		}), ({ article }) => <div>{article.data?.content}</div>)
+				.internalNotes())
+			.render(({ article }) => <div>{article.id}</div>)
 
 		expect(EditorArticleCard.$article).toBeDefined()
 	})
@@ -697,15 +682,14 @@ describe('Role-aware createComponent', () => {
 	test('type error: public role cannot access editor field (content)', () => {
 		const { createComponent } = createRoleAwareBindx<RoleSchemas>(adminSchema)
 
-		const PublicArticleCard = createComponent({
-			roles: ['public'] as const,
-		}, (it) => ({
-			article: it.fragment('Article')
+		// The @ts-expect-error is on the selector - article.data type becomes invalid due to the error
+		const PublicArticleCard = createComponent({ roles: ['public'] as const })
+			.entity('article', 'Article', e => e
 				.id()
 				.title()
 				// @ts-expect-error - 'content' does not exist on PublicArticle
-				.content(),
-		}), ({ article }) => <div>{article.data?.title}</div>)
+				.content())
+			.render(({ article }) => <div>{article.id}</div>)
 
 		expect(PublicArticleCard.$article).toBeDefined()
 	})
@@ -713,15 +697,14 @@ describe('Role-aware createComponent', () => {
 	test('type error: public role cannot access author relation', () => {
 		const { createComponent } = createRoleAwareBindx<RoleSchemas>(adminSchema)
 
-		const PublicArticleCard = createComponent({
-			roles: ['public'] as const,
-		}, (it) => ({
-			article: it.fragment('Article')
+		// The @ts-expect-error is on the selector - article.data type becomes invalid due to the error
+		const PublicArticleCard = createComponent({ roles: ['public'] as const })
+			.entity('article', 'Article', e => e
 				.id()
 				.title()
 				// @ts-expect-error - 'author' relation does not exist on PublicArticle
-				.author((a: any) => a.name()),
-		}), ({ article }) => <div>{article.data?.title}</div>)
+				.author((a: any) => a.name()))
+			.render(({ article }) => <div>{article.id}</div>)
 
 		expect(PublicArticleCard.$article).toBeDefined()
 	})
@@ -729,16 +712,15 @@ describe('Role-aware createComponent', () => {
 	test('type error: admin Author fields not accessible from editor role', () => {
 		const { createComponent } = createRoleAwareBindx<RoleSchemas>(adminSchema)
 
-		const EditorAuthorCard = createComponent({
-			roles: ['editor'] as const,
-		}, (it) => ({
-			author: it.fragment('Author')
+		// The @ts-expect-error is on the selector - author.data type becomes invalid due to the error
+		const EditorAuthorCard = createComponent({ roles: ['editor'] as const })
+			.entity('author', 'Author', e => e
 				.id()
 				.name()
 				.email() // OK - editor has email
 				// @ts-expect-error - 'salary' does not exist on EditorAuthor (only on AdminAuthor)
-				.salary(),
-		}), ({ author }) => <div>{author.data?.name}</div>)
+				.salary())
+			.render(({ author }) => <div>{author.id}</div>)
 
 		expect(EditorAuthorCard.$author).toBeDefined()
 	})
@@ -756,17 +738,15 @@ describe('Role-aware createComponent', () => {
 	test('type error: component props require matching role EntityRef', () => {
 		const { createComponent } = createRoleAwareBindx<RoleSchemas>(adminSchema)
 
-		// Create admin-only component
-		const AdminArticleCard = createComponent({
-			roles: ['admin'] as const,
-		}, (it) => ({
-			article: it.fragment('Article').id().title().internalNotes(),
-		}), ({ article }) => (
-			<div>
-				<span>{article.data?.title}</span>
-				<span>{article.data?.internalNotes}</span>
-			</div>
-		))
+		// Create admin-only component using the new builder API
+		const AdminArticleCard = createComponent({ roles: ['admin'] as const })
+			.entity('article', 'Article', e => e.id().title().internalNotes())
+			.render(({ article }) => (
+				<div>
+					<span>{article.data?.title}</span>
+					<span>{article.data?.internalNotes}</span>
+				</div>
+			))
 
 		// Create a mock EntityRef with only editor roles
 		const editorOnlyEntityRef: EntityRef<EditorArticle, EditorArticle, any, 'Article', readonly ['editor']> = {
@@ -798,12 +778,10 @@ describe('Role-aware createComponent', () => {
 	test('component props accept EntityRef with superset of required roles', () => {
 		const { createComponent } = createRoleAwareBindx<RoleSchemas>(adminSchema)
 
-		// Create admin-only component
-		const AdminArticleCard = createComponent({
-			roles: ['admin'] as const,
-		}, (it) => ({
-			article: it.fragment('Article').id().title(),
-		}), ({ article }) => <div>{article.data?.title}</div>)
+		// Create admin-only component using the new builder API
+		const AdminArticleCard = createComponent({ roles: ['admin'] as const })
+			.entity('article', 'Article', e => e.id().title())
+			.render(({ article }) => <div>{article.data?.title}</div>)
 
 		// Create a mock EntityRef with admin + editor roles (superset of required ['admin'])
 		const adminEditorEntityRef: EntityRef<AdminArticle, { id: string; title: string }, any, 'Article', readonly ['admin', 'editor']> = {
@@ -826,11 +804,9 @@ describe('Role-aware createComponent', () => {
 	test('fragment role info is preserved in type system', () => {
 		const { createComponent } = createRoleAwareBindx<RoleSchemas>(adminSchema)
 
-		const AdminCard = createComponent({
-			roles: ['admin'] as const,
-		}, (it) => ({
-			article: it.fragment('Article').id(),
-		}), ({ article }) => <div>{article.data?.id}</div>)
+		const AdminCard = createComponent({ roles: ['admin'] as const })
+			.entity('article', 'Article', e => e.id())
+			.render(({ article }) => <div>{article.data?.id}</div>)
 
 		// Type-level check: fragment should have ['admin'] as available roles
 		type FragmentType = typeof AdminCard.$article
@@ -951,20 +927,15 @@ describe('Role-aware implicit createComponent', () => {
 	test('implicit component with roles collects selections from JSX', () => {
 		const { createComponent } = createRoleAwareBindx<RoleSchemas>(adminSchema)
 
-		// Define props with EntityRefFor
-		type AdminArticleCardProps = {
-			article: EntityRef<AdminArticle, AdminArticle, import('@contember/bindx').AnyBrand, 'Article', ['admin']>
-		}
-
-		// Create implicit component with roles - P is inferred from parameter annotation
-		const AdminArticleCard = createComponent({
-			roles: ['admin'] as const,
-		}, ({ article }: AdminArticleCardProps) => (
-			<div>
-				<span data-testid="title">{article.fields.title.value}</span>
-				<span data-testid="notes">{article.fields.internalNotes.value}</span>
-			</div>
-		))
+		// Create implicit component with roles using the new builder API
+		const AdminArticleCard = createComponent({ roles: ['admin'] as const })
+			.entity('article', 'Article')
+			.render(({ article }) => (
+				<div>
+					<span data-testid="title">{article.fields.title.value}</span>
+					<span data-testid="notes">{article.fields.internalNotes.value}</span>
+				</div>
+			))
 
 		// Component should have $article fragment property
 		expect(AdminArticleCard.$article).toBeDefined()
@@ -974,15 +945,12 @@ describe('Role-aware implicit createComponent', () => {
 	test('implicit component fragment has correct role info', () => {
 		const { createComponent } = createRoleAwareBindx<RoleSchemas>(adminSchema)
 
-		type AdminArticleCardProps = {
-			article: EntityRef<AdminArticle, AdminArticle, import('@contember/bindx').AnyBrand, 'Article', ['admin']>
-		}
-
-		const AdminArticleCard = createComponent({
-			roles: ['admin'] as const,
-		}, ({ article }: AdminArticleCardProps) => (
-			<div>{article.fields.title.value}</div>
-		))
+		// Create implicit component using the new builder API
+		const AdminArticleCard = createComponent({ roles: ['admin'] as const })
+			.entity('article', 'Article')
+			.render(({ article }) => (
+				<div>{article.fields.title.value}</div>
+			))
 
 		// Fragment should carry role information
 		const fragment = AdminArticleCard.$article
@@ -993,24 +961,15 @@ describe('Role-aware implicit createComponent', () => {
 	test('implicit component with multiple roles', () => {
 		const { createComponent } = createRoleAwareBindx<RoleSchemas>(adminSchema)
 
-		type EditorAdminCardProps = {
-			article: EntityRef<
-				AdminArticle & EditorArticle,
-				AdminArticle & EditorArticle,
-				import('@contember/bindx').AnyBrand,
-				'Article',
-				['editor', 'admin']
-			>
-		}
-
-		const EditorAdminCard = createComponent({
-			roles: ['editor', 'admin'] as const,
-		}, ({ article }: EditorAdminCardProps) => (
-			<div>
-				<span>{article.fields.title.value}</span>
-				<span>{article.fields.content.value}</span>
-			</div>
-		))
+		// Create implicit component with multiple roles using the new builder API
+		const EditorAdminCard = createComponent({ roles: ['editor', 'admin'] as const })
+			.entity('article', 'Article')
+			.render(({ article }) => (
+				<div>
+					<span>{article.fields.title.value}</span>
+					<span>{article.fields.content.value}</span>
+				</div>
+			))
 
 		// Fragment should carry multiple roles
 		expect(EditorAdminCard.$article.__roles).toEqual(['editor', 'admin'])
@@ -1019,15 +978,12 @@ describe('Role-aware implicit createComponent', () => {
 	test('implicit component has __componentRoles property', () => {
 		const { createComponent } = createRoleAwareBindx<RoleSchemas>(adminSchema)
 
-		type AdminArticleCardProps = {
-			article: EntityRef<AdminArticle, AdminArticle, import('@contember/bindx').AnyBrand, 'Article', ['admin']>
-		}
-
-		const AdminArticleCard = createComponent({
-			roles: ['admin'] as const,
-		}, ({ article }: AdminArticleCardProps) => (
-			<div>{article.fields.title.value}</div>
-		))
+		// Create implicit component using the new builder API
+		const AdminArticleCard = createComponent({ roles: ['admin'] as const })
+			.entity('article', 'Article')
+			.render(({ article }) => (
+				<div>{article.fields.title.value}</div>
+			))
 
 		// Component should have __componentRoles
 		expect((AdminArticleCard as unknown as { __componentRoles: string[] }).__componentRoles).toEqual(['admin'])
@@ -1036,18 +992,15 @@ describe('Role-aware implicit createComponent', () => {
 	test('implicit component selection contains accessed fields', () => {
 		const { createComponent } = createRoleAwareBindx<RoleSchemas>(adminSchema)
 
-		type AdminArticleCardProps = {
-			article: EntityRef<AdminArticle, AdminArticle, import('@contember/bindx').AnyBrand, 'Article', ['admin']>
-		}
-
-		const AdminArticleCard = createComponent({
-			roles: ['admin'] as const,
-		}, ({ article }: AdminArticleCardProps) => (
-			<div>
-				<span>{article.fields.title.value}</span>
-				<span>{article.fields.internalNotes.value}</span>
-			</div>
-		))
+		// Create implicit component using the new builder API
+		const AdminArticleCard = createComponent({ roles: ['admin'] as const })
+			.entity('article', 'Article')
+			.render(({ article }) => (
+				<div>
+					<span>{article.fields.title.value}</span>
+					<span>{article.fields.internalNotes.value}</span>
+				</div>
+			))
 
 		// Fragment should have selection metadata
 		const fragment = AdminArticleCard.$article

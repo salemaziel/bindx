@@ -4,12 +4,22 @@ import { SchemaRegistry } from '@contember/bindx'
 import { resolveSelectionMeta, type SelectionInput } from '@contember/bindx'
 import { useEntityImpl, type UseEntityOptions, type EntityAccessorResult } from './useEntityImpl.js'
 import { useEntityListImpl, type UseEntityListOptions, type EntityListAccessorResult } from './useEntityListImpl.js'
-import { createComponentFactory, COMPONENT_MARKER, COMPONENT_SELECTIONS, type SelectionPropMeta } from '../jsx/createComponent.js'
+import {
+	createComponentBuilder,
+	COMPONENT_MARKER,
+	COMPONENT_SELECTIONS,
+	type SelectionPropMeta,
+} from '../jsx/componentBuilder.js'
+import type {
+	ComponentBuilder,
+	ComponentBuilderState,
+	CreateComponentOptions,
+} from '../jsx/componentBuilder.types.js'
 import { Entity, type EntityProps } from '../jsx/components/Entity.js'
 import { EntityList, type EntityListProps } from '../jsx/components/EntityList.js'
 
 // Re-export symbols needed for declaration files
-export { COMPONENT_MARKER, COMPONENT_SELECTIONS, type SelectionPropMeta } from '../jsx/createComponent.js'
+export { COMPONENT_MARKER, COMPONENT_SELECTIONS, type SelectionPropMeta } from '../jsx/componentBuilder.js'
 
 // Re-export types for convenience
 export type { EntityFields } from '@contember/bindx'
@@ -44,14 +54,21 @@ export type { UseEntityListOptions, EntityListAccessorResult, LoadingEntityListA
  *
  * export const { useEntity, useEntityList, Entity, createComponent } = createBindx(schema)
  *
- * // Usage:
- * const article = useEntity('Article', { id }, e =>
- *   e.id().title().author(a => a.name())
- * )
+ * // Usage with new builder API:
+ * const AuthorCard = createComponent()
+ *   .entity('author', 'Author')
+ *   .render(({ author }) => <div>{author.fields.name.value}</div>)
  *
- * const AuthorCard = createComponent({
- *   author: ['Author', e => e.name().email()],
- * }, ({ author }) => <div>{author.data?.name}</div>)
+ * // With explicit selection:
+ * const AuthorCard = createComponent()
+ *   .entity('author', 'Author', e => e.name().email())
+ *   .render(({ author }) => <div>{author.data?.name}</div>)
+ *
+ * // With scalar props:
+ * const AuthorCard = createComponent()
+ *   .entity('author', 'Author')
+ *   .props<{ showEmail?: boolean }>()
+ *   .render(({ author, showEmail }) => ...)
  * ```
  */
 export function createBindx<TModels extends { [K in keyof TModels]: object }>(
@@ -117,8 +134,59 @@ export function createBindx<TModels extends { [K in keyof TModels]: object }>(
 	) => ReactElement | null
 	const TypedEntityList = EntityList as TypedEntityListComponent
 
-	// Create schema-aware createComponent
-	const createComponent = createComponentFactory<TModels>()
+	/**
+	 * Creates a component builder for defining bindx components.
+	 *
+	 * Uses a fluent builder API:
+	 * - .entity(propName, entityName) - implicit selection (from JSX)
+	 * - .entity(propName, entityName, selector) - explicit selection
+	 * - .props<T>() - add scalar props
+	 * - .render(fn) - build the component
+	 *
+	 * @example
+	 * ```tsx
+	 * // Implicit mode - selection collected from JSX
+	 * const AuthorCard = createComponent()
+	 *   .entity('author', 'Author')
+	 *   .render(({ author }) => (
+	 *     <div>{author.fields.name.value}</div>
+	 *   ))
+	 *
+	 * // Explicit mode - selection defined upfront
+	 * const AuthorCard = createComponent()
+	 *   .entity('author', 'Author', e => e.name().email())
+	 *   .render(({ author }) => (
+	 *     <div>{author.data?.name}</div>
+	 *   ))
+	 *
+	 * // With scalar props
+	 * const AuthorCard = createComponent()
+	 *   .entity('author', 'Author')
+	 *   .props<{ className?: string }>()
+	 *   .render(({ author, className }) => (
+	 *     <div className={className}>{author.fields.name.value}</div>
+	 *   ))
+	 *
+	 * // Fragment usage
+	 * const article = useEntity('Article', { id }, e =>
+	 *   e.title().author(AuthorCard.$author)
+	 * )
+	 * ```
+	 */
+	// eslint-disable-next-line @typescript-eslint/ban-types
+	function createComponent(): ComponentBuilder<TModels, ComponentBuilderState<TModels, {}, object, readonly string[]>>
+	// eslint-disable-next-line @typescript-eslint/ban-types
+	function createComponent<TRoles extends readonly string[]>(
+		options: CreateComponentOptions<TRoles>,
+	// eslint-disable-next-line @typescript-eslint/ban-types
+	): ComponentBuilder<TModels, ComponentBuilderState<TModels, {}, object, TRoles>>
+	function createComponent(options?: CreateComponentOptions<readonly string[]>): ComponentBuilder<TModels, ComponentBuilderState<TModels>> {
+		const roles = options?.roles ?? []
+		return createComponentBuilder<TModels>(
+			schema as SchemaRegistry<Record<string, object>>,
+			roles,
+		) as ComponentBuilder<TModels, ComponentBuilderState<TModels>>
+	}
 
 	return {
 		useEntity,

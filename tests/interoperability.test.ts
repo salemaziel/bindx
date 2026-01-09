@@ -12,7 +12,6 @@ import { renderToString } from 'react-dom/server'
 import type { EntityRef, FluentFragment, SelectionBuilder } from '@contember/react-bindx'
 import {
 	createFragment,
-	createComponent,
 	createBindx,
 	defineSchema,
 	scalar,
@@ -90,7 +89,7 @@ const schema = defineSchema<{
 	},
 })
 
-const { useEntity, useEntityList, Entity } = createBindx(schema)
+const { useEntity, useEntityList, Entity, createComponent } = createBindx(schema)
 
 // ============================================================================
 // Fragment Interoperability Tests
@@ -140,16 +139,14 @@ describe('Fragment Interoperability', () => {
 			// Create a fluent fragment
 			const AuthorFragment = createFragment<Author>()(e => e.id().name().email())
 
-			// Create a component with implicit selection
-			interface ArticleHeaderProps {
-				article: EntityRef<Article, { title: string; author: { id: string; name: string; email: string } }>
-			}
-
-			const ArticleHeader = createComponent<ArticleHeaderProps>(({ article }) => {
-				void article.fields.title
-				void article.fields.author.fields.name
-				return null
-			})
+			// Create a component with explicit selection
+			const ArticleHeader = createComponent()
+				.entity('article', 'Article', e => e.title().author(a => a.id().name().email()))
+				.render(({ article }) => {
+					void article.data?.title
+					void article.data?.author?.name
+					return null
+				})
 
 			// Both should have compatible selection metadata
 			expect(ArticleHeader.$article).toBeDefined()
@@ -158,15 +155,13 @@ describe('Fragment Interoperability', () => {
 		})
 
 		test('component $propName matches declared selection', () => {
-			interface TagCardProps {
-				tag: EntityRef<Tag, { name: string; color: string }>
-			}
-
-			const TagCard = createComponent<TagCardProps>(({ tag }) => {
-				void tag.fields.name
-				void tag.fields.color
-				return null
-			})
+			const TagCard = createComponent()
+				.entity('tag', 'Tag', e => e.name().color())
+				.render(({ tag }) => {
+					void tag.data?.name
+					void tag.data?.color
+					return null
+				})
 
 			// The $tag fragment should exist and have metadata
 			expect(TagCard.$tag).toBeDefined()
@@ -180,14 +175,13 @@ describe('Fragment Interoperability', () => {
 
 	describe('mergeFragments with createComponent', () => {
 		test('can merge component fragment with fluent fragment', () => {
-			// Component with implicit selection
-			interface AuthorCardProps {
-				author: EntityRef<Author, { name: string }>
-			}
-			const AuthorCard = createComponent<AuthorCardProps>(({ author }) => {
-				void author.fields.name
-				return null
-			})
+			// Component with explicit selection
+			const AuthorCard = createComponent()
+				.entity('author', 'Author', e => e.name())
+				.render(({ author }) => {
+					void author.data?.name
+					return null
+				})
 
 			// Fluent fragment
 			const AuthorEmailFragment = createFragment<Author>()(e => e.email())
@@ -201,21 +195,19 @@ describe('Fragment Interoperability', () => {
 		})
 
 		test('can merge multiple component fragment props', () => {
-			interface AuthorNameProps {
-				author: EntityRef<Author, { name: string }>
-			}
-			const AuthorName = createComponent<AuthorNameProps>(({ author }) => {
-				void author.fields.name
-				return null
-			})
+			const AuthorName = createComponent()
+				.entity('author', 'Author', e => e.name())
+				.render(({ author }) => {
+					void author.data?.name
+					return null
+				})
 
-			interface AuthorEmailProps {
-				author: EntityRef<Author, { email: string }>
-			}
-			const AuthorEmail = createComponent<AuthorEmailProps>(({ author }) => {
-				void author.fields.email
-				return null
-			})
+			const AuthorEmail = createComponent()
+				.entity('author', 'Author', e => e.email())
+				.render(({ author }) => {
+					void author.data?.email
+					return null
+				})
 
 			const Combined = mergeFragments(AuthorName.$author, AuthorEmail.$author)
 
@@ -314,14 +306,12 @@ describe('Type Inference Chain', () => {
 
 describe('Component Integration', () => {
 	test('createComponent creates valid React component', () => {
-		interface AuthorViewProps {
-			author: EntityRef<Author, { name: string }>
-		}
-
-		const AuthorView = createComponent<AuthorViewProps>(({ author }) => {
-			void author.fields.name
-			return React.createElement('div', null, 'Author View')
-		})
+		const AuthorView = createComponent()
+			.entity('author', 'Author', e => e.name())
+			.render(({ author }) => {
+				void author.data?.name
+				return React.createElement('div', null, 'Author View')
+			})
 
 		// Should be a valid React component type
 		expect(typeof AuthorView).toBe('object') // memo returns object
@@ -330,23 +320,21 @@ describe('Component Integration', () => {
 	})
 
 	test('multiple components with different selections', () => {
-		interface AuthorNameProps {
-			author: EntityRef<Author, { name: string }>
-		}
-		const AuthorName = createComponent<AuthorNameProps>(({ author }) => {
-			void author.fields.name
-			return null
-		})
+		const AuthorName = createComponent()
+			.entity('author', 'Author', e => e.name())
+			.render(({ author }) => {
+				void author.data?.name
+				return null
+			})
 
-		interface AuthorFullProps {
-			author: EntityRef<Author, { name: string; email: string; bio: string }>
-		}
-		const AuthorFull = createComponent<AuthorFullProps>(({ author }) => {
-			void author.fields.name
-			void author.fields.email
-			void author.fields.bio
-			return null
-		})
+		const AuthorFull = createComponent()
+			.entity('author', 'Author', e => e.name().email().bio())
+			.render(({ author }) => {
+				void author.data?.name
+				void author.data?.email
+				void author.data?.bio
+				return null
+			})
 
 		// Each should have its own fragment with different fields
 		expect(AuthorName.$author.__meta.fields.has('name')).toBe(true)

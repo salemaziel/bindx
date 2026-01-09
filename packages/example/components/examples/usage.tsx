@@ -1,14 +1,14 @@
 import { Entity, createComponent, useEntity } from '../../bindx.js'
-import { Field, HasMany, mergeFragments, type EntityRef } from '@contember/react-bindx'
-import type { Author } from '../../types.js'
+import { Field, HasMany, mergeFragments } from '@contember/react-bindx'
 
-
-export const AuthorArticlesExplicit = createComponent((it) => ({
-	author: it.fragment('Author').name().articles({ limit: 5 }, it => it.title().id()),
-}), props => {
-	return (
+/**
+ * Component with explicit selection - selection is defined upfront in the builder.
+ */
+export const AuthorArticlesExplicit = createComponent()
+	.entity('author', 'Author', e => e.name().articles({ limit: 5 }, a => a.id().title()))
+	.render(({ author }) => (
 		<ul>
-			<HasMany field={props.author.fields.articles}>
+			<HasMany field={author.fields.articles}>
 				{article => (
 					<li key={article.id}>
 						<Field field={article.fields.title} />
@@ -16,16 +16,16 @@ export const AuthorArticlesExplicit = createComponent((it) => ({
 				)}
 			</HasMany>
 		</ul>
-	)
-})
+	))
 
-
-export const AuthorArticlesImplicit = createComponent<{
-	author: EntityRef<Author>
-}>(props => {
-	return (
+/**
+ * Component with implicit selection - selection is collected from JSX access.
+ */
+export const AuthorArticlesImplicit = createComponent()
+	.entity('author', 'Author')
+	.render(({ author }) => (
 		<ul>
-			<HasMany field={props.author.fields.articles} limit={5}>
+			<HasMany field={author.fields.articles} limit={5}>
 				{article => (
 					<li key={article.id}>
 						<Field field={article.fields.title} />
@@ -33,49 +33,69 @@ export const AuthorArticlesImplicit = createComponent<{
 				)}
 			</HasMany>
 		</ul>
-	)
-})
+	))
 
-export const AuthorBioImplicit = createComponent<{
-	author: EntityRef<Author>
-}>(props => {
-	return (
+/**
+ * Another implicit component for author bio.
+ */
+export const AuthorBioImplicit = createComponent()
+	.entity('author', 'Author')
+	.render(({ author }) => (
 		<div>
 			<p>
-				<Field field={props.author.fields.bio} />
+				<Field field={author.fields.bio} />
 			</p>
 		</div>
-	)
-})
+	))
 
+/**
+ * Example: Using implicit component inside Entity JSX.
+ */
 export const ArticleImplicitInImplicit = () => {
-	return <Entity name="Article" id="some-article-id">
-		{article => (
-			<article className="article-detail">
-				<header>
-					<h1><Field field={article.fields.title} /></h1>
-				</header>
-				<AuthorArticlesImplicit author={article.fields.author.entity} />
-
-			</article>
-		)}
-	</Entity>
+	return (
+		<Entity name="Article" id="some-article-id">
+			{article => (
+				<article className="article-detail">
+					<header>
+						<h1>
+							<Field field={article.fields.title} />
+						</h1>
+					</header>
+					<AuthorArticlesImplicit author={article.fields.author.entity} />
+				</article>
+			)}
+		</Entity>
+	)
 }
+
+/**
+ * Example: Using explicit component inside Entity JSX.
+ */
 export const ArticleExplicitInImplicit = () => {
-	return <Entity name="Article" id="some-article-id">
-		{article => (
-			<article className="article-detail">
-				<header>
-					<h1><Field field={article.fields.title} /></h1>
-				</header>
-				<AuthorArticlesExplicit author={article.fields.author.entity} />
-			</article>
-		)}
-	</Entity>
+	return (
+		<Entity name="Article" id="some-article-id">
+			{article => (
+				<article className="article-detail">
+					<header>
+						<h1>
+							<Field field={article.fields.title} />
+						</h1>
+					</header>
+					<AuthorArticlesExplicit author={article.fields.author.entity} />
+				</article>
+			)}
+		</Entity>
+	)
 }
 
+/**
+ * Example: Using explicit component with useEntity hook.
+ * The component's $author fragment is used in the selection.
+ */
 export const ArticleExplicitInExplicit = () => {
-	const article = useEntity('Article', { id: 'some-article-id' }, e => e.title().author(AuthorArticlesExplicit.$author))
+	const article = useEntity('Article', { id: 'some-article-id' }, e =>
+		e.title().author(AuthorArticlesExplicit.$author),
+	)
 
 	if (article.isLoading) {
 		return <div>Loading article...</div>
@@ -88,18 +108,24 @@ export const ArticleExplicitInExplicit = () => {
 	return (
 		<article className="article-detail">
 			<header>
-				<h1><Field field={article.fields.title} /></h1>
+				<h1>
+					<Field field={article.fields.title} />
+				</h1>
 			</header>
 			<AuthorArticlesExplicit author={article.fields.author.entity} />
 		</article>
 	)
 }
 
+/**
+ * Example: Using multiple implicit components with useEntity hook.
+ * mergeFragments combines the fragment selections from both components.
+ */
 export const ArticleImplicitInExplicit = () => {
 	// Use mergeFragments to combine fragment selections from both components
 	// This ensures the EntityRef has the required brands for both components
-	const article = useEntity('Article', { id: 'some-article-id' }, e => e.title()
-		.author(mergeFragments(AuthorArticlesImplicit.$author, AuthorBioImplicit.$author))
+	const article = useEntity('Article', { id: 'some-article-id' }, e =>
+		e.title().author(mergeFragments(AuthorArticlesImplicit.$author, AuthorBioImplicit.$author)),
 	)
 
 	if (article.isLoading) {
@@ -113,7 +139,9 @@ export const ArticleImplicitInExplicit = () => {
 	return (
 		<article className="article-detail">
 			<header>
-				<h1><Field field={article.fields.title} /></h1>
+				<h1>
+					<Field field={article.fields.title} />
+				</h1>
 			</header>
 			<AuthorBioImplicit author={article.fields.author.entity} />
 
