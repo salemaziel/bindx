@@ -8,6 +8,7 @@
 import type { FluentFragment, AnyBrand } from '@contember/bindx'
 import { ComponentBrand } from '@contember/bindx'
 import { SelectionMetaCollector, mergeSelections } from './SelectionMeta.js'
+import { COMPONENT_BRAND } from './componentBuilder.js'
 
 // Re-export from builder module
 export {
@@ -70,16 +71,10 @@ export function validateBrand(
 	component: { [key: symbol]: ComponentBrand | undefined },
 	propName: string,
 ): void {
-	if (!brandValidationEnabled) {
+	if (!brandValidationEnabled || !entityRef) {
 		return
 	}
 
-	if (!entityRef) {
-		return
-	}
-
-	// Import symbol dynamically to avoid circular dependency
-	const { COMPONENT_BRAND } = require('./componentBuilder.js')
 	const componentBrand = component[COMPONENT_BRAND] as ComponentBrand | undefined
 	if (!componentBrand) {
 		return

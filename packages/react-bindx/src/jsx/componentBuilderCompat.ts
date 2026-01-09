@@ -4,8 +4,9 @@
  */
 
 import type { ComponentType } from 'react'
-import type { FluentFragment } from '@contember/bindx'
 import type { SelectionPropMeta } from './componentBuilder.types.js'
+import { COMPONENT_MARKER, COMPONENT_SELECTIONS } from './componentBuilder.js'
+import { BINDX_COMPONENT } from './types.js'
 
 /**
  * Assigns $propName fragment properties to a component.
@@ -31,9 +32,6 @@ export function assignComponentMarkers(
 	component: ComponentType<any>,
 	selectionsMap: Map<string, SelectionPropMeta>,
 ): void {
-	const { COMPONENT_MARKER, COMPONENT_SELECTIONS } = require('./componentBuilder.js')
-	const { BINDX_COMPONENT } = require('./types.js')
-
 	const comp = component as unknown as Record<symbol, unknown>
 	comp[BINDX_COMPONENT] = true
 	comp[COMPONENT_MARKER] = true

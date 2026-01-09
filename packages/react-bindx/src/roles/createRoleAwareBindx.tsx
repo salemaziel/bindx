@@ -557,41 +557,24 @@ export type SchemaInput =
 	| ContemberSchemaLike
 	| SchemaRegistry
 
-function isContemberSchemaLike(input: unknown): input is ContemberSchemaLike {
-	return (
-		typeof input === 'object' &&
-		input !== null &&
-		'getEntityNames' in input &&
-		typeof (input as ContemberSchemaLike).getEntityNames === 'function' &&
-		'getEntity' in input &&
-		typeof (input as ContemberSchemaLike).getEntity === 'function'
-	)
-}
-
-function isSchemaRegistry(input: unknown): input is SchemaRegistry {
-	return input instanceof SchemaRegistry
-}
-
-function isSchemaDefinition(input: unknown): input is SchemaDefinition<Record<string, object>> {
-	return (
-		typeof input === 'object' &&
-		input !== null &&
-		'entities' in input &&
-		typeof (input as SchemaDefinition<Record<string, object>>).entities === 'object'
-	)
-}
-
 function resolveSchemaRegistry(input: SchemaInput): SchemaRegistry {
-	if (isSchemaRegistry(input)) {
+	// Already a SchemaRegistry
+	if (input instanceof SchemaRegistry) {
 		return input
 	}
 
-	if (isContemberSchemaLike(input)) {
+	if (typeof input !== 'object' || input === null) {
+		throw new Error('Invalid schema input: expected SchemaDefinition, ContemberSchema, or SchemaRegistry')
+	}
+
+	// ContemberSchema-like (has getEntityNames/getEntity methods)
+	if ('getEntityNames' in input && typeof input.getEntityNames === 'function') {
 		return SchemaRegistry.fromContemberSchema(input as ContemberSchema)
 	}
 
-	if (isSchemaDefinition(input)) {
-		return new SchemaRegistry(input)
+	// SchemaDefinition (has entities object)
+	if ('entities' in input && typeof input.entities === 'object') {
+		return new SchemaRegistry(input as SchemaDefinition<Record<string, object>>)
 	}
 
 	throw new Error('Invalid schema input: expected SchemaDefinition, ContemberSchema, or SchemaRegistry')

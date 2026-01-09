@@ -195,28 +195,25 @@ function buildComponent<TProps extends object>(
  * This prevents crashes when accessing .data or .fields on explicit props.
  */
 function createExplicitPropMock(): unknown {
-	// Create a proxy that returns null/undefined for any property access
-	// This allows code like `article.data?.title` to work without crashing
-	const handler: ProxyHandler<object> = {
-		get(_target, prop): unknown {
-			if (prop === 'data') {
-				return null
-			}
-			if (prop === 'fields') {
-				// Return another proxy for fields that returns undefined for any field
-				return new Proxy({}, {
-					get(): unknown {
-						return { value: null }
-					},
-				})
-			}
-			if (prop === 'id') {
-				return null
-			}
-			return undefined
+	const fieldsProxy = new Proxy({}, {
+		get(): unknown {
+			return { value: null }
 		},
-	}
-	return new Proxy({}, handler)
+	})
+
+	return new Proxy({}, {
+		get(_target, prop): unknown {
+			switch (prop) {
+				case 'data':
+				case 'id':
+					return null
+				case 'fields':
+					return fieldsProxy
+				default:
+					return undefined
+			}
+		},
+	})
 }
 
 /**
@@ -384,10 +381,7 @@ export function isBindxComponent(value: unknown): boolean {
 	if (typeof value !== 'object' && typeof value !== 'function') {
 		return false
 	}
-	return (
-		COMPONENT_MARKER in value &&
-		(value as Record<symbol, unknown>)[COMPONENT_MARKER] === true
-	)
+	return COMPONENT_MARKER in value && (value as Record<symbol, unknown>)[COMPONENT_MARKER] === true
 }
 
 /**

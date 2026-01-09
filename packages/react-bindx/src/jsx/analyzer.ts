@@ -1,8 +1,8 @@
 import type { ReactNode, ReactElement } from 'react'
-import { Children, isValidElement } from 'react'
+import { isValidElement } from 'react'
 import type { JsxSelectionMeta, JsxSelectionFieldMeta, SelectionProvider } from './types.js'
-import { BINDX_COMPONENT, FIELD_REF_META } from './types.js'
-import { SelectionMetaCollector, mergeSelections, createEmptySelection } from './SelectionMeta.js'
+import { FIELD_REF_META } from './types.js'
+import { SelectionMetaCollector } from './SelectionMeta.js'
 import { isBindxComponent, COMPONENT_SELECTIONS } from './createComponent.js'
 
 /**
@@ -35,21 +35,10 @@ export function analyzeJsx(node: ReactNode, selection: SelectionMetaCollector): 
 
 	const element = node as ReactElement<{ children?: ReactNode }>
 
-	// Handle React Fragment
-	if (typeof element.type === 'symbol') {
-		// Fragment - analyze children
-		const children = element.props.children
-		if (children) {
-			analyzeJsx(children, selection)
-		}
-		return
-	}
-
-	// Handle host elements (div, span, etc.)
-	if (typeof element.type === 'string') {
-		const children = element.props.children
-		if (children) {
-			analyzeJsx(children, selection)
+	// Handle React Fragment and host elements (div, span, etc.) - just analyze children
+	if (typeof element.type === 'symbol' || typeof element.type === 'string') {
+		if (element.props.children) {
+			analyzeJsx(element.props.children, selection)
 		}
 		return
 	}
@@ -67,11 +56,10 @@ export function analyzeJsx(node: ReactNode, selection: SelectionMetaCollector): 
 		return
 	}
 
-	// Check if it's a bindx component with getSelection
-	// Note: memo() returns an object, not a function, so we check for both
+	// Check if it's a component with getSelection (including memo() wrapped components)
 	if (
-		(typeof component === 'function' || typeof component === 'object') &&
 		component !== null &&
+		typeof component === 'object' &&
 		'getSelection' in component &&
 		typeof (component as SelectionProvider).getSelection === 'function'
 	) {
