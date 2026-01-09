@@ -906,3 +906,171 @@ describe('Role-aware createComponent', () => {
 		expect(true).toBe(true)
 	})
 })
+
+// ============================================================================
+// Role-Aware Implicit Component Tests
+// ============================================================================
+
+describe('Role-aware implicit createComponent', () => {
+	test('EntityRefFor creates correct type for admin role', () => {
+		// Type-level test: EntityRefFor should create a correctly typed EntityRef
+
+		// Import EntityRefFor (already imported via @contember/bindx)
+		type AdminArticleRef = import('@contember/bindx').EntityRefFor<RoleSchemas, ['admin'], 'Article'>
+
+		// The ref should have __availableRoles type
+		type AvailableRoles = AdminArticleRef['__availableRoles']
+		const _checkRoles: AvailableRoles = ['admin']
+
+		// The ref should have __entityName type
+		type EntityName = AdminArticleRef['__entityName']
+		const _checkName: EntityName = 'Article'
+
+		// The ref's fields should have internalNotes (admin-only field)
+		type HasInternalNotes = AdminArticleRef['fields'] extends { internalNotes: unknown } ? true : false
+		const _hasNotes: HasInternalNotes = true
+
+		expect(true).toBe(true) // Compile-time test passed
+	})
+
+	test('EntityRefFor with public role does not have admin fields', () => {
+		// Type-level test: public role shouldn't have admin-only fields
+
+		type PublicArticleRef = import('@contember/bindx').EntityRefFor<RoleSchemas, ['public'], 'Article'>
+
+		// @ts-expect-error - internalNotes should not exist on public entity
+		type HasInternalNotes = PublicArticleRef['fields']['internalNotes']
+
+		// Public should have title
+		type HasTitle = PublicArticleRef['fields'] extends { title: unknown } ? true : false
+		const _hasTitle: HasTitle = true
+
+		expect(true).toBe(true) // Compile-time test passed
+	})
+
+	test('implicit component with roles collects selections from JSX', () => {
+		const { createComponent } = createRoleAwareBindx<RoleSchemas>(adminSchema)
+
+		// Define props with EntityRefFor
+		type AdminArticleCardProps = {
+			article: EntityRef<AdminArticle, AdminArticle, import('@contember/bindx').AnyBrand, 'Article', ['admin']>
+		}
+
+		// Create implicit component with roles - P is inferred from parameter annotation
+		const AdminArticleCard = createComponent({
+			roles: ['admin'] as const,
+		}, ({ article }: AdminArticleCardProps) => (
+			<div>
+				<span data-testid="title">{article.fields.title.value}</span>
+				<span data-testid="notes">{article.fields.internalNotes.value}</span>
+			</div>
+		))
+
+		// Component should have $article fragment property
+		expect(AdminArticleCard.$article).toBeDefined()
+		expect(AdminArticleCard.$article.__isFragment).toBe(true)
+	})
+
+	test('implicit component fragment has correct role info', () => {
+		const { createComponent } = createRoleAwareBindx<RoleSchemas>(adminSchema)
+
+		type AdminArticleCardProps = {
+			article: EntityRef<AdminArticle, AdminArticle, import('@contember/bindx').AnyBrand, 'Article', ['admin']>
+		}
+
+		const AdminArticleCard = createComponent({
+			roles: ['admin'] as const,
+		}, ({ article }: AdminArticleCardProps) => (
+			<div>{article.fields.title.value}</div>
+		))
+
+		// Fragment should carry role information
+		const fragment = AdminArticleCard.$article
+		expect(fragment.__roles).toEqual(['admin'])
+		expect(fragment.__availableRoles).toEqual(['admin'])
+	})
+
+	test('implicit component with multiple roles', () => {
+		const { createComponent } = createRoleAwareBindx<RoleSchemas>(adminSchema)
+
+		type EditorAdminCardProps = {
+			article: EntityRef<
+				AdminArticle & EditorArticle,
+				AdminArticle & EditorArticle,
+				import('@contember/bindx').AnyBrand,
+				'Article',
+				['editor', 'admin']
+			>
+		}
+
+		const EditorAdminCard = createComponent({
+			roles: ['editor', 'admin'] as const,
+		}, ({ article }: EditorAdminCardProps) => (
+			<div>
+				<span>{article.fields.title.value}</span>
+				<span>{article.fields.content.value}</span>
+			</div>
+		))
+
+		// Fragment should carry multiple roles
+		expect(EditorAdminCard.$article.__roles).toEqual(['editor', 'admin'])
+	})
+
+	test('implicit component has __componentRoles property', () => {
+		const { createComponent } = createRoleAwareBindx<RoleSchemas>(adminSchema)
+
+		type AdminArticleCardProps = {
+			article: EntityRef<AdminArticle, AdminArticle, import('@contember/bindx').AnyBrand, 'Article', ['admin']>
+		}
+
+		const AdminArticleCard = createComponent({
+			roles: ['admin'] as const,
+		}, ({ article }: AdminArticleCardProps) => (
+			<div>{article.fields.title.value}</div>
+		))
+
+		// Component should have __componentRoles
+		expect((AdminArticleCard as unknown as { __componentRoles: string[] }).__componentRoles).toEqual(['admin'])
+	})
+
+	test('implicit component selection contains accessed fields', () => {
+		const { createComponent } = createRoleAwareBindx<RoleSchemas>(adminSchema)
+
+		type AdminArticleCardProps = {
+			article: EntityRef<AdminArticle, AdminArticle, import('@contember/bindx').AnyBrand, 'Article', ['admin']>
+		}
+
+		const AdminArticleCard = createComponent({
+			roles: ['admin'] as const,
+		}, ({ article }: AdminArticleCardProps) => (
+			<div>
+				<span>{article.fields.title.value}</span>
+				<span>{article.fields.internalNotes.value}</span>
+			</div>
+		))
+
+		// Fragment should have selection metadata
+		const fragment = AdminArticleCard.$article
+		expect(fragment.__meta).toBeDefined()
+		expect(fragment.__meta.fields).toBeDefined()
+
+		// Selection should contain the accessed fields
+		const fieldNames = Array.from(fragment.__meta.fields.values()).map(f => f.fieldName)
+		expect(fieldNames).toContain('title')
+		expect(fieldNames).toContain('internalNotes')
+	})
+
+	test('EntityRefFor type is exported from react-bindx', () => {
+		// This test verifies that EntityRefFor is properly exported
+		// If the import works, the test passes
+
+		// Import from react-bindx roles
+		type TestRef = import('@contember/react-bindx').EntityRefFor<RoleSchemas, ['admin'], 'Article'>
+
+		// Should be a valid EntityRef type
+		type HasId = TestRef extends { id: string | null } ? true : false
+		const _hasId: HasId = true
+
+		expect(true).toBe(true)
+	})
+})

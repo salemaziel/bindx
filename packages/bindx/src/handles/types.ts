@@ -332,3 +332,57 @@ export interface EntityRef<
 	/** Runtime brand symbols for validation */
 	readonly __brands?: Set<symbol>
 }
+
+// ============================================================================
+// Role-Aware Type Helpers
+// ============================================================================
+
+/**
+ * Constraint for role schema maps that works with interfaces (no index signature required).
+ * Used for EntityRefFor type helper.
+ */
+type RoleSchemasBaseForRef<T> = { [K in keyof T]: { [E: string]: object } }
+
+/**
+ * Helper type to extract entity type with object constraint for role-aware refs.
+ */
+type EntityForRolesObjectForRef<
+	TRoleSchemas extends RoleSchemasBaseForRef<TRoleSchemas>,
+	TRoles extends readonly (keyof TRoleSchemas)[],
+	TEntityName extends string,
+> = import('../roles/types.js').EntityForRoles<TRoleSchemas, TRoles, TEntityName> extends object
+	? import('../roles/types.js').EntityForRoles<TRoleSchemas, TRoles, TEntityName>
+	: object
+
+/**
+ * Type helper for creating correctly typed EntityRef for role-aware components.
+ *
+ * This allows declaring component props with specific role requirements,
+ * enabling type-safe JSX autocomplete for fields available to those roles.
+ *
+ * @typeParam TRoleSchemas - The role schema map (e.g., { admin: { Article: AdminArticle }, public: { Article: PublicArticle } })
+ * @typeParam TRoles - Tuple of role names that the entity must have
+ * @typeParam TEntityName - The entity name
+ * @typeParam TSelected - Optional selection subset (defaults to full entity for roles)
+ *
+ * @example
+ * ```typescript
+ * interface AdminArticleCardProps {
+ *   article: EntityRefFor<RoleSchemas, ['admin'], 'Article'>
+ * }
+ *
+ * const AdminArticleCard = createComponent<AdminArticleCardProps>({...
+ * ```
+ */
+export type EntityRefFor<
+	TRoleSchemas extends RoleSchemasBaseForRef<TRoleSchemas>,
+	TRoles extends readonly (keyof TRoleSchemas & string)[],
+	TEntityName extends string,
+	TSelected extends object = EntityForRolesObjectForRef<TRoleSchemas, TRoles, TEntityName>,
+> = EntityRef<
+	EntityForRolesObjectForRef<TRoleSchemas, TRoles, TEntityName>,
+	TSelected,
+	AnyBrand,
+	TEntityName,
+	TRoles
+>

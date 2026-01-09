@@ -52,6 +52,9 @@ import {
 import {
 	assignFragmentProperties,
 } from '../jsx/createComponent.js'
+import { createCollectorProxy } from '../jsx/proxy.js'
+import { collectSelection } from '../jsx/analyzer.js'
+import { SelectionMetaCollector, mergeSelections } from '../jsx/SelectionMeta.js'
 
 // ============================================================================
 // Helper Types
@@ -179,6 +182,58 @@ export type RoleAwareExplicitFragmentComponent<
 	TRoles
 > & RoleAwareFragmentConfigToFragments<TConfig, TRoles>
 
+// ============================================================================
+// Implicit Mode Types (role-aware)
+// ============================================================================
+
+/**
+ * Extract keys from props type where value is EntityRef<any, any>
+ */
+type RoleAwareEntityPropKeys<P> = {
+	[K in keyof P]: P[K] extends EntityRef<infer _T, infer _S, infer _B, infer _N, infer _R> ? K : never
+}[keyof P]
+
+/**
+ * Extract the full entity type from an EntityRef prop
+ */
+type RoleAwareEntityFromProp<P, K extends keyof P> = P[K] extends EntityRef<infer T, infer _S, infer _B, infer _N, infer _R> ? T : never
+
+/**
+ * Extract the selection type from an EntityRef prop
+ */
+type RoleAwareSelectionFromProp<P, K extends keyof P> = P[K] extends EntityRef<infer _T, infer S, infer _B, infer _N, infer _R> ? S : never
+
+/**
+ * Extract the roles type from an EntityRef prop
+ */
+type RoleAwareRolesFromProp<P, K extends keyof P> = P[K] extends EntityRef<infer _T, infer _S, infer _B, infer _N, infer R> ? R : readonly string[]
+
+/**
+ * Fragment properties for role-aware implicit mode - $propName for each entity prop
+ * Includes role information in the fragment type.
+ */
+export type RoleAwareImplicitFragmentProperties<
+	TRoleSchemas extends RoleSchemasBase<TRoleSchemas>,
+	P,
+	TRoles extends readonly string[]
+> = {
+	[K in RoleAwareEntityPropKeys<P> as `$${K & string}`]: FluentFragment<
+		RoleAwareEntityFromProp<P, K>,
+		RoleAwareSelectionFromProp<P, K>,
+		AnyBrand,
+		TRoles
+	>
+}
+
+/**
+ * Component type for role-aware implicit mode.
+ */
+export type RoleAwareImplicitComponent<
+	TRoleSchemas extends RoleSchemasBase<TRoleSchemas>,
+	P extends object,
+	TRoles extends readonly string[]
+> = RoleAwareBindxComponentBase<P, TRoles> & RoleAwareImplicitFragmentProperties<TRoleSchemas, P, TRoles>
+
 /**
  * Options for role-aware createComponent.
  */
@@ -191,6 +246,32 @@ export interface RoleAwareCreateComponentOptions<TRoles extends readonly string[
  * Role-aware createComponent function type.
  */
 export type RoleAwareCreateComponent<TRoleSchemas extends RoleSchemasBase<TRoleSchemas>> = {
+	/**
+	 * Creates a component with implicit mode - uses JSX to collect selections.
+	 * Props interface declares role requirements via EntityRefFor type.
+	 * P is inferred from the render function parameter.
+	 *
+	 * @example
+	 * ```typescript
+	 * interface AdminArticleCardProps {
+	 *   article: EntityRefFor<RoleSchemas, ['admin'], 'Article'>
+	 * }
+	 *
+	 * const AdminArticleCard = createComponent({
+	 *   roles: ['admin'] as const,
+	 * }, ({ article }: AdminArticleCardProps) => (
+	 *   <div>{article.fields.internalNotes.value}</div>  // OK - admin has internalNotes
+	 * ))
+	 *
+	 * // Fragment carries role info
+	 * AdminArticleCard.$article.__roles // ['admin']
+	 * ```
+	 */
+	<P extends object, const TRoles extends readonly (keyof TRoleSchemas & string)[]>(
+		options: RoleAwareCreateComponentOptions<TRoles>,
+		render: (props: P) => ReactNode,
+	): RoleAwareImplicitComponent<TRoleSchemas, P, TRoles>
+
 	/**
 	 * Creates a component with explicit role restrictions and fragment definitions.
 	 *
@@ -972,7 +1053,107 @@ export function createRoleAwareBindx<TRoleSchemas extends RoleSchemasBase<TRoleS
 		return MemoizedComponent as unknown as RoleAwareExplicitFragmentComponent<TRoleSchemas, TScalarProps, TConfig, TRoles>
 	}
 
+	/**
+	 * Creates a role-aware implicit component (JSX-based selection collection).
+	 */
+	function createRoleAwareImplicitComponent<
+		P extends object,
+		const TRoles extends readonly (keyof TRoleSchemas & string)[],
+	>(
+		options: RoleAwareCreateComponentOptions<TRoles>,
+		render: (props: P) => ReactNode,
+	): RoleAwareImplicitComponent<TRoleSchemas, P, TRoles> {
+		const { roles } = options
+		const selectionsMap = new Map<string, SelectionPropMeta>()
+
+		// Generate unique brand for this component
+		const componentBrand = new ComponentBrand(`role_aware_implicit_${roles.join('_')}_${Math.random().toString(36).slice(2)}`)
+
+		// Collect selections from JSX at component creation time
+		const collectEntityProps = (): void => {
+			const propCollectors = new Map<string, SelectionMetaCollector>()
+
+			const propsProxy = new Proxy({} as P, {
+				get(_target, propName: string | symbol): unknown {
+					if (typeof propName === 'symbol') {
+						return undefined
+					}
+
+					const selection = new SelectionMetaCollector()
+					propCollectors.set(propName, selection)
+
+					return createCollectorProxy<unknown>(selection)
+				},
+			})
+
+			// Execute render to capture field accesses
+			const jsx = render(propsProxy)
+
+			// Analyze JSX tree for component-level selections
+			const jsxSelection = collectSelection(jsx)
+
+			// Create fragments for props that had field accesses
+			for (const [propName, collector] of propCollectors) {
+				if (collector.fields.size > 0) {
+					mergeSelections(collector, jsxSelection)
+
+					const fragment: FluentFragment<unknown, object, typeof componentBrand, TRoles> = {
+						__meta: collector,
+						__resultType: {} as object,
+						__modelType: undefined as unknown,
+						__isFragment: true,
+						__brand: componentBrand,
+						__brands: new Set([componentBrand.brandSymbol]),
+						__availableRoles: roles,
+						__roles: roles,
+					}
+					selectionsMap.set(propName, { selection: collector, fragment })
+				}
+			}
+		}
+
+		collectEntityProps()
+
+		// Create React component
+		function ComponentImpl(props: P): ReactNode {
+			return render(props)
+		}
+
+		const MemoizedComponent = memo(ComponentImpl) as unknown as RoleAwareBindxComponentBase<P, TRoles>
+
+		// SelectionProvider for JSX analysis
+		MemoizedComponent.getSelection = (_props, _collectNested) => {
+			const fields: { fieldName: string; alias: string; path: string[]; isRelation: boolean; isArray: boolean; nested?: SelectionMeta }[] = []
+			for (const [_propName, meta] of selectionsMap) {
+				for (const [_key, field] of meta.selection.fields) {
+					fields.push({ ...field })
+				}
+			}
+			return fields.length > 0 ? fields : null
+		}
+
+		// Add markers
+		const comp = MemoizedComponent as unknown as Record<symbol, unknown>
+		comp[COMPONENT_MARKER] = true
+		comp[COMPONENT_SELECTIONS] = selectionsMap
+		;(MemoizedComponent as unknown as { __componentRoles: TRoles }).__componentRoles = roles
+
+		// Add $propName properties
+		assignFragmentProperties(MemoizedComponent, selectionsMap)
+
+		return MemoizedComponent as unknown as RoleAwareImplicitComponent<TRoleSchemas, P, TRoles>
+	}
+
 	// Wrapper function to match the overloaded signature
+	// Implicit mode overload (2 args: options, render)
+	function roleAwareCreateComponent<
+		P extends object,
+		const TRoles extends readonly (keyof TRoleSchemas & string)[],
+	>(
+		options: RoleAwareCreateComponentOptions<TRoles>,
+		render: (props: P) => ReactNode,
+	): RoleAwareImplicitComponent<TRoleSchemas, P, TRoles>
+	// Explicit mode overload (3 args: options, definer, render)
 	function roleAwareCreateComponent<
 		const TRoles extends readonly (keyof TRoleSchemas & string)[],
 		TConfig extends Record<string, SelectionBuilder<object, object, object>>,
@@ -981,6 +1162,7 @@ export function createRoleAwareBindx<TRoleSchemas extends RoleSchemasBase<TRoleS
 		definer: (factory: RoleAwareFragmentFactory<TRoleSchemas, TRoles>) => TConfig,
 		render: (props: RoleAwareCombinedPropsWithFragments<TRoleSchemas, object, TConfig, TRoles>) => ReactNode,
 	): RoleAwareExplicitFragmentComponent<TRoleSchemas, object, TConfig, TRoles>
+	// Builder pattern for scalar props (0 args, returns function)
 	function roleAwareCreateComponent<TScalarProps extends object>(): <
 		const TRoles extends readonly (keyof TRoleSchemas & string)[],
 		TConfig extends Record<string, SelectionBuilder<object, object, object>>,
@@ -989,16 +1171,17 @@ export function createRoleAwareBindx<TRoleSchemas extends RoleSchemasBase<TRoleS
 		definer: (factory: RoleAwareFragmentFactory<TRoleSchemas, TRoles>) => TConfig,
 		render: (props: RoleAwareCombinedPropsWithFragments<TRoleSchemas, TScalarProps, TConfig, TRoles>) => ReactNode,
 	) => RoleAwareExplicitFragmentComponent<TRoleSchemas, TScalarProps, TConfig, TRoles>
+	// Implementation
 	function roleAwareCreateComponent<
 		const TRoles extends readonly (keyof TRoleSchemas & string)[],
 		TScalarProps extends object = object,
 		TConfig extends Record<string, SelectionBuilder<object, object, object>> = Record<string, SelectionBuilder<object, object, object>>,
 	>(
 		options?: RoleAwareCreateComponentOptions<TRoles>,
-		definer?: (factory: RoleAwareFragmentFactory<TRoleSchemas, TRoles>) => TConfig,
+		definerOrRender?: ((factory: RoleAwareFragmentFactory<TRoleSchemas, TRoles>) => TConfig) | ((props: TScalarProps) => ReactNode),
 		render?: (props: RoleAwareCombinedPropsWithFragments<TRoleSchemas, TScalarProps, TConfig, TRoles>) => ReactNode,
 	): unknown {
-		// Signature 2: createComponent<ScalarProps>() - returns builder function
+		// Signature 3: createComponent<ScalarProps>() - returns builder function
 		if (options === undefined) {
 			return <
 				const TRoles2 extends readonly (keyof TRoleSchemas & string)[],
@@ -1012,9 +1195,23 @@ export function createRoleAwareBindx<TRoleSchemas extends RoleSchemasBase<TRoleS
 			}
 		}
 
+		// Signature 1: Implicit mode - createComponent(options, render)
+		// Detect: options exists, second arg is a render function (not a definer)
+		// The key is: if there's no third argument, the second must be a render function (implicit mode)
+		if (definerOrRender && render === undefined) {
+			return createRoleAwareImplicitComponent<TScalarProps, TRoles>(
+				options,
+				definerOrRender as (props: TScalarProps) => ReactNode,
+			)
+		}
+
 		// Signature 1: createComponent(options, definer, render)
-		if (definer && render) {
-			return createRoleAwareComponent<TRoles, TScalarProps, TConfig>(options, definer, render)
+		if (definerOrRender && render) {
+			return createRoleAwareComponent<TRoles, TScalarProps, TConfig>(
+				options,
+				definerOrRender as (factory: RoleAwareFragmentFactory<TRoleSchemas, TRoles>) => TConfig,
+				render,
+			)
 		}
 
 		throw new Error('Invalid createComponent arguments')

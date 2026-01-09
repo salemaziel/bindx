@@ -34,6 +34,8 @@ export type {
 	RoleAwareFragmentConfigToProps,
 	RoleAwareFragmentConfigToFragments,
 	RoleAwareExplicitFragmentComponent,
+	RoleAwareImplicitFragmentProperties,
+	RoleAwareImplicitComponent,
 	RoleAwareCreateComponentOptions,
 	RoleAwareCreateComponent,
 	SchemaInput,
@@ -44,3 +46,6 @@ export {
 	createRoleAwareBindx,
 	RoleAwareProvider,
 } from './createRoleAwareBindx.js'
+
+// Re-export EntityRefFor type helper from bindx
+export type { EntityRefFor } from '@contember/bindx'

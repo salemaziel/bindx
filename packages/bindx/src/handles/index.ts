@@ -14,4 +14,5 @@ export {
 	type HasManyRef,
 	type HasOneRef,
 	type EntityRef,
+	type EntityRefFor,
 } from './types.js'

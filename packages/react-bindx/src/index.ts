@@ -63,6 +63,7 @@ export type {
 	HasManyRef,
 	HasOneRef,
 	EntityRef,
+	EntityRefFor,
 	// Adapter types
 	BackendAdapter,
 	FetchOptions,
