@@ -7,6 +7,7 @@
 
 import type { FieldHandle } from './FieldHandle.js'
 import type { ComponentBrand, AnyBrand } from '../brand/ComponentBrand.js'
+import type { FieldError, ErrorInput } from '../errors/types.js'
 
 // ============================================================================
 // Field Type Detection Utilities
@@ -210,6 +211,18 @@ export interface FieldRef<T> {
 		value: T | null
 		setValue: (value: T | null) => void
 	}
+
+	/** List of errors on this field */
+	readonly errors: readonly FieldError[]
+
+	/** Whether this field has any errors */
+	readonly hasError: boolean
+
+	/** Add a client-side error to this field */
+	addError(error: ErrorInput): void
+
+	/** Clear all errors from this field */
+	clearErrors(): void
 }
 
 /**
@@ -256,6 +269,18 @@ export interface HasManyRef<TEntity, TSelected = TEntity, TBrand extends AnyBran
 
 	/** Runtime brand symbols for validation */
 	readonly __brands?: Set<symbol>
+
+	/** List of errors on this relation */
+	readonly errors: readonly FieldError[]
+
+	/** Whether this relation has any errors */
+	readonly hasError: boolean
+
+	/** Add a client-side error to this relation */
+	addError(error: ErrorInput): void
+
+	/** Clear all errors from this relation */
+	clearErrors(): void
 }
 
 /**
@@ -299,6 +324,18 @@ export interface HasOneRef<TEntity, TSelected = TEntity, TBrand extends AnyBrand
 
 	/** Runtime brand symbols for validation */
 	readonly __brands?: Set<symbol>
+
+	/** List of errors on this relation */
+	readonly errors: readonly FieldError[]
+
+	/** Whether this relation has any errors */
+	readonly hasError: boolean
+
+	/** Add a client-side error to this relation */
+	addError(error: ErrorInput): void
+
+	/** Clear all errors from this relation */
+	clearErrors(): void
 }
 
 /**
@@ -370,6 +407,21 @@ export interface EntityRef<
 
 	/** Runtime brand symbols for validation */
 	readonly __brands?: Set<symbol>
+
+	/** List of entity-level errors (not including field or relation errors) */
+	readonly errors: readonly FieldError[]
+
+	/** Whether this entity has any errors (entity-level, fields, or relations) */
+	readonly hasError: boolean
+
+	/** Add a client-side error to this entity */
+	addError(error: ErrorInput): void
+
+	/** Clear entity-level errors */
+	clearErrors(): void
+
+	/** Clear all errors (entity-level, fields, and relations) */
+	clearAllErrors(): void
 }
 
 // ============================================================================

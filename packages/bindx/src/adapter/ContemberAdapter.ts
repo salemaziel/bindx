@@ -1,7 +1,8 @@
 import { GraphQlClient } from '@contember/graphql-client'
 import { ContentClient, ContentQueryBuilder, ContentEntitySelection, SchemaNames, ContentQuery } from '@contember/client-content'
 import type { QuerySpec, QueryFieldSpec } from '../selection/buildQuery.js'
-import type { BackendAdapter, Query, QueryResult, QueryOptions, GetQuery, ListQuery } from './types.js'
+import type { BackendAdapter, Query, QueryResult, QueryOptions, GetQuery, ListQuery, PersistResult, CreateResult, DeleteResult } from './types.js'
+import type { ContemberMutationResult } from '../errors/pathMapper.js'
 
 /**
  * Options for ContemberAdapter
@@ -83,7 +84,7 @@ export class ContemberAdapter implements BackendAdapter {
 		entityType: string,
 		id: string,
 		changes: Record<string, unknown>,
-	): Promise<void> {
+	): Promise<PersistResult> {
 		const mutation = this.queryBuilder.update(entityType, {
 			by: { id },
 			data: changes as any,
@@ -92,14 +93,20 @@ export class ContemberAdapter implements BackendAdapter {
 		const result = await this.contentClient.mutate(mutation)
 
 		if (!result.ok) {
-			throw new Error(result.errorMessage ?? `Failed to update ${entityType}:${id}`)
+			return {
+				ok: false,
+				errorMessage: result.errorMessage ?? `Failed to update ${entityType}:${id}`,
+				mutationResult: this.toMutationResult(result),
+			}
 		}
+
+		return { ok: true }
 	}
 
 	async create(
 		entityType: string,
 		data: Record<string, unknown>,
-	): Promise<Record<string, unknown>> {
+	): Promise<CreateResult> {
 		// Build selection to return created entity
 		const selection = (s: ContentEntitySelection) => s.$('id')
 
@@ -107,18 +114,58 @@ export class ContemberAdapter implements BackendAdapter {
 		const result = await this.contentClient.mutate(mutation)
 
 		if (!result.ok) {
-			throw new Error(result.errorMessage ?? `Failed to create ${entityType}`)
+			return {
+				ok: false,
+				errorMessage: result.errorMessage ?? `Failed to create ${entityType}`,
+				mutationResult: this.toMutationResult(result),
+			}
 		}
 
-		return result.node as Record<string, unknown>
+		return {
+			ok: true,
+			data: result.node as Record<string, unknown>,
+		}
 	}
 
-	async delete(entityType: string, id: string): Promise<void> {
+	async delete(entityType: string, id: string): Promise<DeleteResult> {
 		const mutation = this.queryBuilder.delete(entityType, { by: { id } })
 		const result = await this.contentClient.mutate(mutation)
 
 		if (!result.ok) {
-			throw new Error(result.errorMessage ?? `Failed to delete ${entityType}:${id}`)
+			return {
+				ok: false,
+				errorMessage: result.errorMessage ?? `Failed to delete ${entityType}:${id}`,
+				mutationResult: this.toMutationResult(result),
+			}
+		}
+
+		return { ok: true }
+	}
+
+	/**
+	 * Converts Contember mutation result to our ContemberMutationResult type.
+	 */
+	private toMutationResult(result: {
+		ok: boolean
+		errorMessage: string | null
+		errors: Array<{ paths: Array<Array<{ field: string } | { index: number; alias: string | null }>>; message: string; type: string }>
+		validation: { valid: boolean; errors: Array<{ path: Array<{ field: string } | { index: number; alias: string | null }>; message: { text: string } }> }
+	}): ContemberMutationResult {
+		return {
+			ok: result.ok,
+			errorMessage: result.errorMessage,
+			errors: result.errors.map(e => ({
+				paths: e.paths,
+				message: e.message,
+				type: e.type as any,
+			})),
+			validation: {
+				valid: result.validation.valid,
+				errors: result.validation.errors.map(e => ({
+					path: e.path,
+					message: { text: e.message.text },
+				})),
+			},
 		}
 	}
 

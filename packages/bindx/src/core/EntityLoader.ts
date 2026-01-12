@@ -4,6 +4,20 @@ import type { QuerySpec } from '../selection/buildQuery.js'
 import type { EntityWhere, EntityOrderBy } from '../selection/queryTypes.js'
 
 /**
+ * Checks if an error is an AbortError that should be rethrown.
+ */
+function isAbortError(error: unknown): boolean {
+	return error instanceof DOMException && error.name === 'AbortError'
+}
+
+/**
+ * Normalizes unknown error to Error instance.
+ */
+function normalizeError(error: unknown): Error {
+	return error instanceof Error ? error : new Error(String(error))
+}
+
+/**
  * Result of entity loading operation
  */
 export type EntityLoadResult<T> =
@@ -82,14 +96,10 @@ export class EntityLoader {
 
 			return { status: 'success', data: result.data as T }
 		} catch (error) {
-			// Don't treat abort as error
-			if (error instanceof DOMException && error.name === 'AbortError') {
+			if (isAbortError(error)) {
 				throw error
 			}
-			return {
-				status: 'error',
-				error: error instanceof Error ? error : new Error(String(error)),
-			}
+			return { status: 'error', error: normalizeError(error) }
 		}
 	}
 
@@ -123,14 +133,10 @@ export class EntityLoader {
 
 			return { status: 'success', data: result.data as T[] }
 		} catch (error) {
-			// Don't treat abort as error
-			if (error instanceof DOMException && error.name === 'AbortError') {
+			if (isAbortError(error)) {
 				throw error
 			}
-			return {
-				status: 'error',
-				error: error instanceof Error ? error : new Error(String(error)),
-			}
+			return { status: 'error', error: normalizeError(error) }
 		}
 	}
 

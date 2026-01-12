@@ -1,9 +1,12 @@
 import type { BackendAdapter } from '../adapter/types.js'
 import type { SnapshotStore } from '../store/SnapshotStore.js'
 import type { ActionDispatcher } from './ActionDispatcher.js'
-import { setPersisting, commitEntity } from './actions.js'
+import { setPersisting, commitEntity, addFieldError, addEntityError, addRelationError, clearAllServerErrors } from './actions.js'
 import { deepEqual } from '../utils/deepEqual.js'
 import type { UndoManager } from '../undo/UndoManager.js'
+import type { SchemaRegistry } from '../schema/SchemaRegistry.js'
+import { extractMappedErrors, type ContemberMutationResult } from '../errors/pathMapper.js'
+import { createServerError } from '../errors/types.js'
 
 /**
  * Pending persist operation tracking
@@ -45,6 +48,37 @@ export interface PersistenceManagerOptions {
 	 * When provided, undo/redo will be blocked during persistence.
 	 */
 	undoManager?: UndoManager
+	/**
+	 * Schema registry for mapping server errors to fields.
+	 * Required for detailed error mapping.
+	 */
+	schema?: SchemaRegistry
+}
+
+/**
+ * Error thrown when persist fails due to client validation errors.
+ */
+export class ClientValidationError extends Error {
+	constructor(entityType: string, id: string) {
+		super(`Cannot persist ${entityType}:${id} - entity has client validation errors`)
+		this.name = 'ClientValidationError'
+	}
+}
+
+/**
+ * Error thrown when persist fails due to server errors.
+ * Contains the detailed mutation result for inspection.
+ */
+export class PersistError extends Error {
+	constructor(
+		message: string,
+		public readonly entityType: string,
+		public readonly entityId: string,
+		public readonly mutationResult?: ContemberMutationResult,
+	) {
+		super(message)
+		this.name = 'PersistError'
+	}
 }
 
 /**
@@ -54,14 +88,16 @@ export interface PersistenceManagerOptions {
  * - One persist operation per entity at a time (concurrent requests are queued)
  * - Optimistic updates (changes visible immediately)
  * - Abort support for cleanup
- * - Proper error handling
+ * - Proper error handling with field-level error mapping
  * - Optional custom mutation collector for nested operations
+ * - Blocks persist when client validation errors exist
  */
 export class PersistenceManager {
 	/** Pending persist operations keyed by "entityType:id" */
 	private readonly pending = new Map<string, PendingPersist>()
 	private readonly mutationCollector?: MutationDataCollector
 	private readonly undoManager?: UndoManager
+	private readonly schema?: SchemaRegistry
 
 	constructor(
 		private readonly adapter: BackendAdapter,
@@ -71,6 +107,7 @@ export class PersistenceManager {
 	) {
 		this.mutationCollector = options?.mutationCollector
 		this.undoManager = options?.undoManager
+		this.schema = options?.schema
 	}
 
 	/**
@@ -94,15 +131,26 @@ export class PersistenceManager {
 	 *
 	 * If already persisting, waits for the existing operation to complete.
 	 * This prevents duplicate requests and ensures consistency.
+	 *
+	 * @throws {ClientValidationError} If entity has client validation errors
+	 * @throws {PersistError} If server returns an error
 	 */
 	async persist(entityType: string, id: string): Promise<void> {
 		const key = this.getKey(entityType, id)
+
+		// Check for client validation errors - block persist if any exist
+		if (this.store.hasClientErrors(entityType, id)) {
+			throw new ClientValidationError(entityType, id)
+		}
 
 		// If already persisting, wait for existing operation
 		const existing = this.pending.get(key)
 		if (existing) {
 			return existing.promise
 		}
+
+		// Clear server errors before new persist attempt
+		this.dispatcher.dispatch(clearAllServerErrors(entityType, id))
 
 		const abortController = new AbortController()
 
@@ -161,11 +209,22 @@ export class PersistenceManager {
 			}
 
 			// Persist to backend
-			await this.adapter.persist(entityType, id, changes)
+			const result = await this.adapter.persist(entityType, id, changes)
 
 			// Check if aborted
 			if (signal.aborted) {
 				throw new Error('Persist operation was aborted')
+			}
+
+			// Handle errors
+			if (!result.ok) {
+				this.mapServerErrors(entityType, id, result.mutationResult)
+				throw new PersistError(
+					result.errorMessage ?? `Failed to persist ${entityType}:${id}`,
+					entityType,
+					id,
+					result.mutationResult,
+				)
 			}
 
 			// Commit changes (serverData = data)
@@ -225,7 +284,18 @@ export class PersistenceManager {
 				throw new Error('Create operation was aborted')
 			}
 
-			const persistedId = result['id'] as string
+			// Handle errors
+			if (!result.ok) {
+				this.mapServerErrors(entityType, id, result.mutationResult)
+				throw new PersistError(
+					result.errorMessage ?? `Failed to create ${entityType}`,
+					entityType,
+					id,
+					result.mutationResult,
+				)
+			}
+
+			const persistedId = result.data?.['id'] as string
 
 			// Map temp ID to persisted ID in store
 			this.store.mapTempIdToPersistedId(entityType, id, persistedId)
@@ -288,6 +358,56 @@ export class PersistenceManager {
 	}
 
 	/**
+	 * Maps server errors from mutation result to entity fields/relations.
+	 */
+	private mapServerErrors(
+		entityType: string,
+		entityId: string,
+		mutationResult?: ContemberMutationResult,
+	): void {
+		if (!mutationResult) {
+			// No detailed error info - add generic entity error
+			this.dispatcher.dispatch(
+				addEntityError(entityType, entityId, createServerError('Persist operation failed')),
+			)
+			return
+		}
+
+		if (this.schema) {
+			// Use schema to map errors to specific fields/relations
+			const mappedErrors = extractMappedErrors(mutationResult, entityType, this.schema)
+
+			for (const mapped of mappedErrors) {
+				if (mapped.type === 'field' && mapped.name) {
+					this.dispatcher.dispatch(
+						addFieldError(entityType, entityId, mapped.name, mapped.error),
+					)
+				} else if (mapped.type === 'relation' && mapped.name) {
+					this.dispatcher.dispatch(
+						addRelationError(entityType, entityId, mapped.name, mapped.error),
+					)
+				} else {
+					this.dispatcher.dispatch(
+						addEntityError(entityType, entityId, mapped.error),
+					)
+				}
+			}
+		} else {
+			// No schema available - add all errors as entity-level errors
+			for (const error of mutationResult.errors) {
+				this.dispatcher.dispatch(
+					addEntityError(entityType, entityId, createServerError(error.message, error.type)),
+				)
+			}
+			for (const error of mutationResult.validation.errors) {
+				this.dispatcher.dispatch(
+					addEntityError(entityType, entityId, createServerError(error.message.text, undefined, 'VALIDATION_ERROR')),
+				)
+			}
+		}
+	}
+
+	/**
 	 * Cancels a pending persist operation.
 	 */
 	cancel(entityType: string, id: string): void {
@@ -323,13 +443,23 @@ export class PersistenceManager {
 		}
 
 		const result = await this.adapter.create(entityType, data)
-		const id = result['id'] as string
-		const resultData = result['data'] as Record<string, unknown> | undefined
+
+		if (!result.ok) {
+			throw new PersistError(
+				result.errorMessage ?? `Failed to create ${entityType}`,
+				entityType,
+				'',
+				result.mutationResult,
+			)
+		}
+
+		const id = result.data?.['id'] as string
+		const resultData = result.data
 
 		// Store the new entity in SnapshotStore
-		this.store.setEntityData(entityType, id, resultData ?? result, true)
+		this.store.setEntityData(entityType, id, resultData ?? {}, true)
 
-		return { id, data: resultData ?? result }
+		return { id, data: resultData ?? {} }
 	}
 
 	/**
@@ -340,7 +470,16 @@ export class PersistenceManager {
 			throw new Error('Adapter does not support delete operation')
 		}
 
-		await this.adapter.delete(entityType, id)
+		const result = await this.adapter.delete(entityType, id)
+
+		if (!result.ok) {
+			throw new PersistError(
+				result.errorMessage ?? `Failed to delete ${entityType}:${id}`,
+				entityType,
+				id,
+				result.mutationResult,
+			)
+		}
 
 		// Remove from SnapshotStore
 		this.store.removeEntity(entityType, id)

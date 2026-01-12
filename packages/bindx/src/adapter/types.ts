@@ -1,5 +1,6 @@
 import type { QuerySpec } from '../selection/buildQuery.js'
 import type { EntityWhere, EntityOrderBy } from '../selection/queryTypes.js'
+import type { ContemberMutationResult } from '../errors/pathMapper.js'
 
 /**
  * Options for query operations
@@ -67,6 +68,40 @@ export interface ListQueryResult {
 export type QueryResult = GetQueryResult | ListQueryResult
 
 /**
+ * Result of a persist operation.
+ * Contains detailed error information for error mapping.
+ */
+export interface PersistResult {
+	readonly ok: boolean
+	readonly errorMessage?: string
+	/** Detailed mutation result for error mapping (Contember-specific) */
+	readonly mutationResult?: ContemberMutationResult
+}
+
+/**
+ * Result of a create operation.
+ * Contains the created entity data or error information.
+ */
+export interface CreateResult {
+	readonly ok: boolean
+	readonly errorMessage?: string
+	/** The created entity data (when ok is true) */
+	readonly data?: Record<string, unknown>
+	/** Detailed mutation result for error mapping (Contember-specific) */
+	readonly mutationResult?: ContemberMutationResult
+}
+
+/**
+ * Result of a delete operation.
+ */
+export interface DeleteResult {
+	readonly ok: boolean
+	readonly errorMessage?: string
+	/** Detailed mutation result for error mapping (Contember-specific) */
+	readonly mutationResult?: ContemberMutationResult
+}
+
+/**
  * Interface for backend adapters.
  * Implement this to connect bindx to your data source.
  */
@@ -83,28 +118,33 @@ export interface BackendAdapter {
 	query(queries: readonly Query[], options?: QueryOptions): Promise<QueryResult[]>
 
 	/**
-	 * Persists changes to an entity
+	 * Persists changes to an entity.
+	 * Returns a result object with success/failure status and error details.
 	 *
 	 * @param entityType - The type/name of the entity
 	 * @param id - The entity's unique identifier
 	 * @param changes - The changed fields to persist
+	 * @returns Result with ok status and optional error details
 	 */
-	persist(entityType: string, id: string, changes: Record<string, unknown>): Promise<void>
+	persist(entityType: string, id: string, changes: Record<string, unknown>): Promise<PersistResult>
 
 	/**
-	 * Creates a new entity
+	 * Creates a new entity.
+	 * Returns a result object with the created entity or error details.
 	 *
 	 * @param entityType - The type/name of the entity
 	 * @param data - The initial data for the entity
-	 * @returns The created entity with server-assigned fields (e.g., ID)
+	 * @returns Result with ok status, created entity data, and optional error details
 	 */
-	create?(entityType: string, data: Record<string, unknown>): Promise<Record<string, unknown>>
+	create?(entityType: string, data: Record<string, unknown>): Promise<CreateResult>
 
 	/**
-	 * Deletes an entity
+	 * Deletes an entity.
+	 * Returns a result object with success/failure status.
 	 *
 	 * @param entityType - The type/name of the entity
 	 * @param id - The entity's unique identifier
+	 * @returns Result with ok status and optional error details
 	 */
-	delete?(entityType: string, id: string): Promise<void>
+	delete?(entityType: string, id: string): Promise<DeleteResult>
 }

@@ -1,9 +1,10 @@
 import { EntityRelatedHandle } from './BaseHandle.js'
 import type { ActionDispatcher } from '../core/ActionDispatcher.js'
 import type { SnapshotStore } from '../store/SnapshotStore.js'
-import { setField } from '../core/actions.js'
+import { addFieldError, clearFieldErrors, setField } from '../core/actions.js'
 import { FIELD_REF_META, type FieldRef, type FieldRefMeta, type InputProps } from './types.js'
 import { deepEqual } from '../utils/deepEqual.js'
+import { createClientError, type ErrorInput, type FieldError } from '../errors/types.js'
 
 /**
  * FieldHandle provides stable access to a scalar field.
@@ -66,11 +67,48 @@ export class FieldHandle<T = unknown> extends EntityRelatedHandle implements Fie
 
 	/**
 	 * Sets the field value.
+	 * Also clears non-sticky client errors.
 	 */
 	setValue(value: T | null): void {
 		this.assertNotDisposed()
+		// Clear non-sticky errors when value changes
+		this.store.clearNonStickyFieldErrors(this.entityType, this.entityId, this.fieldName)
 		this.dispatcher.dispatch(
 			setField(this.entityType, this.entityId, this.fieldPath, value),
+		)
+	}
+
+	/**
+	 * Gets the list of errors on this field.
+	 */
+	get errors(): readonly FieldError[] {
+		return this.store.getFieldErrors(this.entityType, this.entityId, this.fieldName)
+	}
+
+	/**
+	 * Checks if this field has any errors.
+	 */
+	get hasError(): boolean {
+		return this.errors.length > 0
+	}
+
+	/**
+	 * Adds a client-side error to this field.
+	 */
+	addError(error: ErrorInput): void {
+		this.assertNotDisposed()
+		this.dispatcher.dispatch(
+			addFieldError(this.entityType, this.entityId, this.fieldName, createClientError(error)),
+		)
+	}
+
+	/**
+	 * Clears all errors from this field.
+	 */
+	clearErrors(): void {
+		this.assertNotDisposed()
+		this.dispatcher.dispatch(
+			clearFieldErrors(this.entityType, this.entityId, this.fieldName),
 		)
 	}
 

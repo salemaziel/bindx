@@ -185,6 +185,72 @@ export class ActionDispatcher {
 				)
 				break
 
+			case 'ADD_FIELD_ERROR':
+				this.store.addFieldError(
+					action.entityType,
+					action.entityId,
+					action.fieldName,
+					action.error,
+				)
+				break
+
+			case 'CLEAR_FIELD_ERRORS':
+				this.store.clearFieldErrors(
+					action.entityType,
+					action.entityId,
+					action.fieldName,
+					action.source,
+				)
+				break
+
+			case 'ADD_ENTITY_ERROR':
+				this.store.addEntityError(
+					action.entityType,
+					action.entityId,
+					action.error,
+				)
+				break
+
+			case 'CLEAR_ENTITY_ERRORS':
+				this.store.clearEntityErrors(
+					action.entityType,
+					action.entityId,
+					action.source,
+				)
+				break
+
+			case 'ADD_RELATION_ERROR':
+				this.store.addRelationError(
+					action.entityType,
+					action.entityId,
+					action.relationName,
+					action.error,
+				)
+				break
+
+			case 'CLEAR_RELATION_ERRORS':
+				this.store.clearRelationErrors(
+					action.entityType,
+					action.entityId,
+					action.relationName,
+					action.source,
+				)
+				break
+
+			case 'CLEAR_ALL_SERVER_ERRORS':
+				this.store.clearAllServerErrors(
+					action.entityType,
+					action.entityId,
+				)
+				break
+
+			case 'CLEAR_ALL_ERRORS':
+				this.store.clearAllErrors(
+					action.entityType,
+					action.entityId,
+				)
+				break
+
 			default:
 				// Exhaustive check
 				const _exhaustive: never = action

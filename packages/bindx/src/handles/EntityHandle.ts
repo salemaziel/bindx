@@ -4,9 +4,18 @@ import type { ActionDispatcher } from '../core/ActionDispatcher.js'
 import type { SnapshotStore } from '../store/SnapshotStore.js'
 import type { SchemaRegistry } from '../schema/SchemaRegistry.js'
 import type { EntitySnapshot } from '../store/snapshots.js'
-import { resetEntity, commitEntity } from '../core/actions.js'
+import {
+	resetEntity,
+	commitEntity,
+	addEntityError,
+	clearEntityErrors,
+	clearAllErrors as clearAllErrorsAction,
+	addRelationError,
+	clearRelationErrors,
+} from '../core/actions.js'
 import { FIELD_REF_META, type HasOneRef, type HasManyRef, type FieldRefMeta, type EntityRef, type EntityFields, type SelectedEntityFields } from './types.js'
 import { deepEqual } from '../utils/deepEqual.js'
+import { createClientError, type ErrorInput, type FieldError } from '../errors/types.js'
 
 // Type for relation handle cache
 type RelationHandle = HasOneHandle<object> | HasManyListHandle<object>
@@ -360,6 +369,50 @@ export class EntityHandle<T extends object = object, TSelected = T> extends Enti
 	get __availableRoles(): readonly string[] {
 		return []
 	}
+
+	/**
+	 * Gets the list of entity-level errors (not including field or relation errors).
+	 */
+	get errors(): readonly FieldError[] {
+		return this.store.getEntityErrors(this.entityType, this.entityId)
+	}
+
+	/**
+	 * Checks if this entity has any errors (entity-level, fields, or relations).
+	 */
+	get hasError(): boolean {
+		return this.store.hasAnyErrors(this.entityType, this.entityId)
+	}
+
+	/**
+	 * Adds a client-side error to this entity.
+	 */
+	addError(error: ErrorInput): void {
+		this.assertNotDisposed()
+		this.dispatcher.dispatch(
+			addEntityError(this.entityType, this.entityId, createClientError(error)),
+		)
+	}
+
+	/**
+	 * Clears entity-level errors.
+	 */
+	clearErrors(): void {
+		this.assertNotDisposed()
+		this.dispatcher.dispatch(
+			clearEntityErrors(this.entityType, this.entityId),
+		)
+	}
+
+	/**
+	 * Clears all errors (entity-level, fields, and relations).
+	 */
+	clearAllErrors(): void {
+		this.assertNotDisposed()
+		this.dispatcher.dispatch(
+			clearAllErrorsAction(this.entityType, this.entityId),
+		)
+	}
 }
 
 /**
@@ -633,6 +686,40 @@ export class HasOneHandle<TEntity extends object = object, TSelected = TEntity> 
 	get __entityType(): TEntity {
 		return undefined as unknown as TEntity
 	}
+
+	/**
+	 * Gets the list of errors on this relation.
+	 */
+	get errors(): readonly FieldError[] {
+		return this.store.getRelationErrors(this.entityType, this.entityId, this.fieldName)
+	}
+
+	/**
+	 * Checks if this relation has any errors.
+	 */
+	get hasError(): boolean {
+		return this.errors.length > 0
+	}
+
+	/**
+	 * Adds a client-side error to this relation.
+	 */
+	addError(error: ErrorInput): void {
+		this.assertNotDisposed()
+		this.dispatcher.dispatch(
+			addRelationError(this.entityType, this.entityId, this.fieldName, createClientError(error)),
+		)
+	}
+
+	/**
+	 * Clears all errors from this relation.
+	 */
+	clearErrors(): void {
+		this.assertNotDisposed()
+		this.dispatcher.dispatch(
+			clearRelationErrors(this.entityType, this.entityId, this.fieldName),
+		)
+	}
 }
 
 /**
@@ -886,6 +973,40 @@ export class HasManyListHandle<TEntity extends object = object, TSelected = TEnt
 	get __entityType(): TEntity {
 		return undefined as unknown as TEntity
 	}
+
+	/**
+	 * Gets the list of errors on this relation.
+	 */
+	get errors(): readonly FieldError[] {
+		return this.store.getRelationErrors(this.entityType, this.entityId, this.fieldName)
+	}
+
+	/**
+	 * Checks if this relation has any errors.
+	 */
+	get hasError(): boolean {
+		return this.errors.length > 0
+	}
+
+	/**
+	 * Adds a client-side error to this relation.
+	 */
+	addError(error: ErrorInput): void {
+		this.assertNotDisposed()
+		this.dispatcher.dispatch(
+			addRelationError(this.entityType, this.entityId, this.fieldName, createClientError(error)),
+		)
+	}
+
+	/**
+	 * Clears all errors from this relation.
+	 */
+	clearErrors(): void {
+		this.assertNotDisposed()
+		this.dispatcher.dispatch(
+			clearRelationErrors(this.entityType, this.entityId, this.fieldName),
+		)
+	}
 }
 
 // ==================== Placeholder Handle ====================
@@ -1048,6 +1169,19 @@ export class PlaceholderHandle<TEntity extends object = object, TSelected = TEnt
 			},
 			path: [fieldName],
 			fieldName,
+			// Error properties for FieldRef interface
+			get errors(): readonly FieldError[] {
+				return []
+			},
+			get hasError(): boolean {
+				return false
+			},
+			addError(_error: ErrorInput): void {
+				// Placeholder fields don't store errors
+			},
+			clearErrors(): void {
+				// Placeholder fields don't have errors to clear
+			},
 		}
 	}
 
@@ -1072,39 +1206,42 @@ export class PlaceholderHandle<TEntity extends object = object, TSelected = TEnt
 	get __availableRoles(): readonly string[] {
 		return []
 	}
+
+	/**
+	 * Placeholder entities don't have persistent errors.
+	 * Returns empty array.
+	 */
+	get errors(): readonly FieldError[] {
+		return []
+	}
+
+	/**
+	 * Placeholder entities don't have errors.
+	 */
+	get hasError(): boolean {
+		return false
+	}
+
+	/**
+	 * No-op for placeholder entities.
+	 */
+	addError(_error: ErrorInput): void {
+		// Placeholder entities don't store errors
+	}
+
+	/**
+	 * No-op for placeholder entities.
+	 */
+	clearErrors(): void {
+		// Placeholder entities don't have errors to clear
+	}
+
+	/**
+	 * No-op for placeholder entities.
+	 */
+	clearAllErrors(): void {
+		// Placeholder entities don't have errors to clear
+	}
 }
 
-// ==================== Helper Functions ====================
-
-/**
- * Creates a proxy that returns null FieldHandle-like objects for disconnected relations.
- * Used when a HasOneHandle's relation is disconnected but code still accesses fields.
- * @deprecated Use PlaceholderHandle instead
- */
-function createNullFieldsProxy<T extends object>(): EntityFields<T> {
-	return new Proxy({} as EntityFields<T>, {
-		get(_, fieldName: string) {
-			// Return a minimal FieldHandle-like object with null values
-			return {
-				[FIELD_REF_META]: {
-					path: [fieldName],
-					fieldName,
-					isArray: false,
-					isRelation: false,
-				},
-				value: null,
-				serverValue: null,
-				isDirty: false,
-				setValue: () => {},
-				inputProps: {
-					value: null,
-					setValue: () => {},
-					onChange: () => {},
-				},
-				path: [fieldName],
-				fieldName,
-			}
-		},
-	})
-}
 

@@ -1,4 +1,5 @@
 import type { HasOneRelationState } from '../accessors/types.js'
+import type { FieldError } from '../errors/types.js'
 
 /**
  * Action types for the ActionDispatcher.
@@ -174,6 +175,90 @@ export interface SetPersistingAction {
 	readonly isPersisting: boolean
 }
 
+// ==================== Error Actions ====================
+
+/**
+ * Adds an error to a field
+ */
+export interface AddFieldErrorAction {
+	readonly type: 'ADD_FIELD_ERROR'
+	readonly entityType: string
+	readonly entityId: string
+	readonly fieldName: string
+	readonly error: FieldError
+}
+
+/**
+ * Clears errors from a field
+ */
+export interface ClearFieldErrorsAction {
+	readonly type: 'CLEAR_FIELD_ERRORS'
+	readonly entityType: string
+	readonly entityId: string
+	readonly fieldName: string
+	readonly source?: 'client' | 'server'
+}
+
+/**
+ * Adds an error to an entity
+ */
+export interface AddEntityErrorAction {
+	readonly type: 'ADD_ENTITY_ERROR'
+	readonly entityType: string
+	readonly entityId: string
+	readonly error: FieldError
+}
+
+/**
+ * Clears errors from an entity
+ */
+export interface ClearEntityErrorsAction {
+	readonly type: 'CLEAR_ENTITY_ERRORS'
+	readonly entityType: string
+	readonly entityId: string
+	readonly source?: 'client' | 'server'
+}
+
+/**
+ * Adds an error to a relation
+ */
+export interface AddRelationErrorAction {
+	readonly type: 'ADD_RELATION_ERROR'
+	readonly entityType: string
+	readonly entityId: string
+	readonly relationName: string
+	readonly error: FieldError
+}
+
+/**
+ * Clears errors from a relation
+ */
+export interface ClearRelationErrorsAction {
+	readonly type: 'CLEAR_RELATION_ERRORS'
+	readonly entityType: string
+	readonly entityId: string
+	readonly relationName: string
+	readonly source?: 'client' | 'server'
+}
+
+/**
+ * Clears all server errors for an entity (entity-level, fields, and relations)
+ */
+export interface ClearAllServerErrorsAction {
+	readonly type: 'CLEAR_ALL_SERVER_ERRORS'
+	readonly entityType: string
+	readonly entityId: string
+}
+
+/**
+ * Clears all errors for an entity (entity-level, fields, and relations)
+ */
+export interface ClearAllErrorsAction {
+	readonly type: 'CLEAR_ALL_ERRORS'
+	readonly entityType: string
+	readonly entityId: string
+}
+
 // ==================== Union Type ====================
 
 /**
@@ -195,6 +280,14 @@ export type Action =
 	| MoveInListAction
 	| SetLoadStateAction
 	| SetPersistingAction
+	| AddFieldErrorAction
+	| ClearFieldErrorsAction
+	| AddEntityErrorAction
+	| ClearEntityErrorsAction
+	| AddRelationErrorAction
+	| ClearRelationErrorsAction
+	| ClearAllServerErrorsAction
+	| ClearAllErrorsAction
 
 // ==================== Action Creators ====================
 
@@ -304,4 +397,94 @@ export function setPlaceholderData(
 	value: unknown,
 ): SetPlaceholderDataAction {
 	return { type: 'SET_PLACEHOLDER_DATA', entityType, entityId, fieldName, fieldPath, value }
+}
+
+/**
+ * Creates an ADD_FIELD_ERROR action
+ */
+export function addFieldError(
+	entityType: string,
+	entityId: string,
+	fieldName: string,
+	error: FieldError,
+): AddFieldErrorAction {
+	return { type: 'ADD_FIELD_ERROR', entityType, entityId, fieldName, error }
+}
+
+/**
+ * Creates a CLEAR_FIELD_ERRORS action
+ */
+export function clearFieldErrors(
+	entityType: string,
+	entityId: string,
+	fieldName: string,
+	source?: 'client' | 'server',
+): ClearFieldErrorsAction {
+	return { type: 'CLEAR_FIELD_ERRORS', entityType, entityId, fieldName, source }
+}
+
+/**
+ * Creates an ADD_ENTITY_ERROR action
+ */
+export function addEntityError(
+	entityType: string,
+	entityId: string,
+	error: FieldError,
+): AddEntityErrorAction {
+	return { type: 'ADD_ENTITY_ERROR', entityType, entityId, error }
+}
+
+/**
+ * Creates a CLEAR_ENTITY_ERRORS action
+ */
+export function clearEntityErrors(
+	entityType: string,
+	entityId: string,
+	source?: 'client' | 'server',
+): ClearEntityErrorsAction {
+	return { type: 'CLEAR_ENTITY_ERRORS', entityType, entityId, source }
+}
+
+/**
+ * Creates an ADD_RELATION_ERROR action
+ */
+export function addRelationError(
+	entityType: string,
+	entityId: string,
+	relationName: string,
+	error: FieldError,
+): AddRelationErrorAction {
+	return { type: 'ADD_RELATION_ERROR', entityType, entityId, relationName, error }
+}
+
+/**
+ * Creates a CLEAR_RELATION_ERRORS action
+ */
+export function clearRelationErrors(
+	entityType: string,
+	entityId: string,
+	relationName: string,
+	source?: 'client' | 'server',
+): ClearRelationErrorsAction {
+	return { type: 'CLEAR_RELATION_ERRORS', entityType, entityId, relationName, source }
+}
+
+/**
+ * Creates a CLEAR_ALL_SERVER_ERRORS action
+ */
+export function clearAllServerErrors(
+	entityType: string,
+	entityId: string,
+): ClearAllServerErrorsAction {
+	return { type: 'CLEAR_ALL_SERVER_ERRORS', entityType, entityId }
+}
+
+/**
+ * Creates a CLEAR_ALL_ERRORS action
+ */
+export function clearAllErrors(
+	entityType: string,
+	entityId: string,
+): ClearAllErrorsAction {
+	return { type: 'CLEAR_ALL_ERRORS', entityType, entityId }
 }

@@ -7,6 +7,9 @@ export type {
 	QueryResult,
 	GetQueryResult,
 	ListQueryResult,
+	PersistResult,
+	CreateResult,
+	DeleteResult,
 	EntityUniqueWhere,
 } from './types.js'
 export { MockAdapter, type MockDataStore, type MockAdapterOptions } from './MockAdapter.js'

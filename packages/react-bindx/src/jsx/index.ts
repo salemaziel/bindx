@@ -24,8 +24,6 @@ export {
 	SelectionMetaCollector,
 	mergeSelections,
 	createEmptySelection,
-	toSelectionMeta,
-	fromSelectionMeta,
 } from './SelectionMeta.js'
 
 // Proxy creation

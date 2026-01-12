@@ -33,13 +33,22 @@ const TRACKABLE_ACTION_TYPES = new Set<Action['type']>([
 
 /**
  * Action types that should be skipped for undo/redo.
- * These are operational or commit actions.
+ * These are operational, commit, or error actions.
  */
 const SKIP_ACTION_TYPES = new Set<Action['type']>([
 	'SET_LOAD_STATE',
 	'SET_PERSISTING',
 	'COMMIT_ENTITY',
 	'COMMIT_RELATION',
+	// Error actions are skipped as errors are ephemeral state
+	'ADD_FIELD_ERROR',
+	'CLEAR_FIELD_ERRORS',
+	'ADD_ENTITY_ERROR',
+	'CLEAR_ENTITY_ERRORS',
+	'ADD_RELATION_ERROR',
+	'CLEAR_RELATION_ERRORS',
+	'CLEAR_ALL_SERVER_ERRORS',
+	'CLEAR_ALL_ERRORS',
 ])
 
 /**

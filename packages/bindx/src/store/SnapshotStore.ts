@@ -6,6 +6,8 @@ import {
 	type HasOneRelationSnapshot,
 	type LoadStatus,
 } from './snapshots.js'
+import type { ErrorState, FieldError } from '../errors/types.js'
+import { filterStickyErrors } from '../errors/types.js'
 
 type Subscriber = () => void
 
@@ -84,6 +86,15 @@ export class SnapshotStore {
 
 	/** Persisting status keyed by "entityType:id" */
 	private readonly persistingEntities = new Set<string>()
+
+	/** Field errors keyed by "entityType:id:fieldName" */
+	private readonly fieldErrors = new Map<string, ErrorState>()
+
+	/** Entity-level errors keyed by "entityType:id" */
+	private readonly entityErrors = new Map<string, ErrorState>()
+
+	/** Relation errors keyed by "entityType:id:relationName" */
+	private readonly relationErrors = new Map<string, ErrorState>()
 
 	/** Global version number for change detection */
 	private globalVersion = 0
@@ -717,6 +728,274 @@ export class SnapshotStore {
 		this.notifyEntitySubscribers(key)
 	}
 
+	// ==================== Error State ====================
+
+	/**
+	 * Gets field errors for a specific field.
+	 */
+	getFieldErrors(entityType: string, id: string, fieldName: string): readonly FieldError[] {
+		const key = this.getRelationKey(entityType, id, fieldName)
+		return this.fieldErrors.get(key)?.errors ?? []
+	}
+
+	/**
+	 * Adds an error to a field.
+	 */
+	addFieldError(entityType: string, id: string, fieldName: string, error: FieldError): void {
+		const key = this.getRelationKey(entityType, id, fieldName)
+		const existing = this.fieldErrors.get(key)
+		const errors = existing ? [...existing.errors, error] : [error]
+		this.fieldErrors.set(key, { errors, version: (existing?.version ?? 0) + 1 })
+		this.notifyEntitySubscribers(this.getEntityKey(entityType, id))
+	}
+
+	/**
+	 * Clears field errors, optionally filtering by source.
+	 */
+	clearFieldErrors(
+		entityType: string,
+		id: string,
+		fieldName: string,
+		source?: 'client' | 'server',
+	): void {
+		const key = this.getRelationKey(entityType, id, fieldName)
+		const existing = this.fieldErrors.get(key)
+		if (!existing) return
+
+		if (source === undefined) {
+			this.fieldErrors.delete(key)
+		} else {
+			const filtered = existing.errors.filter(e => e.source !== source)
+			if (filtered.length === 0) {
+				this.fieldErrors.delete(key)
+			} else {
+				this.fieldErrors.set(key, { errors: filtered, version: existing.version + 1 })
+			}
+		}
+		this.notifyEntitySubscribers(this.getEntityKey(entityType, id))
+	}
+
+	/**
+	 * Clears non-sticky client errors for a field.
+	 * Called when field value changes.
+	 */
+	clearNonStickyFieldErrors(entityType: string, id: string, fieldName: string): void {
+		const key = this.getRelationKey(entityType, id, fieldName)
+		const existing = this.fieldErrors.get(key)
+		if (!existing) return
+
+		const filtered = filterStickyErrors(existing.errors)
+		if (filtered.length === existing.errors.length) return // No change
+
+		if (filtered.length === 0) {
+			this.fieldErrors.delete(key)
+		} else {
+			this.fieldErrors.set(key, { errors: filtered, version: existing.version + 1 })
+		}
+		this.notifyEntitySubscribers(this.getEntityKey(entityType, id))
+	}
+
+	/**
+	 * Gets entity-level errors.
+	 */
+	getEntityErrors(entityType: string, id: string): readonly FieldError[] {
+		const key = this.getEntityKey(entityType, id)
+		return this.entityErrors.get(key)?.errors ?? []
+	}
+
+	/**
+	 * Adds an entity-level error.
+	 */
+	addEntityError(entityType: string, id: string, error: FieldError): void {
+		const key = this.getEntityKey(entityType, id)
+		const existing = this.entityErrors.get(key)
+		const errors = existing ? [...existing.errors, error] : [error]
+		this.entityErrors.set(key, { errors, version: (existing?.version ?? 0) + 1 })
+		this.notifyEntitySubscribers(key)
+	}
+
+	/**
+	 * Clears entity-level errors, optionally filtering by source.
+	 */
+	clearEntityErrors(entityType: string, id: string, source?: 'client' | 'server'): void {
+		const key = this.getEntityKey(entityType, id)
+		const existing = this.entityErrors.get(key)
+		if (!existing) return
+
+		if (source === undefined) {
+			this.entityErrors.delete(key)
+		} else {
+			const filtered = existing.errors.filter(e => e.source !== source)
+			if (filtered.length === 0) {
+				this.entityErrors.delete(key)
+			} else {
+				this.entityErrors.set(key, { errors: filtered, version: existing.version + 1 })
+			}
+		}
+		this.notifyEntitySubscribers(key)
+	}
+
+	/**
+	 * Gets relation errors.
+	 */
+	getRelationErrors(entityType: string, id: string, relationName: string): readonly FieldError[] {
+		const key = this.getRelationKey(entityType, id, relationName)
+		return this.relationErrors.get(key)?.errors ?? []
+	}
+
+	/**
+	 * Adds a relation error.
+	 */
+	addRelationError(entityType: string, id: string, relationName: string, error: FieldError): void {
+		const key = this.getRelationKey(entityType, id, relationName)
+		const existing = this.relationErrors.get(key)
+		const errors = existing ? [...existing.errors, error] : [error]
+		this.relationErrors.set(key, { errors, version: (existing?.version ?? 0) + 1 })
+		this.notifyRelationSubscribers(key)
+	}
+
+	/**
+	 * Clears relation errors, optionally filtering by source.
+	 */
+	clearRelationErrors(
+		entityType: string,
+		id: string,
+		relationName: string,
+		source?: 'client' | 'server',
+	): void {
+		const key = this.getRelationKey(entityType, id, relationName)
+		const existing = this.relationErrors.get(key)
+		if (!existing) return
+
+		if (source === undefined) {
+			this.relationErrors.delete(key)
+		} else {
+			const filtered = existing.errors.filter(e => e.source !== source)
+			if (filtered.length === 0) {
+				this.relationErrors.delete(key)
+			} else {
+				this.relationErrors.set(key, { errors: filtered, version: existing.version + 1 })
+			}
+		}
+		this.notifyRelationSubscribers(key)
+	}
+
+	/**
+	 * Clears all server errors for an entity (entity-level, fields, and relations).
+	 * Called before persist to clear stale server errors.
+	 */
+	clearAllServerErrors(entityType: string, id: string): void {
+		const entityKey = this.getEntityKey(entityType, id)
+		const keyPrefix = `${entityType}:${id}:`
+
+		// Clear entity-level server errors
+		this.clearEntityErrors(entityType, id, 'server')
+
+		// Clear field server errors
+		for (const key of this.fieldErrors.keys()) {
+			if (key.startsWith(keyPrefix)) {
+				const fieldName = key.slice(keyPrefix.length)
+				this.clearFieldErrors(entityType, id, fieldName, 'server')
+			}
+		}
+
+		// Clear relation server errors
+		for (const key of this.relationErrors.keys()) {
+			if (key.startsWith(keyPrefix)) {
+				const relationName = key.slice(keyPrefix.length)
+				this.clearRelationErrors(entityType, id, relationName, 'server')
+			}
+		}
+	}
+
+	/**
+	 * Clears all errors for an entity (entity-level, fields, and relations).
+	 */
+	clearAllErrors(entityType: string, id: string): void {
+		const entityKey = this.getEntityKey(entityType, id)
+		const keyPrefix = `${entityType}:${id}:`
+
+		// Clear entity-level errors
+		this.entityErrors.delete(entityKey)
+
+		// Clear field errors
+		for (const key of [...this.fieldErrors.keys()]) {
+			if (key.startsWith(keyPrefix)) {
+				this.fieldErrors.delete(key)
+			}
+		}
+
+		// Clear relation errors
+		for (const key of [...this.relationErrors.keys()]) {
+			if (key.startsWith(keyPrefix)) {
+				this.relationErrors.delete(key)
+			}
+		}
+
+		this.notifyEntitySubscribers(entityKey)
+	}
+
+	/**
+	 * Checks if an entity has any client errors (entity-level, fields, or relations).
+	 * Used to block persist when validation errors exist.
+	 */
+	hasClientErrors(entityType: string, id: string): boolean {
+		const entityKey = this.getEntityKey(entityType, id)
+		const keyPrefix = `${entityType}:${id}:`
+
+		// Check entity-level errors
+		const entityErrs = this.entityErrors.get(entityKey)
+		if (entityErrs?.errors.some(e => e.source === 'client')) {
+			return true
+		}
+
+		// Check field errors
+		for (const [key, state] of this.fieldErrors) {
+			if (key.startsWith(keyPrefix) && state.errors.some(e => e.source === 'client')) {
+				return true
+			}
+		}
+
+		// Check relation errors
+		for (const [key, state] of this.relationErrors) {
+			if (key.startsWith(keyPrefix) && state.errors.some(e => e.source === 'client')) {
+				return true
+			}
+		}
+
+		return false
+	}
+
+	/**
+	 * Checks if an entity has any errors at all.
+	 */
+	hasAnyErrors(entityType: string, id: string): boolean {
+		const entityKey = this.getEntityKey(entityType, id)
+		const keyPrefix = `${entityType}:${id}:`
+
+		// Check entity-level errors
+		const entityErrs = this.entityErrors.get(entityKey)
+		if (entityErrs && entityErrs.errors.length > 0) {
+			return true
+		}
+
+		// Check field errors
+		for (const [key, state] of this.fieldErrors) {
+			if (key.startsWith(keyPrefix) && state.errors.length > 0) {
+				return true
+			}
+		}
+
+		// Check relation errors
+		for (const [key, state] of this.relationErrors) {
+			if (key.startsWith(keyPrefix) && state.errors.length > 0) {
+				return true
+			}
+		}
+
+		return false
+	}
+
 	// ==================== Relation State ====================
 
 	/**
@@ -1208,6 +1487,9 @@ export class SnapshotStore {
 		this.relationStates.clear()
 		this.hasManyStates.clear()
 		this.persistingEntities.clear()
+		this.fieldErrors.clear()
+		this.entityErrors.clear()
+		this.relationErrors.clear()
 		this.globalVersion++
 
 		// Notify all subscribers

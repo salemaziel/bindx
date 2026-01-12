@@ -87,6 +87,9 @@ export type {
 	QueryResult,
 	GetQueryResult,
 	ListQueryResult,
+	PersistResult,
+	CreateResult,
+	DeleteResult,
 	MockDataStore,
 	MockAdapterOptions,
 	ContemberAdapterOptions,
@@ -183,6 +186,37 @@ export type {
 	StoredHasManyState,
 	EntityMeta,
 } from './store/SnapshotStore.js'
+
+// Error types
+export type {
+	ExecutionErrorType,
+	BindxError,
+	ClientError,
+	ServerError,
+	FieldError,
+	ErrorState,
+	ErrorInput,
+	PathElement,
+	ContemberMutationError,
+	ContemberValidationError,
+	MappedError,
+	ContemberMutationResult,
+} from './errors/index.js'
+
+export {
+	createClientError,
+	createServerError,
+	isClientError,
+	isServerError,
+	filterErrorsBySource,
+	filterStickyErrors,
+	mapMutationError,
+	mapValidationError,
+	extractMappedErrors,
+} from './errors/index.js'
+
+// Persist error classes
+export { ClientValidationError, PersistError } from './core/PersistenceManager.js'
 
 // Re-export Contember types for convenience
 export type { SchemaNames, SchemaEntityNames } from '@contember/client-content'

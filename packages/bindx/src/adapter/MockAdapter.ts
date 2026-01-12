@@ -1,5 +1,5 @@
 import type { QuerySpec, QueryFieldSpec } from '../selection/buildQuery.js'
-import type { BackendAdapter, Query, QueryResult, QueryOptions, GetQuery, ListQuery } from './types.js'
+import type { BackendAdapter, Query, QueryResult, QueryOptions, GetQuery, ListQuery, PersistResult, CreateResult, DeleteResult } from './types.js'
 
 /**
  * In-memory data store structure
@@ -271,23 +271,31 @@ export class MockAdapter implements BackendAdapter {
 		entityType: string,
 		id: string,
 		changes: Record<string, unknown>,
-	): Promise<void> {
+	): Promise<PersistResult> {
 		this.log('persist', { entityType, id, changes })
 		await this.simulateDelay()
 
 		const entityStore = this.store[entityType]
 		if (!entityStore) {
-			throw new Error(`Entity type '${entityType}' not found in store`)
+			return {
+				ok: false,
+				errorMessage: `Entity type '${entityType}' not found in store`,
+			}
 		}
 
 		const entity = entityStore[id]
 		if (!entity) {
-			throw new Error(`Entity '${entityType}:${id}' not found`)
+			return {
+				ok: false,
+				errorMessage: `Entity '${entityType}:${id}' not found`,
+			}
 		}
 
 		// Process changes with Contember-style operation support
 		this.applyChanges(entity, changes)
 		this.log('persist result', entity)
+
+		return { ok: true }
 	}
 
 	/**
@@ -450,7 +458,7 @@ export class MockAdapter implements BackendAdapter {
 	async create(
 		entityType: string,
 		data: Record<string, unknown>,
-	): Promise<Record<string, unknown>> {
+	): Promise<CreateResult> {
 		this.log('create', { entityType, data })
 		await this.simulateDelay()
 
@@ -466,10 +474,10 @@ export class MockAdapter implements BackendAdapter {
 		this.store[entityType]![id] = entity
 		this.log('create result', entity)
 
-		return entity
+		return { ok: true, data: entity }
 	}
 
-	async delete(entityType: string, id: string): Promise<void> {
+	async delete(entityType: string, id: string): Promise<DeleteResult> {
 		this.log('delete', { entityType, id })
 		await this.simulateDelay()
 
@@ -477,6 +485,8 @@ export class MockAdapter implements BackendAdapter {
 		if (entityStore) {
 			delete entityStore[id]
 		}
+
+		return { ok: true }
 	}
 
 	/**

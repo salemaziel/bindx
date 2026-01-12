@@ -272,8 +272,6 @@ export {
 	SelectionMetaCollector,
 	mergeSelections,
 	createEmptySelection,
-	toSelectionMeta,
-	fromSelectionMeta,
 	createCollectorProxy,
 	createRuntimeAccessor,
 	analyzeJsx,

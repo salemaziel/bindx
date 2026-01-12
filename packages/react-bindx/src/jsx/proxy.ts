@@ -1,5 +1,5 @@
 import type { SnapshotStore } from '@contember/bindx'
-import { SelectionMetaCollector, createEmptySelection } from './SelectionMeta.js'
+import { SelectionMetaCollector } from './SelectionMeta.js'
 import {
 	type EntityRef,
 	type EntityFields,

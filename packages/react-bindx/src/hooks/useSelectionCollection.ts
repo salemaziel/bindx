@@ -1,7 +1,7 @@
 import { useMemo, useRef, type ReactNode } from 'react'
 import { createCollectorProxy } from '../jsx/proxy.js'
 import { collectSelection, debugSelection } from '../jsx/analyzer.js'
-import { SelectionMetaCollector, mergeSelections, toSelectionMeta } from '../jsx/SelectionMeta.js'
+import { SelectionMetaCollector, mergeSelections } from '../jsx/SelectionMeta.js'
 import { buildQueryFromSelection } from '@contember/bindx'
 import type { SelectionMeta } from '@contember/bindx'
 import type { EntityRef } from '../jsx/types.js'
@@ -82,8 +82,8 @@ export function useSelectionCollection<T>(
 			console.log(debugSelection(selection))
 		}
 
-		// Convert to standard SelectionMeta for the data loading hook
-		const standardSel = toSelectionMeta(selection)
+		// selection is already SelectionMeta - use directly for query building
+		const standardSel = selection
 
 		// Create a stable key from the selection to detect actual changes
 		const query = buildQueryFromSelection(standardSel)
