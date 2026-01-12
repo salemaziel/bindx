@@ -1,6 +1,7 @@
 import type { BackendAdapter } from '../adapter/types.js'
 import type { IdentityMap } from '../store/IdentityMap.js'
 import type { QuerySpec } from '../selection/buildQuery.js'
+import type { EntityWhere, EntityOrderBy } from '../selection/queryTypes.js'
 
 /**
  * Result of entity loading operation
@@ -31,10 +32,13 @@ export interface LoadEntityOptions {
 /**
  * Options for loading entity list
  */
-export interface LoadEntityListOptions {
+export interface LoadEntityListOptions<TEntity = unknown> {
 	entityType: string
 	query: QuerySpec
-	filter?: Record<string, unknown>
+	filter?: EntityWhere<TEntity>
+	orderBy?: readonly EntityOrderBy<TEntity>[]
+	limit?: number
+	offset?: number
 	signal?: AbortSignal
 }
 
@@ -63,16 +67,20 @@ export class EntityLoader {
 		}
 
 		try {
-			const data = await this.adapter.fetchOne(entityType, id, query, { signal })
+			const results = await this.adapter.query(
+				[{ type: 'get', entityType, by: { id }, spec: query }],
+				{ signal },
+			)
 
-			if (!data) {
+			const result = results[0]
+			if (!result || result.type !== 'get' || result.data === null) {
 				return { status: 'not_found' }
 			}
 
 			// Store in identity map
-			this.identityMap.getOrCreate(entityType, id, data as Record<string, unknown>)
+			this.identityMap.getOrCreate(entityType, id, result.data)
 
-			return { status: 'success', data: data as T }
+			return { status: 'success', data: result.data as T }
 		} catch (error) {
 			// Don't treat abort as error
 			if (error instanceof DOMException && error.name === 'AbortError') {
@@ -88,28 +96,32 @@ export class EntityLoader {
 	/**
 	 * Loads multiple entities matching filter.
 	 */
-	async loadMany<T>(options: LoadEntityListOptions): Promise<EntityListLoadResult<T>> {
-		const { entityType, query, filter, signal } = options
-
-		if (!this.adapter.fetchMany) {
-			return {
-				status: 'error',
-				error: new Error('Backend adapter does not support fetchMany'),
-			}
-		}
+	async loadMany<T, TEntity = unknown>(options: LoadEntityListOptions<TEntity>): Promise<EntityListLoadResult<T>> {
+		const { entityType, query, filter, orderBy, limit, offset, signal } = options
 
 		try {
-			const data = await this.adapter.fetchMany(entityType, query, filter, { signal })
+			const results = await this.adapter.query(
+				[{ type: 'list', entityType, filter, orderBy, limit, offset, spec: query }],
+				{ signal },
+			)
+
+			const result = results[0]
+			if (!result || result.type !== 'list') {
+				return {
+					status: 'error',
+					error: new Error('Unexpected query result type'),
+				}
+			}
 
 			// Store each entity in identity map
-			for (const item of data) {
+			for (const item of result.data) {
 				const record = item as Record<string, unknown>
 				if (typeof record['id'] === 'string') {
 					this.identityMap.getOrCreate(entityType, record['id'], record)
 				}
 			}
 
-			return { status: 'success', data: data as T[] }
+			return { status: 'success', data: result.data as T[] }
 		} catch (error) {
 			// Don't treat abort as error
 			if (error instanceof DOMException && error.name === 'AbortError') {

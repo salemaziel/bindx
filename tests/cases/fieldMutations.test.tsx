@@ -72,7 +72,7 @@ describe('Field Mutations', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-1' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
 					e.id().title().content(),
 				)
 
@@ -122,7 +122,7 @@ describe('Field Mutations', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-1' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
 					e.id().title(),
 				)
 
@@ -184,7 +184,7 @@ describe('Field Mutations', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-1' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
 					e.id().title(),
 				)
 
@@ -246,7 +246,7 @@ describe('Field Mutations', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-1' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
 					e.id().views(),
 				)
 
@@ -294,7 +294,7 @@ describe('Field Mutations', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-1' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
 					e.id().title().content(),
 				)
 
@@ -365,7 +365,7 @@ describe('Field Mutations', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-1' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
 					e.id().title(),
 				)
 

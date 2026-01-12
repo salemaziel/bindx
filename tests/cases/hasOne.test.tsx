@@ -105,7 +105,7 @@ describe('HasOne Relations', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-1' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
 					e.id().title().author(a => a.id().name().email()),
 				)
 
@@ -157,7 +157,7 @@ describe('HasOne Relations', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-1' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
 					e.id().title().author(a => a.id().name()),
 				)
 
@@ -207,7 +207,7 @@ describe('HasOne Relations', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-1' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
 					e.id().title().author(a => a.id().name()),
 				)
 
@@ -263,7 +263,7 @@ describe('HasOne Relations', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-1' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
 					e.id().title().author(a => a.id().name()),
 				)
 
@@ -322,7 +322,7 @@ describe('HasOne Relations', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-1' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
 					e.id().title().author(a => a.id().name()),
 				)
 
@@ -381,7 +381,7 @@ describe('HasOne Relations', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-1' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
 					e.id().title().author(a => a.id().name()),
 				)
 
@@ -438,7 +438,7 @@ describe('HasOne Relations', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-1' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
 					e.id().title().author(a => a.id().name()),
 				)
 
@@ -497,7 +497,7 @@ describe('HasOne Relations', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-no-author' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-no-author' } }, e =>
 					e.id().title().author(a => a.id().name().email()),
 				)
 
@@ -552,7 +552,7 @@ describe('HasOne Relations', () => {
 			const { useEntityList } = createBindx(schema)
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-1' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
 					e.id().title().author(a => a.id().name().email()),
 				)
 
@@ -619,7 +619,7 @@ describe('HasOne Relations', () => {
 			const { useEntityList } = createBindx(schema)
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-1' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
 					e.id().title().author(a => a.id().name().email()),
 				)
 
@@ -709,7 +709,7 @@ describe('HasOne Relations', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-1' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
 					e.id().title().author(a => a.id().name().email()),
 				)
 
@@ -757,7 +757,7 @@ describe('HasOne Relations', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-1' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
 					e.id().title().author(a => a.id().name().email()),
 				)
 
@@ -814,7 +814,7 @@ describe('HasOne Relations', () => {
 			const { useEntityList } = createBindx(schema)
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-1' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
 					e.id().title().author(a => a.id().name()),
 				)
 				const allAuthors = useEntityList('Author', {}, a => a.id().name())
@@ -868,7 +868,7 @@ describe('HasOne Relations', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-1' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
 					e.id().title().author(a => a.id().name()),
 				)
 
@@ -923,7 +923,7 @@ describe('HasOne Relations', () => {
 			const { useEntityList } = createBindx(schema)
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-1' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
 					e.id().title().author(a => a.id().name()),
 				)
 				const allAuthors = useEntityList('Author', {}, a => a.id().name())
@@ -984,7 +984,7 @@ describe('HasOne Relations', () => {
 			const { useEntityList } = createBindx(schema)
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-1' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
 					e.id().title().author(a => a.id().name()),
 				)
 				const allAuthors = useEntityList('Author', {}, a => a.id().name())
@@ -1050,7 +1050,7 @@ describe('HasOne Relations', () => {
 			const { useEntityList } = createBindx(schema)
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-1' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
 					e.id().title().author(a => a.id().name()),
 				)
 				const allAuthors = useEntityList('Author', {}, a => a.id().name())
@@ -1114,7 +1114,7 @@ describe('HasOne Relations', () => {
 			const { useEntityList } = createBindx(schema)
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-1' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
 					e.id().title().author(a => a.id().name()),
 				)
 				const allAuthors = useEntityList('Author', {}, a => a.id().name())
@@ -1176,7 +1176,7 @@ describe('HasOne Relations', () => {
 			const { useEntityList } = createBindx(schema)
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-1' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
 					e.id().title().author(a => a.id().name().email()),
 				)
 				const allAuthors = useEntityList('Author', {}, a => a.id().name().email())
@@ -1243,7 +1243,7 @@ describe('HasOne Relations', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-1' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
 					e.id().title().author(a => a.id().name().email()),
 				)
 

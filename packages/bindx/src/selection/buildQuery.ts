@@ -36,14 +36,13 @@ export interface QuerySpec {
  * This is what gets passed to the backend adapter.
  *
  * @param meta - The selection metadata
- * @param isNested - Whether this is a nested query (for has-one/has-many relations)
  */
-export function buildQueryFromSelection(meta: SelectionMeta, isNested: boolean = false): QuerySpec {
+export function buildQueryFromSelection(meta: SelectionMeta): QuerySpec {
 	const fields: QueryFieldSpec[] = []
 
-	// For nested queries (relations), always include 'id' field if not already selected
-	// This is needed for HasOneAccessor to detect if relation exists
-	if (isNested && !meta.fields.has('id')) {
+	// Always include 'id' field if not already selected
+	// This is needed for entity identity and HasOneAccessor to detect if relation exists
+	if (!meta.fields.has('id')) {
 		fields.push({
 			name: 'id',
 			sourcePath: ['id'],
@@ -86,10 +85,10 @@ function buildFieldSpecFromSelection(meta: SelectionFieldMeta): QueryFieldSpec {
 		}
 
 		if (meta.nested) {
-			spec.nested = buildQueryFromSelection(meta.nested, true)
+			spec.nested = buildQueryFromSelection(meta.nested)
 		}
 	} else if (meta.nested) {
-		spec.nested = buildQueryFromSelection(meta.nested, true)
+		spec.nested = buildQueryFromSelection(meta.nested)
 	}
 
 	return spec

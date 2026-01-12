@@ -13,6 +13,12 @@ export interface EntityListProps<TSchema, K extends keyof TSchema> {
 	name: K
 	/** Optional filter criteria */
 	filter?: Record<string, unknown>
+	/** Optional ordering */
+	orderBy?: readonly Record<string, unknown>[]
+	/** Optional limit */
+	limit?: number
+	/** Optional offset */
+	offset?: number
 	/** Render function receiving typed entity accessor and index */
 	children: (entity: EntityRef<TSchema[K]>, index: number) => React.ReactNode
 	/** Loading fallback */
@@ -32,7 +38,7 @@ export interface EntityListProps<TSchema, K extends keyof TSchema> {
  *
  * @example
  * ```tsx
- * <EntityList name="Article" filter={{ published: true }}>
+ * <EntityList name="Article" filter={{ published: true }} orderBy={[{ createdAt: 'desc' }]} limit={10}>
  *   {(article, index) => (
  *     <div key={article.id}>
  *       <Field field={article.fields.title} />
@@ -44,6 +50,9 @@ export interface EntityListProps<TSchema, K extends keyof TSchema> {
 function EntityListImpl<TSchema, K extends keyof TSchema>({
 	name,
 	filter,
+	orderBy,
+	limit,
+	offset,
 	children,
 	loading,
 	error: errorFallback,
@@ -56,6 +65,9 @@ function EntityListImpl<TSchema, K extends keyof TSchema>({
 	const { standardSelection, queryKey } = useSelectionCollectionForList({
 		entityType,
 		filter,
+		orderBy,
+		limit,
+		offset,
 		children,
 	})
 
@@ -63,6 +75,9 @@ function EntityListImpl<TSchema, K extends keyof TSchema>({
 	const result = useEntityListCore({
 		entityType,
 		filter,
+		orderBy,
+		limit,
+		offset,
 		selectionMeta: standardSelection,
 		queryKey,
 	})

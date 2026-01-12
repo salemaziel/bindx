@@ -126,6 +126,9 @@ export class ComponentBuilderImpl<
 
 /**
  * Builds a bindx component from entity configs and render function.
+ *
+ * Note: Implicit selection collection is deferred (lazy) to avoid TDZ errors
+ * when components reference other components defined later in the same file.
  */
 function buildComponent<TProps extends object>(
 	entityConfigs: Map<string, EntityConfig>,
@@ -137,7 +140,7 @@ function buildComponent<TProps extends object>(
 	// Generate unique brand for this component
 	const componentBrand = new ComponentBrand(`component_${Math.random().toString(36).slice(2)}`)
 
-	// 1. Process explicit entities (those with selectors)
+	// 1. Process explicit entities (those with selectors) - these are safe to do eagerly
 	for (const [propName, config] of entityConfigs) {
 		if (config.selector) {
 			const builder = createSelectionBuilder<object>()
@@ -151,14 +154,21 @@ function buildComponent<TProps extends object>(
 		}
 	}
 
-	// 2. Collect implicit entities from JSX (those without selectors)
+	// 2. Implicit entities - collect lazily to avoid TDZ errors
 	const implicitConfigs = [...entityConfigs.entries()].filter(([_, c]) => !c.selector)
-	if (implicitConfigs.length > 0) {
+	let implicitCollected = false
+
+	function ensureImplicitCollected(): void {
+		if (implicitCollected || implicitConfigs.length === 0) {
+			return
+		}
+		implicitCollected = true
 		collectImplicitSelections(implicitConfigs, renderFn, selectionsMap, componentBrand, roles)
 	}
 
 	// 3. Create React component
 	function ComponentImpl(props: TProps): ReactNode {
+		ensureImplicitCollected()
 		return renderFn(props)
 	}
 
@@ -175,12 +185,31 @@ function buildComponent<TProps extends object>(
 		comp['__componentRoles'] = roles
 	}
 
-	// 5. Add SelectionProvider interface
-	;(MemoizedComponent as unknown as SelectionProvider).getSelection = createGetSelection(selectionsMap)
+	// 5. Add SelectionProvider interface with lazy collection
+	;(MemoizedComponent as unknown as SelectionProvider).getSelection = (
+		props: Record<string, unknown>,
+		collectNested,
+	): SelectionFieldMeta | SelectionFieldMeta[] | null => {
+		ensureImplicitCollected()
+		return createGetSelection(selectionsMap)(props, collectNested)
+	}
 
-	// 6. Attach fragment properties ($propName)
+	// 6. Attach fragment properties ($propName) for explicit entities
 	for (const [propName, meta] of selectionsMap) {
 		comp[`$${propName}`] = meta.fragment
+	}
+
+	// 7. Define lazy getters for implicit entity props
+	// This allows accessing $propName without first rendering the component
+	for (const [propName] of implicitConfigs) {
+		Object.defineProperty(comp, `$${propName}`, {
+			get(): FluentFragment<unknown, object, AnyBrand> | undefined {
+				ensureImplicitCollected()
+				return selectionsMap.get(propName)?.fragment
+			},
+			enumerable: true,
+			configurable: true,
+		})
 	}
 
 	return MemoizedComponent

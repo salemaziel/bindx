@@ -182,9 +182,10 @@ describe('Typed Query Parameters', () => {
 			const meta = getSelectionMeta(result)
 			const query = buildQueryFromSelection(meta)
 
-			expect(query.fields[0]?.filter).toEqual({ color: { eq: 'red' } })
-			expect(query.fields[0]?.orderBy).toEqual([{ name: 'asc' }])
-			expect(query.fields[0]?.limit).toBe(10)
+			// fields[0] is auto-added 'id', fields[1] is 'tags'
+			expect(query.fields[1]?.filter).toEqual({ color: { eq: 'red' } })
+			expect(query.fields[1]?.orderBy).toEqual([{ name: 'asc' }])
+			expect(query.fields[1]?.limit).toBe(10)
 		})
 
 		test('should accept complex filter', () => {
@@ -203,7 +204,8 @@ describe('Typed Query Parameters', () => {
 			const meta = getSelectionMeta(result)
 			const query = buildQueryFromSelection(meta)
 
-			expect(query.fields[0]?.filter).toEqual({
+			// fields[0] is auto-added 'id', fields[1] is 'tags'
+			expect(query.fields[1]?.filter).toEqual({
 				and: [
 					{ color: { in: ['red', 'blue'] } },
 					{ priority: { gte: 1 } },
@@ -225,7 +227,8 @@ describe('Typed Query Parameters', () => {
 			const meta = getSelectionMeta(result)
 			const query = buildQueryFromSelection(meta)
 
-			expect(query.fields[0]?.orderBy).toEqual([
+			// fields[0] is auto-added 'id', fields[1] is 'tags'
+			expect(query.fields[1]?.orderBy).toEqual([
 				{ priority: 'desc' },
 				{ name: 'asc' },
 			])

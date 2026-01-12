@@ -307,7 +307,7 @@ describe('createRoleAwareBindx', () => {
 			return (
 				<BindxProvider adapter={adapter}>
 					<RoleAwareProvider hasRole={(role) => userRoles.has(role)}>
-						<Entity name="Article" id="article-1" roles={['editor', 'admin'] as const}>
+						<Entity name="Article" by={{ id: 'article-1' }} roles={['editor', 'admin'] as const}>
 							{(article) => (
 								<div>
 									<span data-testid="title">{article.data?.title}</span>
@@ -364,7 +364,7 @@ describe('createRoleAwareBindx', () => {
 			return (
 				<BindxProvider adapter={adapter}>
 					<RoleAwareProvider hasRole={(role) => userRoles.has(role)}>
-						<Entity name="Article" id="article-1" roles={['editor', 'admin']}>
+						<Entity name="Article" by={{ id: 'article-1' }} roles={['editor', 'admin']}>
 							{(article) => (
 								<div>
 									<span data-testid="title">{article.data?.title}</span>
@@ -456,7 +456,7 @@ describe('createRoleAwareBindx', () => {
 			return (
 				<BindxProvider adapter={adapter}>
 					<RoleAwareProvider hasRole={(role) => userRoles.has(role)}>
-						<Entity name="Article" id="article-1" roles={['public', 'editor', 'admin'] as const}>
+						<Entity name="Article" by={{ id: 'article-1' }} roles={['public', 'editor', 'admin'] as const}>
 							{(article) => (
 								<div>
 									<span data-testid="title">{article.data?.title}</span>
@@ -754,6 +754,8 @@ describe('Role-aware createComponent', () => {
 			fields: {} as any,
 			data: { id: 'article-1', title: 'Test', content: 'Content', author: {} as any },
 			isDirty: false,
+			persistedId: 'article-1',
+			isNew: false,
 			__entityType: {} as EditorArticle,
 			__entityName: 'Article',
 			__availableRoles: ['editor'] as const,
@@ -789,6 +791,8 @@ describe('Role-aware createComponent', () => {
 			fields: {} as any,
 			data: { id: 'article-1', title: 'Test' },
 			isDirty: false,
+			persistedId: 'article-1',
+			isNew: false,
 			__entityType: {} as AdminArticle,
 			__entityName: 'Article',
 			__availableRoles: ['admin', 'editor'] as const,
@@ -799,6 +803,33 @@ describe('Role-aware createComponent', () => {
 		// The fragment itself carries the role info, and the EntityRef needs to have compatible roles
 
 		expect(AdminArticleCard.$article.__roles).toEqual(['admin'])
+	})
+
+	test('component with multiple supported roles accepts EntityRef from single role context (covariance)', () => {
+		// Test that EntityRef with ['admin'] is assignable to EntityRef with ['admin', 'editor']
+		// This is important for using components in narrower role contexts
+
+		// Create EntityRef from admin-only context
+		const adminOnlyEntityRef: EntityRef<AdminArticle, { id: string; title: string }, AnyBrand, 'Article', readonly ['admin']> = {
+			id: 'article-1',
+			fields: {} as any,
+			data: { id: 'article-1', title: 'Test' },
+			isDirty: false,
+			persistedId: 'article-1',
+			isNew: false,
+			__entityType: {} as AdminArticle,
+			__entityName: 'Article',
+			__availableRoles: ['admin'],
+		}
+
+		// Define what a component with ['admin', 'editor'] roles would expect
+		type MultiRoleEntityRef = EntityRef<AdminArticle, { id: string; title: string }, AnyBrand, 'Article', readonly ['admin', 'editor']>
+
+		// This should work: EntityRef<..., ['admin']> is assignable to EntityRef<..., ['admin', 'editor']>
+		// because readonly 'admin'[] is assignable to readonly ('admin' | 'editor')[]
+		const _typeTest: MultiRoleEntityRef = adminOnlyEntityRef
+
+		expect(true).toBe(true)
 	})
 
 	test('fragment role info is preserved in type system', () => {

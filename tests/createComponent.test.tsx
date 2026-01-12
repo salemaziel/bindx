@@ -328,7 +328,7 @@ describe('createComponent rendering', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter}>
-				<Entity name="Author" id="author-1">
+				<Entity name="Author" by={{ id: 'author-1' }}>
 					{author => <AuthorCard author={author} />}
 				</Entity>
 			</BindxProvider>,
@@ -346,7 +346,7 @@ describe('createComponent rendering', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter}>
-				<Entity name="Author" id="author-1">
+				<Entity name="Author" by={{ id: 'author-1' }}>
 					{author => (
 						<AuthorCardWithOptions
 							author={author}
@@ -372,7 +372,7 @@ describe('createComponent rendering', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter}>
-				<Entity name="Author" id="author-1">
+				<Entity name="Author" by={{ id: 'author-1' }}>
 					{author => <AuthorCardWithOptions author={author} showEmail={false} />}
 				</Entity>
 			</BindxProvider>,
@@ -391,7 +391,7 @@ describe('createComponent rendering', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter}>
-				<Entity name="Author" id="author-1">
+				<Entity name="Author" by={{ id: 'author-1' }}>
 					{author => <ImplicitAuthorCard author={author} />}
 				</Entity>
 			</BindxProvider>,

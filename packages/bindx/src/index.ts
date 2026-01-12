@@ -36,8 +36,6 @@ export type {
 	EntityWhere,
 	EntityOrderBy,
 	ScalarCondition,
-	StringCondition,
-	ConditionFor,
 	OrderDirection,
 	TypedHasManyOptions,
 	AliasOptions,
@@ -82,10 +80,17 @@ export { ComponentBrand } from './brand/ComponentBrand.js'
 // Adapter types
 export type {
 	BackendAdapter,
-	FetchOptions,
+	QueryOptions,
+	Query,
+	GetQuery,
+	ListQuery,
+	QueryResult,
+	GetQueryResult,
+	ListQueryResult,
 	MockDataStore,
 	MockAdapterOptions,
 	ContemberAdapterOptions,
+	EntityUniqueWhere,
 } from './adapter/index.js'
 
 // Core types

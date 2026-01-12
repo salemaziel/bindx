@@ -1,5 +1,5 @@
 import type { QuerySpec, QueryFieldSpec } from '../selection/buildQuery.js'
-import type { BackendAdapter, FetchOptions } from './types.js'
+import type { BackendAdapter, Query, QueryResult, QueryOptions, GetQuery, ListQuery } from './types.js'
 
 /**
  * In-memory data store structure
@@ -74,59 +74,197 @@ export class MockAdapter implements BackendAdapter {
 		}
 	}
 
-	async fetchOne(
-		entityType: string,
-		id: string,
-		query: QuerySpec,
-		options?: FetchOptions,
-	): Promise<Record<string, unknown>> {
-		this.log('fetchOne', { entityType, id, query })
+	async query(queries: readonly Query[], options?: QueryOptions): Promise<QueryResult[]> {
+		this.log('query', { queries })
 		await this.simulateDelay(options?.signal)
 
-		const entityStore = this.store[entityType]
-		if (!entityStore) {
-			throw new Error(`Entity type '${entityType}' not found in store`)
-		}
-
-		const entity = entityStore[id]
-		if (!entity) {
-			throw new Error(`Entity '${entityType}:${id}' not found`)
-		}
-
-		// Project only requested fields
-		const result = this.projectFields(entity, query.fields)
-		this.log('fetchOne result', result)
-
-		return result
+		return queries.map(q => {
+			if (q.type === 'get') {
+				return this.executeGet(q)
+			} else {
+				return this.executeList(q)
+			}
+		})
 	}
 
-	async fetchMany(
-		entityType: string,
-		query: QuerySpec,
-		filter?: Record<string, unknown>,
-		options?: FetchOptions,
-	): Promise<Record<string, unknown>[]> {
-		this.log('fetchMany', { entityType, query, filter })
-		await this.simulateDelay(options?.signal)
-
-		const entityStore = this.store[entityType]
+	private executeGet(query: GetQuery): QueryResult {
+		const entityStore = this.store[query.entityType]
 		if (!entityStore) {
-			return []
+			return { type: 'get', data: null }
+		}
+
+		// Find entity by unique field(s) in 'by'
+		const by = query.by
+		const [field, value] = Object.entries(by)[0] ?? []
+
+		if (!field || value === undefined) {
+			return { type: 'get', data: null }
+		}
+
+		let entity: Record<string, unknown> | undefined
+		if (field === 'id') {
+			// Direct lookup by ID
+			entity = entityStore[value as string]
+		} else {
+			// Search by other unique field
+			entity = Object.values(entityStore).find(e => e[field] === value)
+		}
+
+		if (!entity) {
+			return { type: 'get', data: null }
+		}
+
+		const result = this.projectFields(entity, query.spec.fields)
+		this.log('executeGet result', result)
+
+		return { type: 'get', data: result }
+	}
+
+	private executeList(query: ListQuery): QueryResult {
+		const entityStore = this.store[query.entityType]
+		if (!entityStore) {
+			return { type: 'list', data: [] }
 		}
 
 		let entities = Object.values(entityStore)
 
-		// Simple filter implementation
-		if (filter) {
-			entities = entities.filter(entity => {
-				for (const [key, value] of Object.entries(filter)) {
-					if (entity[key] !== value) return false
-				}
-				return true
-			})
+		// Apply filter (simplified - matches exact values for basic filters)
+		if (query.filter) {
+			entities = this.applyFilter(entities, query.filter as Record<string, unknown>)
 		}
 
-		return entities.map(entity => this.projectFields(entity, query.fields))
+		// Apply ordering
+		if (query.orderBy && query.orderBy.length > 0) {
+			entities = this.applyOrderBy(entities, query.orderBy)
+		}
+
+		// Apply pagination
+		if (query.offset !== undefined) {
+			entities = entities.slice(query.offset)
+		}
+		if (query.limit !== undefined) {
+			entities = entities.slice(0, query.limit)
+		}
+
+		const results = entities.map(entity => this.projectFields(entity, query.spec.fields))
+		this.log('executeList result', results)
+
+		return { type: 'list', data: results }
+	}
+
+	private applyFilter(entities: Record<string, unknown>[], filter: Record<string, unknown>): Record<string, unknown>[] {
+		return entities.filter(entity => this.matchesFilter(entity, filter))
+	}
+
+	private matchesFilter(entity: Record<string, unknown>, filter: Record<string, unknown>): boolean {
+		for (const [key, condition] of Object.entries(filter)) {
+			if (key === 'and' && Array.isArray(condition)) {
+				if (!condition.every(c => this.matchesFilter(entity, c as Record<string, unknown>))) {
+					return false
+				}
+				continue
+			}
+			if (key === 'or' && Array.isArray(condition)) {
+				if (!condition.some(c => this.matchesFilter(entity, c as Record<string, unknown>))) {
+					return false
+				}
+				continue
+			}
+			if (key === 'not' && condition && typeof condition === 'object') {
+				if (this.matchesFilter(entity, condition as Record<string, unknown>)) {
+					return false
+				}
+				continue
+			}
+
+			const fieldValue = entity[key]
+			if (condition && typeof condition === 'object' && !Array.isArray(condition)) {
+				// It's a condition object like { eq: 'value' }
+				if (!this.matchesCondition(fieldValue, condition as Record<string, unknown>)) {
+					return false
+				}
+			} else {
+				// Direct value comparison (for backward compatibility)
+				if (fieldValue !== condition) {
+					return false
+				}
+			}
+		}
+		return true
+	}
+
+	private matchesCondition(value: unknown, condition: Record<string, unknown>): boolean {
+		for (const [op, expected] of Object.entries(condition)) {
+			switch (op) {
+				case 'eq':
+					if (value !== expected) return false
+					break
+				case 'notEq':
+					if (value === expected) return false
+					break
+				case 'in':
+					if (!Array.isArray(expected) || !expected.includes(value)) return false
+					break
+				case 'notIn':
+					if (Array.isArray(expected) && expected.includes(value)) return false
+					break
+				case 'lt':
+					if (typeof value !== 'number' || typeof expected !== 'number' || value >= expected) return false
+					break
+				case 'lte':
+					if (typeof value !== 'number' || typeof expected !== 'number' || value > expected) return false
+					break
+				case 'gt':
+					if (typeof value !== 'number' || typeof expected !== 'number' || value <= expected) return false
+					break
+				case 'gte':
+					if (typeof value !== 'number' || typeof expected !== 'number' || value < expected) return false
+					break
+				case 'isNull':
+					if (expected === true && value !== null && value !== undefined) return false
+					if (expected === false && (value === null || value === undefined)) return false
+					break
+				case 'contains':
+					if (typeof value !== 'string' || typeof expected !== 'string' || !value.includes(expected)) return false
+					break
+				case 'startsWith':
+					if (typeof value !== 'string' || typeof expected !== 'string' || !value.startsWith(expected)) return false
+					break
+				case 'endsWith':
+					if (typeof value !== 'string' || typeof expected !== 'string' || !value.endsWith(expected)) return false
+					break
+				case 'containsCI':
+					if (typeof value !== 'string' || typeof expected !== 'string' || !value.toLowerCase().includes(expected.toLowerCase())) return false
+					break
+			}
+		}
+		return true
+	}
+
+	private applyOrderBy(entities: Record<string, unknown>[], orderBy: readonly Record<string, unknown>[]): Record<string, unknown>[] {
+		return [...entities].sort((a, b) => {
+			for (const order of orderBy) {
+				for (const [field, direction] of Object.entries(order)) {
+					if (field.startsWith('_')) continue // Skip _random, _randomSeeded
+					const aVal = a[field]
+					const bVal = b[field]
+
+					let comparison = 0
+					if (aVal === bVal) comparison = 0
+					else if (aVal === null || aVal === undefined) comparison = 1
+					else if (bVal === null || bVal === undefined) comparison = -1
+					else if (aVal < bVal) comparison = -1
+					else comparison = 1
+
+					if (direction === 'desc' || direction === 'descNullsLast') {
+						comparison = -comparison
+					}
+
+					if (comparison !== 0) return comparison
+				}
+			}
+			return 0
+		})
 	}
 
 	async persist(
@@ -395,27 +533,6 @@ export class MockAdapter implements BackendAdapter {
 		}
 
 		return current
-	}
-
-	/**
-	 * Deep merges changes into target object
-	 */
-	private mergeDeep(target: Record<string, unknown>, source: Record<string, unknown>): void {
-		for (const [key, value] of Object.entries(source)) {
-			if (
-				value &&
-				typeof value === 'object' &&
-				!Array.isArray(value) &&
-				target[key] &&
-				typeof target[key] === 'object' &&
-				!Array.isArray(target[key])
-			) {
-				// Recursively merge nested objects
-				this.mergeDeep(target[key] as Record<string, unknown>, value as Record<string, unknown>)
-			} else {
-				target[key] = value
-			}
-		}
 	}
 
 	/**

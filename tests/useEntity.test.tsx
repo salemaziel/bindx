@@ -157,7 +157,7 @@ describe('useEntity hook', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 50 })
 
 			function TestComponent() {
-				const article = useEntity('Article', { id: 'article-1' }, e => e.title())
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e => e.title())
 
 				if (article.isLoading) {
 					return <div data-testid="loading">Loading...</div>
@@ -188,7 +188,7 @@ describe('useEntity hook', () => {
 			let accessor: ReturnType<typeof useEntity> | null = null
 
 			function TestComponent() {
-				accessor = useEntity('Article', { id: 'article-1' }, e => e.title())
+				accessor = useEntity('Article', { by: { id: 'article-1' } }, e => e.title())
 				return null
 			}
 
@@ -210,7 +210,7 @@ describe('useEntity hook', () => {
 			function TestComponent() {
 				const article = useEntity(
 					'Article',
-					{ id: 'article-1' },
+					{ by: { id: 'article-1' } },
 					e => e.title().content(),
 				)
 
@@ -246,7 +246,7 @@ describe('useEntity hook', () => {
 			function TestComponent() {
 				const article = useEntity(
 					'Article',
-					{ id: 'article-1' },
+					{ by: { id: 'article-1' } },
 					e => e.title().author(a => a.name().email()),
 				)
 
@@ -284,7 +284,7 @@ describe('useEntity hook', () => {
 			function TestComponent() {
 				const article = useEntity(
 					'Article',
-					{ id: 'article-1' },
+					{ by: { id: 'article-1' } },
 					e => e.title().tags(t => t.id().name()),
 				)
 
@@ -327,7 +327,7 @@ describe('useEntity hook', () => {
 			function TestComponent() {
 				const article = useEntity(
 					'Article',
-					{ id: 'article-1' },
+					{ by: { id: 'article-1' } },
 					e => e.title().location(l => l.id().label().lat().lng()).tags(t => t.id().name().color()),
 				)
 
@@ -376,7 +376,7 @@ describe('useEntity hook', () => {
 			function TestComponent() {
 				const article = useEntity(
 					'Article',
-					{ id: 'article-1' },
+					{ by: { id: 'article-1' } },
 					e => e.title().location(l => l.id().label()).tags(t => t.id().name()),
 				)
 
@@ -418,7 +418,7 @@ describe('useEntity hook', () => {
 			function ArticleEditorComponent() {
 				const article = useEntity(
 					'Article',
-					{ id: 'article-1' },
+					{ by: { id: 'article-1' } },
 					e => e.title().author(a => a.id().name()).location(l => l.id().label()).tags(t => t.id().name()),
 				)
 
@@ -439,7 +439,7 @@ describe('useEntity hook', () => {
 			function ArticleViewComponent() {
 				const article = useEntity(
 					'Article',
-					{ id: 'article-1' },
+					{ by: { id: 'article-1' } },
 					e => e.title().content(),
 				)
 
@@ -483,7 +483,7 @@ describe('useEntity hook', () => {
 			function TestComponent() {
 				const article = useEntity(
 					'Article',
-					{ id: 'article-1' },
+					{ by: { id: 'article-1' } },
 					e => e.title().location(l => l.id().label()).tags(t => t.id().name()),
 				)
 
@@ -519,7 +519,7 @@ describe('useEntity hook', () => {
 			function TestComponent() {
 				const article = useEntity(
 					'Article',
-					{ id: 'article-1' },
+					{ by: { id: 'article-1' } },
 					e => e.title().content(),
 				)
 
@@ -551,7 +551,7 @@ describe('useEntity hook', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent() {
-				const article = useEntity('Article', { id: 'article-1' }, e => e.title())
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e => e.title())
 
 				if (article.isLoading) {
 					return <div>Loading...</div>
@@ -600,7 +600,7 @@ describe('useEntity hook', () => {
 			function TestComponent() {
 				const article = useEntity(
 					'Article',
-					{ id: 'article-1' },
+					{ by: { id: 'article-1' } },
 					e => e.author(a => a.id().name()),
 				)
 
@@ -636,7 +636,7 @@ describe('useEntity hook', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent() {
-				const article = useEntity('Article', { id: 'article-1' }, e => e.title())
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e => e.title())
 
 				if (article.isLoading) {
 					return <div>Loading...</div>
@@ -662,7 +662,7 @@ describe('useEntity hook', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent() {
-				const article = useEntity('Article', { id: 'article-1' }, e => e.title())
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e => e.title())
 
 				if (article.isLoading) {
 					return <div>Loading...</div>
@@ -704,7 +704,7 @@ describe('useEntity hook', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent() {
-				const article = useEntity('Article', { id: 'article-1' }, e => e.title())
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e => e.title())
 
 				if (article.isLoading) {
 					return <div>Loading...</div>
@@ -754,7 +754,7 @@ describe('useEntity hook', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent() {
-				const article = useEntity('Article', { id: 'article-1' }, e => e.title())
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e => e.title())
 
 				if (article.isLoading) {
 					return <div>Loading...</div>
@@ -798,7 +798,7 @@ describe('useEntity hook', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent() {
-				const article = useEntity('Article', { id: 'article-1' }, e => e.title())
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e => e.title())
 
 				if (article.isLoading) {
 					return <div>Loading...</div>
@@ -853,7 +853,7 @@ describe('useEntity hook', () => {
 			const adapter = new MockAdapter(mockData, { delay: 0 })
 
 			function TestComponent() {
-				const article = useEntity('Article', { id: 'article-1' }, e => e.title())
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e => e.title())
 
 				if (article.isLoading) {
 					return <div>Loading...</div>
@@ -914,7 +914,7 @@ describe('useEntity hook', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 100 })
 
 			function TestComponent() {
-				const article = useEntity('Article', { id: 'article-1' }, e => e.title())
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e => e.title())
 
 				if (article.isLoading) {
 					return <div>Loading...</div>
@@ -972,7 +972,7 @@ describe('useEntity hook', () => {
 			function TestComponent() {
 				const article = useEntity(
 					'Article',
-					{ id: 'article-1' },
+					{ by: { id: 'article-1' } },
 					e => e.title().author(a => a.id().name().email()),
 				)
 
@@ -1013,7 +1013,7 @@ describe('useEntity hook', () => {
 			function TestComponent() {
 				const article = useEntity(
 					'Article',
-					{ id: 'article-1' },
+					{ by: { id: 'article-1' } },
 					e => e.title().tags(t => t.id().name()),
 				)
 
@@ -1061,7 +1061,7 @@ describe('useEntity hook', () => {
 			function TestComponent() {
 				const article = useEntity(
 					'Article',
-					{ id: 'article-1' },
+					{ by: { id: 'article-1' } },
 					e => e.title().tags(t => t.id().name()),
 				)
 
@@ -1106,7 +1106,7 @@ describe('useEntity hook', () => {
 			function TestComponent() {
 				const article = useEntity(
 					'Article',
-					{ id: 'article-1' },
+					{ by: { id: 'article-1' } },
 					e => e.title().author(AuthorFragment),
 				)
 
@@ -1167,7 +1167,7 @@ describe('useEntity hook', () => {
 			function TestComponent() {
 				const article = useEntity(
 					'Article',
-					{ id: 'article-1' },
+					{ by: { id: 'article-1' } },
 					e => e.title().author(a => a.id().name().email()),
 				)
 
@@ -1207,7 +1207,7 @@ describe('useEntity hook', () => {
 			function TestComponent() {
 				const article = useEntity(
 					'Article',
-					{ id: 'article-1' },
+					{ by: { id: 'article-1' } },
 					e => e.title().tags(t => t.id().name()),
 				)
 
@@ -1272,7 +1272,7 @@ describe('useEntity hook', () => {
 			function TestComponent() {
 				const article = useEntity(
 					'Article',
-					{ id: 'article-1' },
+					{ by: { id: 'article-1' } },
 					e => e.title().tags(t => t.id().name()),
 				)
 
@@ -1336,7 +1336,7 @@ describe('useEntity hook', () => {
 			function TestComponent() {
 				const article = useEntity(
 					'Article',
-					{ id: 'article-1' },
+					{ by: { id: 'article-1' } },
 					e => e.title().tags(t => t.id().name()),
 				)
 

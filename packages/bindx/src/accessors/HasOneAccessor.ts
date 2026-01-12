@@ -224,22 +224,25 @@ export class HasOneAccessorImpl<TData extends object>
 
 	private async fetchEntity(id: string, version: number): Promise<void> {
 		try {
-			const query = buildQueryFromSelection(this.meta)
-			const data = await this.adapter.fetchOne(this.relatedEntityType, id, query)
+			const spec = buildQueryFromSelection(this.meta)
+			const results = await this.adapter.query([
+				{ type: 'get', entityType: this.relatedEntityType, by: { id }, spec },
+			])
 
 			// Check if this fetch is still relevant (not superseded by newer connect call)
 			if (version !== this._fetchVersion) {
 				return
 			}
 
-			if (data) {
+			const result = results[0]
+			if (result && result.type === 'get' && result.data) {
 				this._entity = new EntityAccessorImpl(
 					id,
 					this.relatedEntityType,
 					this.meta,
 					this.adapter,
 					this.identityMap,
-					data as TData,
+					result.data as TData,
 					this.onChange,
 					false,
 				)

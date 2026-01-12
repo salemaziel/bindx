@@ -14,6 +14,12 @@ import type { EntityFields } from '@contember/bindx'
 export interface UseEntityListOptions {
 	/** Optional filter criteria */
 	filter?: Record<string, unknown>
+	/** Optional ordering */
+	orderBy?: readonly Record<string, unknown>[]
+	/** Optional limit */
+	limit?: number
+	/** Optional offset */
+	offset?: number
 }
 
 /**
@@ -123,12 +129,17 @@ export function useEntityListImpl<TResult extends object>(
 	selectionMeta: SelectionMeta,
 	schema: SchemaRegistry<Record<string, object>>,
 ): EntityListAccessorResult<TResult> {
-	const { store, dispatcher, adapter } = useBindxContext()
+	const { store, dispatcher, batcher } = useBindxContext()
 
-	// Generate stable filter key for dependency tracking
-	const filterKey = useMemo(
-		() => JSON.stringify(options.filter ?? {}),
-		[options.filter],
+	// Generate stable options key for dependency tracking
+	const optionsKey = useMemo(
+		() => JSON.stringify({
+			filter: options.filter ?? {},
+			orderBy: options.orderBy ?? [],
+			limit: options.limit,
+			offset: options.offset,
+		}),
+		[options.filter, options.orderBy, options.limit, options.offset],
 	)
 
 	// Track list state in a ref
@@ -249,27 +260,40 @@ export function useEntityListImpl<TResult extends object>(
 
 		const fetchData = async () => {
 			try {
-				if (!adapter.fetchMany) {
-					throw new Error('Adapter does not support fetchMany')
+				const spec = buildQueryFromSelection(selectionMeta)
+				// Parse optionsKey to get the actual options (avoids stale closure issues)
+				const currentOptions = JSON.parse(optionsKey) as {
+					filter: Record<string, unknown>
+					orderBy: readonly Record<string, unknown>[]
+					limit?: number
+					offset?: number
 				}
-
-				const query = buildQueryFromSelection(selectionMeta)
-				const results = await adapter.fetchMany(
-					entityType,
-					query,
-					options.filter,
+				const result = await batcher.enqueue(
+					{
+						type: 'list',
+						entityType,
+						filter: currentOptions.filter,
+						orderBy: currentOptions.orderBy,
+						limit: currentOptions.limit,
+						offset: currentOptions.offset,
+						spec,
+					},
 					{ signal: abortController.signal },
 				)
 
 				if (abortController.signal.aborted) return
 
+				if (result.type !== 'list') {
+					throw new Error('Unexpected query result type')
+				}
+
 				// Store each entity in the SnapshotStore
-				const items = results.map((result) => {
-					const id = result['id'] as string
+				const items = result.data.map((data: Record<string, unknown>) => {
+					const id = data['id'] as string
 					dispatcher.dispatch(
-						setEntityData(entityType, id, result, true),
+						setEntityData(entityType, id, data, true),
 					)
-					return { id, data: result as TResult }
+					return { id, data: data as TResult }
 				})
 
 				listStateRef.current = { status: 'ready', items }
@@ -293,7 +317,7 @@ export function useEntityListImpl<TResult extends object>(
 		return () => {
 			abortController.abort()
 		}
-	}, [entityType, filterKey, adapter, dispatcher, selectionMeta, options.filter])
+	}, [entityType, optionsKey, batcher, dispatcher, selectionMeta])
 
 	return accessor
 }

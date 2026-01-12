@@ -48,6 +48,8 @@ export function createCollectorProxy<T>(
 		fields: fieldsProxy,
 		data: null,
 		isDirty: false,
+		persistedId: null,
+		isNew: true,
 		__entityType: undefined as unknown as T,
 		__entityName: '__collector__',
 		__availableRoles: [] as readonly string[],
@@ -94,6 +96,7 @@ function createCollectorFieldRef(
 
 		// HasManyRef properties
 		length: 0,
+		items: [],
 		map: <R>(fn: (item: EntityRef<unknown>, index: number) => R): R[] => {
 			// Update selection to mark as array relation
 			selection.addField({
@@ -113,6 +116,7 @@ function createCollectorFieldRef(
 		},
 		add: () => {},
 		remove: () => {},
+		connect: () => {},
 
 		// HasOneRef properties
 		id: null,
@@ -153,8 +157,10 @@ function createCollectorFieldRef(
 			})
 			return createCollectorProxy<unknown>(nestedSelection, [])
 		},
-		connect: () => {},
+		// HasOneRef methods (connect already added above for HasManyRef)
 		disconnect: () => {},
+		delete: () => {},
+		reset: () => {},
 
 		// Type brand (phantom property - only exists in type system)
 		__entityType: undefined as unknown,
@@ -188,6 +194,12 @@ export function createRuntimeAccessor<T>(
 			const snap = store.getEntitySnapshot(entityType, entityId)
 			if (!snap) return false
 			return !deepEqual(snap.data, snap.serverData)
+		},
+		get persistedId() {
+			return store.getPersistedId(entityType, entityId)
+		},
+		get isNew() {
+			return store.isNewEntity(entityType, entityId)
 		},
 		__entityType: undefined as unknown as T,
 		__entityName: entityType,
@@ -260,6 +272,29 @@ function createRuntimeFieldRef(
 		get length() {
 			const items = getValue()
 			return Array.isArray(items) ? items.length : 0
+		},
+		get items(): EntityRef<unknown>[] {
+			const items = getValue()
+			if (!Array.isArray(items)) return []
+
+			return items.map((item: unknown) => {
+				if (typeof item !== 'object' || item === null || !('id' in item)) {
+					throw new Error(`HasMany items must have an 'id' property`)
+				}
+				const itemId = (item as { id: string }).id
+				const nestedEntityType = `${entityType}_${fieldName}`
+
+				if (!store.hasEntity(nestedEntityType, itemId)) {
+					store.setEntityData(nestedEntityType, itemId, item as Record<string, unknown>, true)
+				}
+
+				return createRuntimeAccessor<unknown>(
+					nestedEntityType,
+					itemId,
+					store,
+					notifyChange,
+				)
+			})
 		},
 		map: <R>(fn: (item: EntityRef<unknown>, index: number) => R): R[] => {
 			const items = getValue()
@@ -363,11 +398,44 @@ function createRuntimeFieldRef(
 			)
 		},
 		connect: (id: string) => {
-			// In real implementation, this would update relation state
-			setValue({ id })
+			// Check if this is a HasMany (array) or HasOne (object) relation
+			const currentValue = getValue()
+			if (Array.isArray(currentValue)) {
+				// HasManyRef.connect - add item to list
+				const items = [...currentValue]
+				if (!items.some((item: unknown) => (item as { id: string }).id === id)) {
+					items.push({ id })
+				}
+				setValue(items)
+			} else {
+				// HasOneRef.connect - set the related entity
+				setValue({ id })
+			}
 		},
-		disconnect: () => {
+		disconnect: (itemId?: string | null) => {
+			const currentValue = getValue()
+			if (Array.isArray(currentValue) && itemId) {
+				// HasManyRef.disconnect - remove item from list
+				const filtered = currentValue.filter((item: unknown) => {
+					if (typeof item !== 'object' || item === null || !('id' in item)) return true
+					return (item as { id: string }).id !== itemId
+				})
+				setValue(filtered)
+			} else if (!itemId) {
+				// HasOneRef.disconnect - clear the relation
+				setValue(null)
+			}
+			// If itemId is null for HasMany, it's a no-op
+		},
+		delete: () => {
+			// For HasOneRef - mark relation for deletion
+			// In real implementation, this would update relation state
 			setValue(null)
+		},
+		reset: () => {
+			// Reset to server value
+			const serverValue = getServerValue()
+			setValue(serverValue)
 		},
 
 		// Type brand (phantom property - only exists in type system)
@@ -448,6 +516,8 @@ function createPlaceholderAccessor<T>(): EntityRef<T> {
 		fields: fieldsProxy,
 		data: null,
 		isDirty: false,
+		persistedId: null,
+		isNew: false,
 		__entityType: undefined as unknown as T,
 		__entityName: '__placeholder__',
 		__availableRoles: [] as readonly string[],

@@ -157,6 +157,21 @@ export class EntityHandle<T extends object = object, TSelected = T> extends Enti
 	}
 
 	/**
+	 * Gets the persisted ID (server-assigned ID after create).
+	 * Returns the ID itself if it's already a real ID, null if it's a temp ID without mapping.
+	 */
+	get persistedId(): string | null {
+		return this.store.getPersistedId(this.entityType, this.entityId)
+	}
+
+	/**
+	 * Checks if this entity is new (created locally, not yet persisted to server).
+	 */
+	get isNew(): boolean {
+		return this.store.isNewEntity(this.entityType, this.entityId)
+	}
+
+	/**
 	 * Gets a field handle for a specific field.
 	 * Returns cached handle to ensure stable identity.
 	 */
@@ -933,6 +948,20 @@ export class PlaceholderHandle<TEntity extends object = object, TSelected = TEnt
 			this.fieldName,
 		)
 		return relation ? Object.keys(relation.placeholderData).length > 0 : false
+	}
+
+	/**
+	 * Placeholder entities are always new (not yet persisted).
+	 */
+	get persistedId(): null {
+		return null
+	}
+
+	/**
+	 * Placeholder entities are always new.
+	 */
+	get isNew(): boolean {
+		return true
 	}
 
 	/**

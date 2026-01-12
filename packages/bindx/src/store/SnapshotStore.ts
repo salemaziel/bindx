@@ -100,6 +100,9 @@ export class SnapshotStore {
 	/** Parent-child relationships: childKey -> Set of parentKeys */
 	private readonly childToParents = new Map<string, Set<string>>()
 
+	/** Mapping from temp ID to persisted ID (keyed by "entityType:tempId") */
+	private readonly tempToPersistedId = new Map<string, string>()
+
 	// ==================== Key Generation ====================
 
 	private getEntityKey(entityType: string, id: string): string {
@@ -352,6 +355,84 @@ export class SnapshotStore {
 	isScheduledForDeletion(entityType: string, id: string): boolean {
 		const key = this.getEntityKey(entityType, id)
 		return this.entityMetas.get(key)?.isScheduledForDeletion ?? false
+	}
+
+	// ==================== Create Mode (Temp ID Management) ====================
+
+	/**
+	 * Creates a new entity with a temporary ID for create mode.
+	 * The entity is initialized with `existsOnServer: false`.
+	 *
+	 * @param entityType - The entity type name
+	 * @param initialData - Optional initial data for the entity
+	 * @returns The generated temporary ID
+	 */
+	createEntity(entityType: string, initialData?: Record<string, unknown>): string {
+		const tempId = `__temp_${crypto.randomUUID()}`
+		const data = { id: tempId, ...initialData }
+
+		// Create snapshot with initial data (not server data)
+		this.setEntityData(entityType, tempId, data, false)
+
+		// Mark as not existing on server
+		this.setExistsOnServer(entityType, tempId, false)
+
+		return tempId
+	}
+
+	/**
+	 * Maps a temporary ID to its persisted (server-assigned) ID after successful creation.
+	 * Also updates `existsOnServer` to true.
+	 *
+	 * @param entityType - The entity type name
+	 * @param tempId - The temporary ID
+	 * @param persistedId - The server-assigned ID
+	 */
+	mapTempIdToPersistedId(entityType: string, tempId: string, persistedId: string): void {
+		const key = this.getEntityKey(entityType, tempId)
+		this.tempToPersistedId.set(key, persistedId)
+
+		// Update existsOnServer flag
+		this.setExistsOnServer(entityType, tempId, true)
+
+		// Notify subscribers about the change
+		this.notifyEntitySubscribers(key)
+	}
+
+	/**
+	 * Gets the persisted ID for an entity.
+	 * Returns the ID itself if it's already a real ID, null if it's a temp ID without mapping.
+	 *
+	 * @param entityType - The entity type name
+	 * @param id - The entity ID (can be temp or real)
+	 * @returns The persisted ID or null if not yet persisted
+	 */
+	getPersistedId(entityType: string, id: string): string | null {
+		// If ID doesn't start with __temp_, it's already a real ID
+		if (!id.startsWith('__temp_')) {
+			return id
+		}
+
+		const key = this.getEntityKey(entityType, id)
+		return this.tempToPersistedId.get(key) ?? null
+	}
+
+	/**
+	 * Checks if an entity is new (created locally, not yet persisted to server).
+	 *
+	 * @param entityType - The entity type name
+	 * @param id - The entity ID
+	 * @returns true if the entity is new (has temp ID and no persisted mapping)
+	 */
+	isNewEntity(entityType: string, id: string): boolean {
+		// If ID doesn't start with __temp_, it's not a new entity
+		if (!id.startsWith('__temp_')) {
+			return false
+		}
+
+		// Check if we have a persisted mapping - if so, it's no longer "new"
+		const key = this.getEntityKey(entityType, id)
+		return !this.tempToPersistedId.has(key)
 	}
 
 	// ==================== Has-Many State ====================

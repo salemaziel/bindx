@@ -305,8 +305,8 @@ export interface RoleAwareEntityProps<
 	/** Entity type name */
 	name: TEntityName
 
-	/** Entity ID */
-	id: string
+	/** Unique field(s) to identify the entity (e.g., { id: '...' } or { slug: '...' }) */
+	by: Record<string, unknown>
 
 	/** Optional roles - when provided, entity type is narrowed to intersection of these roles */
 	roles?: TRoles
@@ -693,7 +693,7 @@ export function createRoleAwareBindx<TRoleSchemas extends RoleSchemasBase<TRoleS
 		const TRoles extends readonly (keyof TRoleSchemas & string)[] | undefined = undefined,
 	>({
 		name,
-		id,
+		by,
 		roles,
 		children: renderFn,
 		loading,
@@ -703,17 +703,20 @@ export function createRoleAwareBindx<TRoleSchemas extends RoleSchemasBase<TRoleS
 		const { store } = useBindxContext()
 		const entityType = name as string
 
+		// Stable key for the 'by' clause
+		const byKey = useMemo(() => JSON.stringify(by), [by])
+
 		// Phase 1: Collect JSX selection (same as standard Entity)
 		const { standardSelection, queryKey } = useSelectionCollection({
 			entityType,
-			entityId: id,
+			entityId: byKey,
 			children: renderFn as (entity: JsxEntityRef<object>) => ReactNode,
 		})
 
 		// Phase 2: Load data using core hook (same as standard Entity)
 		const result = useEntityCore({
 			entityType,
-			id,
+			by,
 			selectionMeta: standardSelection,
 			queryKey,
 		})
@@ -731,13 +734,16 @@ export function createRoleAwareBindx<TRoleSchemas extends RoleSchemasBase<TRoleS
 		}
 
 		if (result.status === 'not_found') {
-			return <>{notFound ?? <div className="bindx-not-found">{entityType} with id &quot;{id}&quot; not found</div>}</>
+			const byDescription = Object.entries(by).map(([k, v]) => `${k}="${v}"`).join(', ')
+			return <>{notFound ?? <div className="bindx-not-found">{entityType} with {byDescription} not found</div>}</>
 		}
 
 		// Phase 3: Runtime render with real data (same as standard Entity)
+		// Get ID from loaded snapshot data
+		const entityId = (result.snapshot?.data as Record<string, unknown> | undefined)?.['id'] as string
 		const accessor = createRuntimeAccessor<object>(
 			entityType,
-			id,
+			entityId,
 			store,
 			() => {}, // Changes are automatically handled by useSyncExternalStore
 		)
@@ -751,8 +757,8 @@ export function createRoleAwareBindx<TRoleSchemas extends RoleSchemasBase<TRoleS
 		// Provide entity context for HasRole
 		const entityContext: EntityContextValue = {
 			entityType,
-			entityId: id,
-			storeKey: `${entityType}:${id}`,
+			entityId,
+			storeKey: `${entityType}:${entityId}`,
 		}
 
 		return (

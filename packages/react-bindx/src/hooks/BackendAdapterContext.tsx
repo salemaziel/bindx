@@ -6,6 +6,7 @@ import { PersistenceManager } from '@contember/bindx'
 import { MockMutationCollector } from '@contember/bindx'
 import { SchemaRegistry } from '@contember/bindx'
 import { UndoManager } from '@contember/bindx'
+import { QueryBatcher } from '../batching/QueryBatcher.js'
 
 /**
  * Context value containing all bindx services
@@ -13,6 +14,8 @@ import { UndoManager } from '@contember/bindx'
 export interface BindxContextValue {
 	/** Backend adapter for data fetching/persistence */
 	adapter: BackendAdapter
+	/** Query batcher for combining multiple queries into single requests */
+	batcher: QueryBatcher
 	/** Immutable snapshot store */
 	store: SnapshotStore
 	/** Action dispatcher for mutations */
@@ -76,6 +79,7 @@ export function BindxProvider({
 	const services = useMemo(() => {
 		const store = customStore ?? new SnapshotStore()
 		const dispatcher = new ActionDispatcher(store)
+		const batcher = new QueryBatcher(adapter)
 
 		// Create undo manager if enabled
 		const undoManager = enableUndo ? new UndoManager(store, undoConfig) : null
@@ -97,6 +101,7 @@ export function BindxProvider({
 
 		return {
 			adapter,
+			batcher,
 			store,
 			dispatcher,
 			persistence,
@@ -166,6 +171,18 @@ export function useBindxContext(): BindxContextValue {
 		throw new Error('useBindxContext must be used within a BindxProvider')
 	}
 	return context
+}
+
+/**
+ * Hook to access the query batcher.
+ * Must be used within a BindxProvider.
+ */
+export function useQueryBatcher(): QueryBatcher {
+	const context = useContext(BindxContext)
+	if (!context) {
+		throw new Error('useQueryBatcher must be used within a BindxProvider')
+	}
+	return context.batcher
 }
 
 // Legacy export for backward compatibility during migration

@@ -1,7 +1,7 @@
 import { GraphQlClient } from '@contember/graphql-client'
-import { ContentClient, ContentQueryBuilder, ContentEntitySelection, SchemaNames } from '@contember/client-content'
+import { ContentClient, ContentQueryBuilder, ContentEntitySelection, SchemaNames, ContentQuery } from '@contember/client-content'
 import type { QuerySpec, QueryFieldSpec } from '../selection/buildQuery.js'
-import type { BackendAdapter, FetchOptions } from './types.js'
+import type { BackendAdapter, Query, QueryResult, QueryOptions, GetQuery, ListQuery } from './types.js'
 
 /**
  * Options for ContemberAdapter
@@ -17,7 +17,7 @@ export interface ContemberAdapterOptions {
  * Backend adapter for Contember Content API.
  * Uses @contember/client-content for type-safe GraphQL operations.
  */
-export class ContemberAdapter implements BackendAdapter {	
+export class ContemberAdapter implements BackendAdapter {
 
 	constructor(
 		private readonly contentClient: ContentClient,
@@ -25,44 +25,58 @@ export class ContemberAdapter implements BackendAdapter {
 	) {
 	}
 
-	async fetchOne(
-		entityType: string,
-		id: string,
-		query: QuerySpec,
-		options?: FetchOptions,
-	): Promise<Record<string, unknown>> {
-		const selection = this.buildEntitySelection(entityType, query)
-		const contentQuery = this.queryBuilder.get(entityType, { by: { id } }, selection)
+	async query(queries: readonly Query[], options?: QueryOptions): Promise<QueryResult[]> {
+		if (queries.length === 0) return []
 
-		const result = await this.contentClient.query(contentQuery, {
-			signal: options?.signal,
-		})
+		// Build ContentQuery for each query
+		const contentQueries: Record<string, ContentQuery<unknown>> = {}
 
-		if (result === null) {
-			throw new Error(`Entity '${entityType}:${id}' not found`)
+		for (let i = 0; i < queries.length; i++) {
+			const q = queries[i]!
+			const key = `q${i}`
+
+			if (q.type === 'get') {
+				contentQueries[key] = this.buildGetQuery(q)
+			} else {
+				contentQueries[key] = this.buildListQuery(q)
+			}
 		}
 
-		return result as Record<string, unknown>
-	}
-
-	async fetchMany(
-		entityType: string,
-		query: QuerySpec,
-		filter?: Record<string, unknown>,
-		options?: FetchOptions,
-	): Promise<Record<string, unknown>[]> {
-		const selection = this.buildEntitySelection(entityType, query)
-		const contentQuery = this.queryBuilder.list(
-			entityType,
-			{ filter: filter as any },
-			selection,
-		)
-
-		const result = await this.contentClient.query(contentQuery, {
+		// Execute all queries in single request
+		const results = await this.contentClient.query(contentQueries, {
 			signal: options?.signal,
 		})
 
-		return result as Record<string, unknown>[]
+		// Map results back to QueryResult array
+		return queries.map((q, i) => {
+			const key = `q${i}`
+			const data = (results as Record<string, unknown>)[key]
+
+			if (q.type === 'get') {
+				return { type: 'get' as const, data: data as Record<string, unknown> | null }
+			} else {
+				return { type: 'list' as const, data: (data ?? []) as readonly Record<string, unknown>[] }
+			}
+		})
+	}
+
+	private buildGetQuery(query: GetQuery): ContentQuery<unknown> {
+		const selection = this.buildEntitySelection(query.spec)
+		return this.queryBuilder.get(query.entityType, { by: query.by as any }, selection)
+	}
+
+	private buildListQuery(query: ListQuery): ContentQuery<unknown> {
+		const selection = this.buildEntitySelection(query.spec)
+		return this.queryBuilder.list(
+			query.entityType,
+			{
+				filter: query.filter as any,
+				orderBy: query.orderBy as any,
+				limit: query.limit,
+				offset: query.offset,
+			},
+			selection,
+		)
 	}
 
 	async persist(
@@ -112,7 +126,6 @@ export class ContemberAdapter implements BackendAdapter {
 	 * Builds ContentEntitySelection from QuerySpec
 	 */
 	private buildEntitySelection(
-		entityType: string,
 		query: QuerySpec,
 	): (selection: ContentEntitySelection) => ContentEntitySelection {
 		return (selection: ContentEntitySelection) => {

@@ -3,6 +3,7 @@ import { GraphQlClient } from '@contember/graphql-client'
 import { ContentClient, ContentQueryBuilder, type SchemaNames } from '@contember/client-content'
 import { ContemberAdapter, SnapshotStore, ActionDispatcher, PersistenceManager, MutationCollector } from '@contember/bindx'
 import { BindxContext, type BindxContextValue } from './BackendAdapterContext.js'
+import { QueryBatcher } from '../batching/QueryBatcher.js'
 
 /**
  * Props for ContemberBindxProvider
@@ -51,6 +52,7 @@ export const ContemberBindxProvider = memo(function ContemberBindxProvider({
 	const bindxValue = useMemo((): BindxContextValue => {
 
 		const adapter = new ContemberAdapter(new ContentClient(graphQlClient), new ContentQueryBuilder(schema))
+		const batcher = new QueryBatcher(adapter)
 
 		const store = customStore ?? new SnapshotStore()
 		const dispatcher = new ActionDispatcher(store)
@@ -64,6 +66,7 @@ export const ContemberBindxProvider = memo(function ContemberBindxProvider({
 
 		return {
 			adapter,
+			batcher,
 			store,
 			dispatcher,
 			persistence,

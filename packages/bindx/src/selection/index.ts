@@ -18,8 +18,6 @@ export {
 	type EntityWhere,
 	type EntityOrderBy,
 	type ScalarCondition,
-	type StringCondition,
-	type ConditionFor,
 	type OrderDirection,
 	type TypedHasManyOptions,
 	type AliasOptions,

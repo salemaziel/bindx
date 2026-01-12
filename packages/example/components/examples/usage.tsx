@@ -53,7 +53,7 @@ export const AuthorBioImplicit = createComponent()
  */
 export const ArticleImplicitInImplicit = () => {
 	return (
-		<Entity name="Article" id="some-article-id">
+		<Entity name="Article" by={{ id: 'some-article-id' }}>
 			{article => (
 				<article className="article-detail">
 					<header>
@@ -73,7 +73,7 @@ export const ArticleImplicitInImplicit = () => {
  */
 export const ArticleExplicitInImplicit = () => {
 	return (
-		<Entity name="Article" id="some-article-id">
+		<Entity name="Article" by={{ id: 'some-article-id' }}>
 			{article => (
 				<article className="article-detail">
 					<header>
@@ -93,7 +93,7 @@ export const ArticleExplicitInImplicit = () => {
  * The component's $author fragment is used in the selection.
  */
 export const ArticleExplicitInExplicit = () => {
-	const article = useEntity('Article', { id: 'some-article-id' }, e =>
+	const article = useEntity('Article', { by: { id: 'some-article-id' } }, e =>
 		e.title().author(AuthorArticlesExplicit.$author),
 	)
 
@@ -124,7 +124,7 @@ export const ArticleExplicitInExplicit = () => {
 export const ArticleImplicitInExplicit = () => {
 	// Use mergeFragments to combine fragment selections from both components
 	// This ensures the EntityRef has the required brands for both components
-	const article = useEntity('Article', { id: 'some-article-id' }, e =>
+	const article = useEntity('Article', { by: { id: 'some-article-id' } }, e =>
 		e.title().author(mergeFragments(AuthorArticlesImplicit.$author, AuthorBioImplicit.$author)),
 	)
 

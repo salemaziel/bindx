@@ -19,10 +19,16 @@ interface PendingPersist {
  */
 export interface MutationDataCollector {
 	/**
-	 * Collects mutation data for an entity.
+	 * Collects mutation data for updating an existing entity.
 	 * Returns the mutation input or null if no changes.
 	 */
 	collectUpdateData(entityType: string, entityId: string): Record<string, unknown> | null
+
+	/**
+	 * Collects mutation data for creating a new entity.
+	 * Returns the mutation input or null if no data.
+	 */
+	collectCreateData?(entityType: string, entityId: string): Record<string, unknown> | null
 }
 
 /**
@@ -84,6 +90,7 @@ export class PersistenceManager {
 
 	/**
 	 * Persists an entity's changes to the backend.
+	 * Handles both create (new entities) and update (existing entities) operations.
 	 *
 	 * If already persisting, waits for the existing operation to complete.
 	 * This prevents duplicate requests and ensures consistency.
@@ -99,16 +106,22 @@ export class PersistenceManager {
 
 		const abortController = new AbortController()
 
-		const promise = this.doPersist(entityType, id, abortController.signal)
-			.finally(() => {
-				this.pending.delete(key)
-				this.dispatcher.dispatch(setPersisting(entityType, id, false))
-			})
+		// Check if this is a new entity (not yet on server)
+		const existsOnServer = this.store.existsOnServer(entityType, id)
 
-		this.pending.set(key, { promise, abortController })
+		const promise = existsOnServer
+			? this.doPersist(entityType, id, abortController.signal)
+			: this.doCreate(entityType, id, abortController.signal)
+
+		const wrappedPromise = promise.finally(() => {
+			this.pending.delete(key)
+			this.dispatcher.dispatch(setPersisting(entityType, id, false))
+		})
+
+		this.pending.set(key, { promise: wrappedPromise, abortController })
 		this.dispatcher.dispatch(setPersisting(entityType, id, true))
 
-		return promise
+		return wrappedPromise
 	}
 
 	/**
@@ -164,6 +177,94 @@ export class PersistenceManager {
 			// Unblock undo after persist completes (success or failure)
 			this.undoManager?.unblock()
 		}
+	}
+
+	/**
+	 * Performs the create operation for new entities.
+	 */
+	private async doCreate(
+		entityType: string,
+		id: string,
+		signal: AbortSignal,
+	): Promise<void> {
+		// Block undo during persist
+		this.undoManager?.block()
+
+		try {
+			const snapshot = this.store.getEntitySnapshot(entityType, id)
+			if (!snapshot) {
+				throw new Error(`Entity ${entityType}:${id} not found`)
+			}
+
+			// Collect create data using custom collector or all data
+			let createData: Record<string, unknown> | null
+
+			if (this.mutationCollector?.collectCreateData) {
+				// Use custom mutation collector (e.g., for Contember nested operations)
+				createData = this.mutationCollector.collectCreateData(entityType, id)
+			} else {
+				// Simple approach - use all data except temp id
+				createData = this.collectCreateData(snapshot.data as Record<string, unknown>)
+			}
+
+			if (!createData || Object.keys(createData).length === 0) {
+				// Nothing to create - mark as created with same ID
+				// This handles the case where entity has no data yet
+				return
+			}
+
+			if (!this.adapter.create) {
+				throw new Error('Adapter does not support create operation')
+			}
+
+			// Create entity on backend
+			const result = await this.adapter.create(entityType, createData)
+
+			// Check if aborted
+			if (signal.aborted) {
+				throw new Error('Create operation was aborted')
+			}
+
+			const persistedId = result['id'] as string
+
+			// Map temp ID to persisted ID in store
+			this.store.mapTempIdToPersistedId(entityType, id, persistedId)
+
+			// Commit changes (serverData = data)
+			this.dispatcher.dispatch(commitEntity(entityType, id))
+
+			// Commit all relations (hasOne and hasMany)
+			this.store.commitAllRelations(entityType, id)
+		} finally {
+			// Unblock undo after persist completes (success or failure)
+			this.undoManager?.unblock()
+		}
+	}
+
+	/**
+	 * Collects data for creating a new entity.
+	 * Excludes the temporary ID.
+	 */
+	private collectCreateData(
+		data: Record<string, unknown>,
+	): Record<string, unknown> {
+		const createData: Record<string, unknown> = {}
+
+		for (const [key, value] of Object.entries(data)) {
+			// Skip the temp ID
+			if (key === 'id' && typeof value === 'string' && value.startsWith('__temp_')) {
+				continue
+			}
+
+			// Skip null/undefined values
+			if (value === null || value === undefined) {
+				continue
+			}
+
+			createData[key] = value
+		}
+
+		return createData
 	}
 
 	/**

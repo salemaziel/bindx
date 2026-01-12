@@ -9,7 +9,7 @@ import { TextInput } from './inputs/index.js'
 export function UndoDemo({ id }: { id: string }): React.ReactElement {
 	const { canUndo, canRedo, undo, redo, undoCount, redoCount, beginGroup, endGroup } = useUndo()
 
-	const article = useEntity('Article', { id }, e => e.id().title().content())
+	const article = useEntity('Article', { by: { id } }, e => e.id().title().content())
 
 	if (article.isLoading) {
 		return <div className="loading">Loading...</div>

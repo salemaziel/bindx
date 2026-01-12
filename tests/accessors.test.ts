@@ -368,11 +368,14 @@ describe('MockAdapter projection', () => {
 		const adapter = new MockAdapter(mockData, { delay: 0 })
 
 		const builder = createSelectionBuilder<Article>()
-		const result = builder.title().location(l => l.id().label().lat().lng())
-		const meta = getSelectionMeta(result)
+		const selectionResult = builder.title().location(l => l.id().label().lat().lng())
+		const meta = getSelectionMeta(selectionResult)
 		const query = buildQueryFromSelection(meta)
 
-		const data = await adapter.fetchOne('Article', 'article-1', query)
+		const results = await adapter.query([{ type: 'get', entityType: 'Article', by: { id: 'article-1' }, spec: query }])
+		const result = results[0]!
+		if (result.type !== 'get' || !result.data) throw new Error('Expected get result')
+		const data = result.data
 
 		expect(data['title']).toBe('Test')
 		expect(data['location']).toBeDefined()
@@ -397,11 +400,14 @@ describe('MockAdapter projection', () => {
 		const adapter = new MockAdapter(mockData, { delay: 0 })
 
 		const builder = createSelectionBuilder<Article>()
-		const result = builder.title().tags(t => t.id().name().color())
-		const meta = getSelectionMeta(result)
+		const resultBuilder = builder.title().tags(t => t.id().name().color())
+		const meta = getSelectionMeta(resultBuilder)
 		const query = buildQueryFromSelection(meta)
 
-		const data = await adapter.fetchOne('Article', 'article-1', query)
+		const results = await adapter.query([{ type: 'get', entityType: 'Article', by: { id: 'article-1' }, spec: query }])
+		const result = results[0]!
+		if (result.type !== 'get' || !result.data) throw new Error('Expected get result')
+		const data = result.data
 
 		expect(data['title']).toBe('Test')
 		expect(data['tags']).toBeDefined()
@@ -434,11 +440,14 @@ describe('MockAdapter projection', () => {
 		const adapter = new MockAdapter(mockData, { delay: 0 })
 
 		const builder = createSelectionBuilder<Article>()
-		const result = builder.title().location(l => l.id().label().lat().lng()).tags(t => t.id().name().color())
-		const meta = getSelectionMeta(result)
+		const resultBuilder = builder.title().location(l => l.id().label().lat().lng()).tags(t => t.id().name().color())
+		const meta = getSelectionMeta(resultBuilder)
 		const query = buildQueryFromSelection(meta)
 
-		const data = await adapter.fetchOne('Article', 'article-1', query)
+		const results = await adapter.query([{ type: 'get', entityType: 'Article', by: { id: 'article-1' }, spec: query }])
+		const result = results[0]!
+		if (result.type !== 'get' || !result.data) throw new Error('Expected get result')
+		const data = result.data
 
 		expect(data['title']).toBe('Test')
 		expect(data['location']).toBeDefined()

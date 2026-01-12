@@ -14,6 +14,12 @@ export interface UseSelectionCollectionForListOptions<T> {
 	entityType: string
 	/** Optional filter (for dependency tracking) */
 	filter?: Record<string, unknown>
+	/** Optional ordering (for dependency tracking) */
+	orderBy?: readonly Record<string, unknown>[]
+	/** Optional limit (for dependency tracking) */
+	limit?: number
+	/** Optional offset (for dependency tracking) */
+	offset?: number
 	/** Children render function - receives entity and index */
 	children: (entity: EntityRef<T>, index: number) => ReactNode
 }
@@ -51,7 +57,7 @@ interface SelectionCache {
 export function useSelectionCollectionForList<T>(
 	options: UseSelectionCollectionForListOptions<T>,
 ): SelectionCollectionForListResult {
-	const { entityType, filter, children } = options
+	const { entityType, filter, orderBy, limit, offset, children } = options
 
 	// Stable children ref - we use a ref to avoid re-running useMemo on every render
 	const childrenRef = useRef(children)
@@ -60,8 +66,13 @@ export function useSelectionCollectionForList<T>(
 	// Cache for selection to avoid unnecessary refetches
 	const selectionCacheRef = useRef<SelectionCache | null>(null)
 
-	// Stable filter key for dependency tracking
-	const filterKey = JSON.stringify(filter ?? {})
+	// Stable options key for dependency tracking
+	const optionsKey = JSON.stringify({
+		filter: filter ?? {},
+		orderBy: orderBy ?? [],
+		limit,
+		offset,
+	})
 
 	// Collection phase - runs on every render but caches based on content
 	const result = useMemo((): SelectionCollectionForListResult => {
@@ -86,7 +97,7 @@ export function useSelectionCollectionForList<T>(
 
 		// Create a stable key from the selection to detect actual changes
 		const query = buildQueryFromSelection(standardSel)
-		const newQueryKey = JSON.stringify({ query, filter })
+		const newQueryKey = JSON.stringify({ query, filter, orderBy, limit, offset })
 
 		// If the selection hasn't actually changed, return cached values
 		const cache = selectionCacheRef.current
@@ -103,7 +114,7 @@ export function useSelectionCollectionForList<T>(
 		selectionCacheRef.current = newCache
 
 		return newCache
-	}, [entityType, filterKey]) // Only depend on entity identity and filter, not children
+	}, [entityType, optionsKey]) // Only depend on entity identity and options, not children
 
 	return result
 }

@@ -1,5 +1,5 @@
 import { useRef, useEffect, useMemo } from 'react'
-import type { SchemaRegistry } from '@contember/bindx'
+import type { SchemaRegistry, EntityUniqueWhere } from '@contember/bindx'
 import { EntityHandle } from '@contember/bindx'
 import { useBindxContext } from './BackendAdapterContext.js'
 import { useEntityCore } from './useEntityCore.js'
@@ -11,8 +11,8 @@ import type { EntityFields, SelectedEntityFields } from '@contember/bindx'
  * Options for useEntity hook
  */
 export interface UseEntityOptions {
-	/** Entity ID to fetch */
-	id: string
+	/** Unique field(s) to identify the entity (e.g., { id: '...' } or { slug: '...' }) */
+	by: EntityUniqueWhere
 	/** If true, use cached data from store if available (default: false) */
 	cache?: boolean
 }
@@ -149,18 +149,28 @@ export function useEntityImpl<TEntity extends object, TSelected extends object>(
 ): EntityAccessorResult<TEntity, TSelected> {
 	const { store, dispatcher, persistence } = useBindxContext()
 
+	// Derive ID from 'by' for internal use (before entity is loaded)
+	const derivedId = useMemo(() => {
+		const by = options.by
+		if ('id' in by && typeof by['id'] === 'string') {
+			return by['id']
+		}
+		const firstValue = Object.values(by)[0]
+		return typeof firstValue === 'string' ? firstValue : String(firstValue)
+	}, [options.by])
+
 	// Use core hook for data loading
 	const coreResult = useEntityCore({
 		entityType,
-		id: options.id,
+		by: options.by,
 		selectionMeta,
 		cache: options.cache,
 	})
 
-	// Create stable handle (memoized on id/type)
+	// Create stable handle (memoized on derivedId/type)
 	const handle = useMemo(
-		() => new EntityHandle<TEntity, TSelected>(options.id, entityType, store, dispatcher, schema),
-		[options.id, entityType, store, dispatcher, schema],
+		() => new EntityHandle<TEntity, TSelected>(derivedId, entityType, store, dispatcher, schema),
+		[derivedId, entityType, store, dispatcher, schema],
 	)
 
 	// Cleanup handle on unmount
@@ -173,19 +183,20 @@ export function useEntityImpl<TEntity extends object, TSelected extends object>(
 	// Build accessor from core result
 	const accessor = useMemo((): EntityAccessorResult<TEntity, TSelected> => {
 		if (coreResult.status === 'loading') {
-			return createLoadingAccessor(options.id)
+			return createLoadingAccessor(derivedId)
 		}
 
 		if (coreResult.status === 'error') {
-			return createErrorAccessor(options.id, coreResult.error!)
+			return createErrorAccessor(derivedId, coreResult.error!)
 		}
 
 		if (coreResult.status === 'not_found') {
-			return createLoadingAccessor(options.id) // Treat not_found as loading for now
+			return createLoadingAccessor(derivedId) // Treat not_found as loading for now
 		}
 
-		// Ready state
+		// Ready state - use real ID from snapshot if available
 		const snapshot = coreResult.snapshot!
+		const realId = (snapshot.data as Record<string, unknown>)?.['id'] as string | undefined ?? derivedId
 
 		return {
 			status: 'ready',
@@ -196,17 +207,17 @@ export function useEntityImpl<TEntity extends object, TSelected extends object>(
 				// Use handle.isDirty which includes scalar and relation changes
 				return handle.isDirty
 			},
-			id: options.id,
+			id: realId,
 			fields: handle.fields as SelectedEntityFields<TEntity, TSelected>,
 			data: snapshot.data as TSelected,
 			async persist() {
-				await persistence.persist(entityType, options.id)
+				await persistence.persist(entityType, realId)
 			},
 			reset() {
 				handle.reset()
 			},
 		}
-	}, [coreResult, options.id, handle, persistence, entityType])
+	}, [coreResult, derivedId, handle, persistence, entityType])
 
 	return accessor
 }

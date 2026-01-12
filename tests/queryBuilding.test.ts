@@ -76,9 +76,11 @@ describe('Query Building with Fluent API', () => {
 			const meta = getSelectionMeta(result)
 			const query = buildQueryFromSelection(meta)
 
-			expect(query.fields.length).toBe(1)
-			expect(query.fields[0]?.name).toBe('title')
-			expect(query.fields[0]?.sourcePath).toEqual(['title'])
+			// 'id' is automatically added for all queries
+			expect(query.fields.length).toBe(2)
+			expect(query.fields[0]?.name).toBe('id')
+			expect(query.fields[1]?.name).toBe('title')
+			expect(query.fields[1]?.sourcePath).toEqual(['title'])
 		})
 
 		test('should build query for nested objects', () => {
@@ -87,12 +89,14 @@ describe('Query Building with Fluent API', () => {
 			const meta = getSelectionMeta(result)
 			const query = buildQueryFromSelection(meta)
 
-			expect(query.fields.length).toBe(1)
-			expect(query.fields[0]?.name).toBe('author')
-			expect(query.fields[0]?.nested).toBeDefined()
-			// 'id' is automatically added for nested queries (needed for relation identity)
-			expect(query.fields[0]?.nested?.fields[0]?.name).toBe('id')
-			expect(query.fields[0]?.nested?.fields[1]?.name).toBe('name')
+			// 'id' is automatically added for all queries
+			expect(query.fields.length).toBe(2)
+			expect(query.fields[0]?.name).toBe('id')
+			expect(query.fields[1]?.name).toBe('author')
+			expect(query.fields[1]?.nested).toBeDefined()
+			// 'id' is also automatically added for nested queries
+			expect(query.fields[1]?.nested?.fields[0]?.name).toBe('id')
+			expect(query.fields[1]?.nested?.fields[1]?.name).toBe('name')
 		})
 
 		test('should build query with has-many parameters', () => {
@@ -101,11 +105,13 @@ describe('Query Building with Fluent API', () => {
 			const meta = getSelectionMeta(result)
 			const query = buildQueryFromSelection(meta)
 
-			expect(query.fields.length).toBe(1)
-			expect(query.fields[0]?.name).toBe('tags')
-			expect(query.fields[0]?.isArray).toBe(true)
-			expect(query.fields[0]?.filter).toEqual({ name: { eq: 'featured' } })
-			expect(query.fields[0]?.limit).toBe(10)
+			// 'id' is automatically added for all queries
+			expect(query.fields.length).toBe(2)
+			expect(query.fields[0]?.name).toBe('id')
+			expect(query.fields[1]?.name).toBe('tags')
+			expect(query.fields[1]?.isArray).toBe(true)
+			expect(query.fields[1]?.filter).toEqual({ name: { eq: 'featured' } })
+			expect(query.fields[1]?.limit).toBe(10)
 		})
 	})
 

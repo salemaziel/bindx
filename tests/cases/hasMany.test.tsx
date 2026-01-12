@@ -106,7 +106,7 @@ interface TestComponentProps {
 }
 
 function HasManyTestComponent({ articleId, onArticle }: TestComponentProps): React.ReactElement {
-	const article = useEntity('Article', { id: articleId }, e =>
+	const article = useEntity('Article', { by: { id: articleId } }, e =>
 		e.id().title().tags(t => t.id().name().color()),
 	)
 
@@ -246,7 +246,7 @@ describe('HasMany Relations', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-1' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
 					e.id().tags(t => t.id().name()),
 				)
 
@@ -338,7 +338,7 @@ describe('HasMany Relations', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-1' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
 					e.id().tags(t => t.id().name()),
 				)
 
@@ -510,7 +510,7 @@ describe('HasMany Relations', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-1' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
 					e.id().tags(t => t.id().name()),
 				)
 
@@ -583,7 +583,7 @@ describe('HasMany Relations', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-1' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
 					e.id().tags(t => t.id().name()),
 				)
 
@@ -642,7 +642,7 @@ describe('HasMany Relations', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-1' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
 					e.id().tags(t => t.id().name()),
 				)
 
@@ -701,7 +701,7 @@ describe('HasMany Relations', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-1' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
 					e.id().tags(t => t.id().name()),
 				)
 
@@ -830,7 +830,7 @@ describe('HasMany Relations', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-1' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
 					e.id().tags(t => t.id().name()),
 				)
 
@@ -875,7 +875,7 @@ describe('HasMany Relations', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-1' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
 					e.id().tags(t => t.id().name()),
 				)
 
@@ -919,7 +919,7 @@ describe('HasMany Relations', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-empty' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-empty' } }, e =>
 					e.id().tags(t => t.id().name()),
 				)
 
@@ -971,7 +971,7 @@ describe('HasMany Relations', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-single' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-single' } }, e =>
 					e.id().tags(t => t.id().name()),
 				)
 
@@ -1103,7 +1103,7 @@ describe('HasMany Relations', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-1' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
 					e.id().tags(t => t.id().name()),
 				)
 
@@ -1157,7 +1157,7 @@ describe('HasMany Relations', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-1' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
 					e.id().title().tags(t => t.id().name().color()),
 				)
 
@@ -1213,7 +1213,7 @@ describe('HasMany Relations', () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			function TestComponent(): React.ReactElement {
-				const article = useEntity('Article', { id: 'article-1' }, e =>
+				const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
 					e.id().title().tags(t => t.id().name().color()),
 				)
 

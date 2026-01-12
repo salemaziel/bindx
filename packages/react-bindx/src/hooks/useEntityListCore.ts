@@ -13,6 +13,12 @@ export interface UseEntityListCoreOptions {
 	entityType: string
 	/** Optional filter criteria */
 	filter?: Record<string, unknown>
+	/** Optional ordering */
+	orderBy?: readonly Record<string, unknown>[]
+	/** Optional limit */
+	limit?: number
+	/** Optional offset */
+	offset?: number
 	/** Pre-resolved selection metadata */
 	selectionMeta: SelectionMeta
 	/** Optional query key for cache invalidation */
@@ -58,21 +64,26 @@ interface ListSubscriptionSnapshot {
  * @internal This hook is for internal use only.
  */
 export function useEntityListCore(options: UseEntityListCoreOptions): EntityListCoreResult {
-	const { entityType, filter, selectionMeta, queryKey } = options
-	const { store, dispatcher, adapter } = useBindxContext()
+	const { entityType, filter, orderBy, limit, offset, selectionMeta, queryKey } = options
+	const { store, dispatcher, batcher } = useBindxContext()
 
-	// Generate stable filter key for dependency tracking
-	const filterKey = useMemo(
-		() => JSON.stringify(filter ?? {}),
-		[filter],
+	// Generate stable options key for dependency tracking
+	const optionsKey = useMemo(
+		() => JSON.stringify({
+			filter: filter ?? {},
+			orderBy: orderBy ?? [],
+			limit,
+			offset,
+		}),
+		[filter, orderBy, limit, offset],
 	)
 
 	// Create stable query key from selection if not provided
 	const effectiveQueryKey = useMemo(() => {
 		if (queryKey) return queryKey
 		const query = buildQueryFromSelection(selectionMeta)
-		return JSON.stringify({ query, filter })
-	}, [queryKey, selectionMeta, filter])
+		return JSON.stringify({ query, filter, orderBy, limit, offset })
+	}, [queryKey, selectionMeta, filter, orderBy, limit, offset])
 
 	// Track list state in a ref
 	const listStateRef = useRef<{
@@ -153,27 +164,40 @@ export function useEntityListCore(options: UseEntityListCoreOptions): EntityList
 
 		const fetchData = async (): Promise<void> => {
 			try {
-				if (!adapter.fetchMany) {
-					throw new Error('Adapter does not support fetchMany')
+				const spec = buildQueryFromSelection(selectionMeta)
+				// Parse optionsKey to get the actual options (avoids stale closure issues)
+				const currentOptions = JSON.parse(optionsKey) as {
+					filter: Record<string, unknown>
+					orderBy: readonly Record<string, unknown>[]
+					limit?: number
+					offset?: number
 				}
-
-				const query = buildQueryFromSelection(selectionMeta)
-				const results = await adapter.fetchMany(
-					entityType,
-					query,
-					filter,
+				const result = await batcher.enqueue(
+					{
+						type: 'list',
+						entityType,
+						filter: currentOptions.filter,
+						orderBy: currentOptions.orderBy,
+						limit: currentOptions.limit,
+						offset: currentOptions.offset,
+						spec,
+					},
 					{ signal: abortController.signal },
 				)
 
 				if (abortController.signal.aborted) return
 
+				if (result.type !== 'list') {
+					throw new Error('Unexpected query result type')
+				}
+
 				// Store each entity in the SnapshotStore
-				const items = results.map((result) => {
-					const id = result['id'] as string
+				const items = result.data.map((data) => {
+					const id = data['id'] as string
 					dispatcher.dispatch(
-						setEntityData(entityType, id, result, true),
+						setEntityData(entityType, id, data as Record<string, unknown>, true),
 					)
-					return { id, data: result as Record<string, unknown> }
+					return { id, data: data as Record<string, unknown> }
 				})
 
 				listStateRef.current = { status: 'ready', items }
@@ -197,7 +221,7 @@ export function useEntityListCore(options: UseEntityListCoreOptions): EntityList
 		return () => {
 			abortController.abort()
 		}
-	}, [entityType, filterKey, effectiveQueryKey, adapter, dispatcher, store, selectionMeta, filter])
+	}, [entityType, optionsKey, effectiveQueryKey, batcher, dispatcher, store, selectionMeta])
 
 	return snapshot
 }

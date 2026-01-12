@@ -9,7 +9,7 @@ import { TextInput } from '../inputs/index.js'
  */
 export function ArticleWithAuthorSelectExample({ id }: { id: string }) {
 	// Load the article
-	const article = useEntity('Article', { id }, e =>
+	const article = useEntity('Article', { by: { id } }, e =>
 		e
 			.id()
 			.title()

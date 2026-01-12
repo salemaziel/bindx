@@ -3,7 +3,7 @@ import { useBindxContext } from './BackendAdapterContext.js'
 import { useStoreSubscription } from './useStoreSubscription.js'
 import { setEntityData, setLoadState } from '@contember/bindx'
 import { buildQueryFromSelection } from '@contember/bindx'
-import type { SelectionMeta } from '@contember/bindx'
+import type { SelectionMeta, EntityUniqueWhere } from '@contember/bindx'
 import type { EntitySnapshot, LoadStatus } from '@contember/bindx'
 
 /**
@@ -12,8 +12,8 @@ import type { EntitySnapshot, LoadStatus } from '@contember/bindx'
 export interface UseEntityCoreOptions {
 	/** Entity type name */
 	entityType: string
-	/** Entity ID */
-	id: string
+	/** Unique field(s) to identify the entity (e.g., { id: '...' } or { slug: '...' }) */
+	by: EntityUniqueWhere
 	/** Pre-resolved selection metadata */
 	selectionMeta: SelectionMeta
 	/** Optional query key for cache invalidation (used by JSX pattern) */
@@ -66,8 +66,21 @@ interface SubscriptionSnapshot {
  * @internal This hook is for internal use only.
  */
 export function useEntityCore(options: UseEntityCoreOptions): EntityCoreResult {
-	const { entityType, id, selectionMeta, queryKey, cache } = options
-	const { store, dispatcher, adapter } = useBindxContext()
+	const { entityType, by, selectionMeta, queryKey, cache } = options
+	const { store, dispatcher, batcher } = useBindxContext()
+
+	// Derive ID from 'by' for store operations
+	// Use id directly if present, otherwise use the first value from by
+	const id = useMemo(() => {
+		if ('id' in by && typeof by['id'] === 'string') {
+			return by['id']
+		}
+		const firstValue = Object.values(by)[0]
+		return typeof firstValue === 'string' ? firstValue : String(firstValue)
+	}, [by])
+
+	// Stable key for the 'by' clause
+	const byKey = useMemo(() => JSON.stringify(by), [by])
 
 	// Create stable query key from selection if not provided
 	const effectiveQueryKey = useMemo(() => {
@@ -111,7 +124,7 @@ export function useEntityCore(options: UseEntityCoreOptions): EntityCoreResult {
 	// Cache ref to track if we've started fetching
 	const fetchingRef = useRef<string | null>(null)
 
-	// Load data on mount or when id/selection changes
+	// Load data on mount or when by/selection changes
 	useEffect(() => {
 		// Check cache first
 		if (cache && store.hasEntity(entityType, id)) {
@@ -120,7 +133,7 @@ export function useEntityCore(options: UseEntityCoreOptions): EntityCoreResult {
 		}
 
 		// Skip if already fetching same data
-		const fetchKey = `${entityType}:${id}:${effectiveQueryKey}`
+		const fetchKey = `${entityType}:${byKey}:${effectiveQueryKey}`
 		if (fetchingRef.current === fetchKey) {
 			return
 		}
@@ -134,21 +147,21 @@ export function useEntityCore(options: UseEntityCoreOptions): EntityCoreResult {
 		// Fetch data
 		const fetchData = async () => {
 			try {
-				const query = buildQueryFromSelection(selectionMeta)
-				const result = await adapter.fetchOne(
-					entityType,
-					id,
-					query,
+				const spec = buildQueryFromSelection(selectionMeta)
+				// Parse byKey to get the by object (avoids stale closure issues)
+				const currentBy = JSON.parse(byKey) as Record<string, unknown>
+				const result = await batcher.enqueue(
+					{ type: 'get', entityType, by: currentBy, spec },
 					{ signal: abortController.signal },
 				)
 
 				if (abortController.signal.aborted) return
 
-				if (result === null) {
+				if (result.type === 'get' && result.data === null) {
 					dispatcher.dispatch(setLoadState(entityType, id, 'not_found'))
-				} else {
+				} else if (result.type === 'get' && result.data) {
 					dispatcher.dispatch(
-						setEntityData(entityType, id, result as Record<string, unknown>, true),
+						setEntityData(entityType, id, result.data, true),
 					)
 					dispatcher.dispatch(setLoadState(entityType, id, 'success'))
 				}
@@ -179,7 +192,7 @@ export function useEntityCore(options: UseEntityCoreOptions): EntityCoreResult {
 				fetchingRef.current = null
 			}
 		}
-	}, [entityType, id, effectiveQueryKey, cache, adapter, store, dispatcher, selectionMeta])
+	}, [entityType, id, byKey, effectiveQueryKey, cache, batcher, store, dispatcher, selectionMeta])
 
 	// Determine current status
 	const result = useMemo((): EntityCoreResult => {

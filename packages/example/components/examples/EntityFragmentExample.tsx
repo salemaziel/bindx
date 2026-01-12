@@ -114,7 +114,7 @@ export const ArticleTags = createComponent()
  */
 export function AuthorProfileExample({ authorId }: { authorId: string }) {
 	return (
-		<Entity name="Author" id={authorId}>
+		<Entity name="Author" by={{ id: authorId }}>
 			{author => (
 				<div className="author-profile">
 					<h2>Author Profile</h2>
@@ -135,7 +135,7 @@ export function AuthorProfileExample({ authorId }: { authorId: string }) {
  */
 export function ArticleDetailWithFragments({ articleId }: { articleId: string }) {
 	return (
-		<Entity name="Article" id={articleId}>
+		<Entity name="Article" by={{ id: articleId }}>
 			{article => (
 				<article className="article-detail">
 					<header>
@@ -170,7 +170,7 @@ export function ArticleDetailWithFragments({ articleId }: { articleId: string })
  */
 export function AuthorCardExample({ authorId }: { authorId: string }) {
 	return (
-		<Entity name="Author" id={authorId}>
+		<Entity name="Author" by={{ id: authorId }}>
 			{author => (
 				<div className="author-card">
 					{/* Multiple fragment components for the same entity */}

@@ -6,7 +6,6 @@
  */
 
 import type { FieldHandle } from './FieldHandle.js'
-import type { HasOneHandle, HasManyListHandle } from './EntityHandle.js'
 import type { ComponentBrand, AnyBrand } from '../brand/ComponentBrand.js'
 
 // ============================================================================
@@ -61,23 +60,23 @@ export type HasOneKeys<T> = {
  * Maps entity fields to their correct Handle types based on structural typing.
  *
  * - Scalar fields (primitives, 'id') -> FieldHandle<T>
- * - HasOne relations (objects) -> HasOneHandle<T>
- * - HasMany relations (arrays of objects) -> HasManyListHandle<T>
+ * - HasOne relations (objects) -> HasOneRef<T>
+ * - HasMany relations (arrays of objects) -> HasManyRef<T>
  *
  * @example
  * ```typescript
  * interface Article {
  *   id: string           // -> FieldHandle<string>
  *   title: string        // -> FieldHandle<string>
- *   author: Author       // -> HasOneHandle<Author>
- *   tags: Tag[]          // -> HasManyListHandle<Tag>
+ *   author: Author       // -> HasOneRef<Author>
+ *   tags: Tag[]          // -> HasManyRef<Tag>
  * }
  *
  * type Fields = EntityFields<Article>
  * // Fields.id: FieldHandle<string>
  * // Fields.title: FieldHandle<string>
- * // Fields.author: HasOneHandle<Author>
- * // Fields.tags: HasManyListHandle<Tag>
+ * // Fields.author: HasOneRef<Author>
+ * // Fields.tags: HasManyRef<Tag>
  * ```
  */
 export type EntityFields<T> = {
@@ -85,11 +84,11 @@ export type EntityFields<T> = {
 } & {
 	[K in HasManyKeys<T>]: T[K] extends (infer U)[]
 		? U extends object
-			? HasManyListHandle<U>
+			? HasManyRef<U>
 			: never
 		: never
 } & {
-	[K in HasOneKeys<T>]: HasOneHandle<NonNullable<T[K]>>
+	[K in HasOneKeys<T>]: HasOneRef<NonNullable<T[K]>>
 }
 
 // ============================================================================
@@ -109,6 +108,7 @@ type ExtractNestedSelection<TSelected, K extends PropertyKey> =
  *
  * @typeParam TEntity - The full entity type
  * @typeParam TSelected - The selected subset (determines which fields are accessible)
+ * @typeParam TAvailableRoles - Available roles to propagate to nested relations
  *
  * @example
  * ```typescript
@@ -129,21 +129,23 @@ type ExtractNestedSelection<TSelected, K extends PropertyKey> =
  * // Fields.bio: never (not selected)
  * ```
  */
-export type SelectedEntityFields<TEntity, TSelected> = {
+export type SelectedEntityFields<TEntity, TSelected, TAvailableRoles extends readonly string[] = readonly string[]> = {
 	// Scalar fields: only include if key exists in TSelected
 	[K in ScalarKeys<TEntity> & keyof TSelected]: FieldHandle<TEntity[K]>
 } & {
 	// HasMany fields: only include if key exists in TSelected, with nested selection
 	[K in HasManyKeys<TEntity> & keyof TSelected]: TEntity[K] extends (infer U)[]
 		? U extends object
-			? HasManyListHandle<U, ExtractNestedSelection<TSelected, K> extends (infer S)[] ? S : U>
+			? HasManyRef<U, ExtractNestedSelection<TSelected, K> extends (infer S)[] ? S : U, AnyBrand, TAvailableRoles>
 			: never
 		: never
 } & {
 	// HasOne fields: only include if key exists in TSelected, with nested selection
-	[K in HasOneKeys<TEntity> & keyof TSelected]: HasOneHandle<
+	[K in HasOneKeys<TEntity> & keyof TSelected]: HasOneRef<
 		NonNullable<TEntity[K]>,
-		ExtractNestedSelection<TSelected, K> extends object ? ExtractNestedSelection<TSelected, K> : NonNullable<TEntity[K]>
+		ExtractNestedSelection<TSelected, K> extends object ? ExtractNestedSelection<TSelected, K> : NonNullable<TEntity[K]>,
+		AnyBrand,
+		TAvailableRoles
 	>
 }
 
@@ -216,8 +218,9 @@ export interface FieldRef<T> {
  * @typeParam TEntity - The full entity type
  * @typeParam TSelected - The selected subset of fields (defaults to TEntity for backwards compatibility)
  * @typeParam TBrand - Component brand type for validation (defaults to AnyBrand)
+ * @typeParam TAvailableRoles - Available roles for role-based type checking (defaults to readonly string[])
  */
-export interface HasManyRef<TEntity, TSelected = TEntity, TBrand extends AnyBrand = AnyBrand> {
+export interface HasManyRef<TEntity, TSelected = TEntity, TBrand extends AnyBrand = AnyBrand, TAvailableRoles extends readonly string[] = readonly string[]> {
 	/** Internal metadata for collection phase */
 	readonly [FIELD_REF_META]: FieldRefMeta
 
@@ -227,14 +230,26 @@ export interface HasManyRef<TEntity, TSelected = TEntity, TBrand extends AnyBran
 	/** Whether any item has been modified */
 	readonly isDirty: boolean
 
+	/** Direct access to items array - returns selection-aware entity refs */
+	readonly items: EntityRef<TEntity, TSelected, TBrand, string, TAvailableRoles>[]
+
 	/** Iterate over items - returns selection-aware entity refs */
-	map<R>(fn: (item: EntityRef<TEntity, TSelected, TBrand>, index: number) => R): R[]
+	map<R>(fn: (item: EntityRef<TEntity, TSelected, TBrand, string, TAvailableRoles>, index: number) => R): R[]
 
 	/** Add a new item */
 	add(data?: Partial<TEntity>): void
 
 	/** Remove item by key */
 	remove(key: string): void
+
+	/** Connect an existing entity to this has-many relation */
+	connect(itemId: string): void
+
+	/** Disconnect an entity from this has-many relation */
+	disconnect(itemId: string | null): void
+
+	/** Reset the relation to server state */
+	reset(): void
 
 	/** Type brand - ensures HasManyRef<Author> is not assignable to HasManyRef<Tag> */
 	readonly __entityType: TEntity
@@ -249,8 +264,9 @@ export interface HasManyRef<TEntity, TSelected = TEntity, TBrand extends AnyBran
  * @typeParam TEntity - The full entity type
  * @typeParam TSelected - The selected subset of fields (defaults to TEntity for backwards compatibility)
  * @typeParam TBrand - Component brand type for validation (defaults to AnyBrand)
+ * @typeParam TAvailableRoles - Available roles for role-based type checking (defaults to readonly string[])
  */
-export interface HasOneRef<TEntity, TSelected = TEntity, TBrand extends AnyBrand = AnyBrand> {
+export interface HasOneRef<TEntity, TSelected = TEntity, TBrand extends AnyBrand = AnyBrand, TAvailableRoles extends readonly string[] = readonly string[]> {
 	/** Internal metadata for collection phase */
 	readonly [FIELD_REF_META]: FieldRefMeta
 
@@ -261,16 +277,22 @@ export interface HasOneRef<TEntity, TSelected = TEntity, TBrand extends AnyBrand
 	readonly isDirty: boolean
 
 	/** Nested entity fields - only selected fields are accessible */
-	readonly fields: SelectedEntityFields<TEntity, TSelected>
+	readonly fields: SelectedEntityFields<TEntity, TSelected, TAvailableRoles>
 
 	/** Related entity reference (always available, may be placeholder with id=null) */
-	readonly entity: EntityRef<TEntity, TSelected, TBrand>
+	readonly entity: EntityRef<TEntity, TSelected, TBrand, string, TAvailableRoles>
 
 	/** Connect to existing entity */
 	connect(id: string): void
 
 	/** Disconnect relation */
 	disconnect(): void
+
+	/** Mark relation for deletion */
+	delete(): void
+
+	/** Reset the relation to server state */
+	reset(): void
 
 	/** Type brand - ensures HasOneRef<Author> is not assignable to HasOneRef<Tag> */
 	readonly __entityType: TEntity
@@ -312,7 +334,7 @@ export interface EntityRef<
 	readonly id: string | null
 
 	/** Typed field accessors - only selected fields are accessible */
-	readonly fields: SelectedEntityFields<TEntity, TSelected>
+	readonly fields: SelectedEntityFields<TEntity, TSelected, TAvailableRoles>
 
 	/** Raw data snapshot */
 	readonly data: TSelected | null
@@ -320,14 +342,31 @@ export interface EntityRef<
 	/** Whether entity is dirty */
 	readonly isDirty: boolean
 
+	/**
+	 * Server-assigned ID after persistence.
+	 * - null for entities that haven't been persisted yet (temp IDs)
+	 * - string (the real ID) after successful persist
+	 */
+	readonly persistedId: string | null
+
+	/**
+	 * Whether this entity is new (created locally, not yet on server).
+	 */
+	readonly isNew: boolean
+
 	/** Type brand - ensures EntityRef<Author> is not assignable to EntityRef<Tag> */
 	readonly __entityType: TEntity
 
 	/** Type brand for entity name - carries the entity name as a type */
 	readonly __entityName: TEntityName
 
-	/** Type brand for available roles - constrains what roles can be used in HasRole */
-	readonly __availableRoles: TAvailableRoles
+	/**
+	 * Type brand for available roles - constrains what roles can be used in HasRole.
+	 * Uses readonly array of union elements for covariance:
+	 * EntityRef<..., ['admin']> is assignable to EntityRef<..., ['admin', 'client']>
+	 * because readonly 'admin'[] is assignable to readonly ('admin' | 'client')[].
+	 */
+	readonly __availableRoles: readonly TAvailableRoles[number][]
 
 	/** Runtime brand symbols for validation */
 	readonly __brands?: Set<symbol>

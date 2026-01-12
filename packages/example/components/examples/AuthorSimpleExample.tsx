@@ -7,7 +7,7 @@ import { Field, HasMany, HasOne, If, Show } from '@contember/react-bindx'
  */
 export function AuthorSimpleExample({ authorId }: { authorId: string }) {
 	return (
-		<Entity name="Author" id={authorId}>
+		<Entity name="Author" by={{ id: authorId }}>
 			{author => (
 				<div className="author-card">
 					{/* Scalar fields - fully typed */}
@@ -81,7 +81,7 @@ export function AuthorSimpleExample({ authorId }: { authorId: string }) {
  */
 export function ArticleDetailExample({ articleId }: { articleId: string }) {
 	return (
-		<Entity name="Article" id={articleId}>
+		<Entity name="Article" by={{ id: articleId }}>
 			{article => (
 				<article className="article-detail">
 					<header>
@@ -127,7 +127,7 @@ export function AuthorEditExample({ authorId }: { authorId: string }) {
 	return (
 		<Entity
 			name="Author"
-			id={authorId}
+			by={{ id: authorId }}
 			loading={<div>Loading author...</div>}
 			error={err => <div className="error">Failed to load: {err.message}</div>}
 		>

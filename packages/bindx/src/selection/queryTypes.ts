@@ -1,53 +1,26 @@
 /**
  * Typed query parameter types for filter, orderBy, etc.
  *
- * These types provide type-safe filters and ordering based on entity interfaces.
- * They mirror Contember's Content API input types but work with plain TypeScript interfaces.
+ * Uses Input.Condition and Input.OrderDirection from @contember/schema
+ * for scalar conditions, wrapped in entity-aware types that work with
+ * plain TypeScript interfaces.
  */
+
+import { Input } from '@contember/schema'
 
 // ============================================================================
-// Condition Types (for filter expressions)
+// Re-export Contember types
 // ============================================================================
 
 /**
- * Condition operators for scalar values
+ * Condition operators for scalar values - re-exported from @contember/schema
  */
-export interface ScalarCondition<T> {
-	readonly and?: readonly ScalarCondition<T>[]
-	readonly or?: readonly ScalarCondition<T>[]
-	readonly not?: ScalarCondition<T>
-	readonly eq?: T
-	readonly notEq?: T
-	readonly isNull?: boolean
-	readonly in?: readonly T[]
-	readonly notIn?: readonly T[]
-	readonly lt?: T
-	readonly lte?: T
-	readonly gt?: T
-	readonly gte?: T
-}
+export type ScalarCondition<T> = Input.Condition<T>
 
 /**
- * String-specific condition operators
+ * Order direction enum values - string literal union from Contember enum
  */
-export interface StringCondition extends ScalarCondition<string> {
-	readonly contains?: string
-	readonly startsWith?: string
-	readonly endsWith?: string
-	readonly containsCI?: string
-	readonly startsWithCI?: string
-	readonly endsWithCI?: string
-}
-
-/**
- * Maps a scalar type to its condition type
- */
-export type ConditionFor<T> =
-	T extends string ? StringCondition :
-	T extends number ? ScalarCondition<number> :
-	T extends boolean ? ScalarCondition<boolean> :
-	T extends Date ? ScalarCondition<Date> :
-	ScalarCondition<T>
+export type OrderDirection = `${Input.OrderDirection}`
 
 // ============================================================================
 // Where Types (for filtering)
@@ -75,7 +48,7 @@ type IsPlainObject<T> =
 
 /**
  * Field-level where clause for an entity
- * Maps each field to its appropriate condition type
+ * Maps each field to its appropriate condition type using Input.Condition
  */
 export type FieldsWhere<TEntity> = {
 	readonly [K in keyof TEntity]?:
@@ -83,7 +56,7 @@ export type FieldsWhere<TEntity> = {
 			? EntityWhere<U> | null  // has-many: filter on related items
 			: IsPlainObject<NonNullable<TEntity[K]>> extends true
 				? EntityWhere<NonNullable<TEntity[K]>> | null  // has-one: filter on related entity
-				: ConditionFor<NonNullable<TEntity[K]>> | null  // scalar: condition (use NonNullable for proper type)
+				: Input.Condition<NonNullable<TEntity[K]>> | null  // scalar: use Input.Condition
 }
 
 /**
@@ -94,11 +67,6 @@ export type EntityWhere<TEntity> = ComposedWhere<TEntity> & FieldsWhere<TEntity>
 // ============================================================================
 // OrderBy Types (for sorting)
 // ============================================================================
-
-/**
- * Order direction enum values
- */
-export type OrderDirection = 'asc' | 'ascNullsFirst' | 'desc' | 'descNullsLast'
 
 /**
  * Order by clause for an entity
