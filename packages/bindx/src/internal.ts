@@ -7,19 +7,6 @@
  * @internal
  */
 
-// Accessor implementations
-export {
-	FieldAccessorImpl,
-	EntityAccessorImpl,
-	EntityListAccessorImpl,
-	HasOneAccessorImpl,
-	PlaceholderEntityAccessorImpl,
-	isPlaceholder,
-} from './accessors/index.js'
-
-// Store implementation
-export { IdentityMap, getNestedValue, type EntityRecord } from './store/index.js'
-
 // Selection internals
 export {
 	SELECTION_META,

@@ -1,9 +1,9 @@
-import type { FieldAccessor } from '@contember/react-bindx'
+import type { FieldRef } from '@contember/react-bindx'
 
 /**
  * Generic text input - doesn't know about models
  */
-export function TextInput({ field, label }: { field: FieldAccessor<string>; label: string }) {
+export function TextInput({ field, label }: { field: FieldRef<string>; label: string }) {
 	return (
 		<div className="field">
 			<label>{label}</label>

@@ -1,5 +1,5 @@
 import type { BackendAdapter } from '../adapter/types.js'
-import type { IdentityMap } from '../store/IdentityMap.js'
+import type { SnapshotStore } from '../store/SnapshotStore.js'
 import type { QuerySpec } from '../selection/buildQuery.js'
 import type { EntityWhere, EntityOrderBy } from '../selection/queryTypes.js'
 
@@ -63,7 +63,7 @@ export interface LoadEntityListOptions<TEntity = unknown> {
 export class EntityLoader {
 	constructor(
 		private readonly adapter: BackendAdapter,
-		private readonly identityMap: IdentityMap,
+		private readonly store: SnapshotStore,
 	) {}
 
 	/**
@@ -73,10 +73,10 @@ export class EntityLoader {
 		const { entityType, id, query, useCache = false, signal } = options
 
 		// Check cache first
-		if (useCache && this.identityMap.has(entityType, id)) {
-			const cached = this.identityMap.get(entityType, id)
-			if (cached) {
-				return { status: 'success', data: cached.data as T }
+		if (useCache && this.store.hasEntity(entityType, id)) {
+			const snapshot = this.store.getEntitySnapshot(entityType, id)
+			if (snapshot) {
+				return { status: 'success', data: snapshot.data as T }
 			}
 		}
 
@@ -91,8 +91,8 @@ export class EntityLoader {
 				return { status: 'not_found' }
 			}
 
-			// Store in identity map
-			this.identityMap.getOrCreate(entityType, id, result.data)
+			// Store in snapshot store
+			this.store.setEntityData(entityType, id, result.data, true)
 
 			return { status: 'success', data: result.data as T }
 		} catch (error) {
@@ -123,11 +123,11 @@ export class EntityLoader {
 				}
 			}
 
-			// Store each entity in identity map
+			// Store each entity in snapshot store
 			for (const item of result.data) {
 				const record = item as Record<string, unknown>
 				if (typeof record['id'] === 'string') {
-					this.identityMap.getOrCreate(entityType, record['id'], record)
+					this.store.setEntityData(entityType, record['id'], record, true)
 				}
 			}
 
@@ -144,15 +144,15 @@ export class EntityLoader {
 	 * Checks if entity exists in cache.
 	 */
 	hasInCache(entityType: string, id: string): boolean {
-		return this.identityMap.has(entityType, id)
+		return this.store.hasEntity(entityType, id)
 	}
 
 	/**
 	 * Gets entity from cache if available.
 	 */
 	getFromCache<T>(entityType: string, id: string): T | null {
-		const record = this.identityMap.get(entityType, id)
-		return record ? (record.data as T) : null
+		const snapshot = this.store.getEntitySnapshot(entityType, id)
+		return snapshot ? (snapshot.data as T) : null
 	}
 }
 
@@ -162,7 +162,7 @@ export class EntityLoader {
  */
 export function createEntityLoader(
 	adapter: BackendAdapter,
-	identityMap: IdentityMap,
+	store: SnapshotStore,
 ): EntityLoader {
-	return new EntityLoader(adapter, identityMap)
+	return new EntityLoader(adapter, store)
 }

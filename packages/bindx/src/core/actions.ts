@@ -1,4 +1,4 @@
-import type { HasOneRelationState } from '../accessors/types.js'
+import type { HasOneRelationState } from '../handles/types.js'
 import type { FieldError } from '../errors/types.js'
 
 /**

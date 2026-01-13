@@ -2,9 +2,15 @@ import { EntityRelatedHandle } from './BaseHandle.js'
 import type { ActionDispatcher } from '../core/ActionDispatcher.js'
 import type { SnapshotStore } from '../store/SnapshotStore.js'
 import { addFieldError, clearFieldErrors, setField } from '../core/actions.js'
-import { FIELD_REF_META, type FieldRef, type FieldRefMeta, type InputProps } from './types.js'
+import { FIELD_REF_META, type FieldRef, type FieldRefMeta, type InputProps, type Unsubscribe } from './types.js'
 import { deepEqual } from '../utils/deepEqual.js'
 import { createClientError, type ErrorInput, type FieldError } from '../errors/types.js'
+import type {
+	FieldChangedEvent,
+	FieldChangingEvent,
+	EventListener,
+	Interceptor,
+} from '../events/types.js'
 
 /**
  * FieldHandle provides stable access to a scalar field.
@@ -160,6 +166,38 @@ export class FieldHandle<T = unknown> extends EntityRelatedHandle implements Fie
 			[...this.fieldPath, key as string],
 			this.store,
 			this.dispatcher,
+		)
+	}
+
+	// ==================== Event Subscriptions ====================
+
+	/**
+	 * Subscribe to field value changes.
+	 * The listener is called after the value has changed.
+	 */
+	onChange(listener: EventListener<FieldChangedEvent>): Unsubscribe {
+		const emitter = this.dispatcher.getEventEmitter()
+		return emitter.onField(
+			'field:changed',
+			this.entityType,
+			this.entityId,
+			this.fieldName,
+			listener,
+		)
+	}
+
+	/**
+	 * Intercept field value changes.
+	 * The interceptor can cancel or modify the change.
+	 */
+	onChanging(interceptor: Interceptor<FieldChangingEvent>): Unsubscribe {
+		const emitter = this.dispatcher.getEventEmitter()
+		return emitter.interceptField(
+			'field:changing',
+			this.entityType,
+			this.entityId,
+			this.fieldName,
+			interceptor,
 		)
 	}
 }

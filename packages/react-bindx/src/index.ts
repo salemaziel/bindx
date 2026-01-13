@@ -36,20 +36,8 @@ export type {
 	OrderDirection,
 	TypedHasManyOptions,
 	AliasOptions,
-	// Accessor types
-	FieldAccessor,
-	EntityAccessor,
-	EntityAccessorBase,
-	RootEntityAccessor,
-	HasOneAccessor,
-	HasOneRelationState,
-	PlaceholderEntityAccessor,
-	EntityListAccessor,
-	EntityListItem,
-	AccessorFromShape,
-	AccessorFromShapeInternal,
-	RelationChange,
 	// Handle types
+	HasOneRelationState,
 	InputProps,
 	EntityFields,
 	SelectedEntityFields,
@@ -92,6 +80,41 @@ export type {
 	UndoManagerConfig,
 	UndoState,
 	UndoEntry,
+	// Event types
+	BindxEvent,
+	FieldScopedEvent,
+	FieldChangingEvent,
+	FieldChangedEvent,
+	RelationConnectingEvent,
+	RelationConnectedEvent,
+	RelationDisconnectingEvent,
+	RelationDisconnectedEvent,
+	RelationDeletingEvent,
+	RelationDeletedEvent,
+	HasManyConnectingEvent,
+	HasManyConnectedEvent,
+	HasManyDisconnectingEvent,
+	HasManyDisconnectedEvent,
+	EntityPersistingEvent,
+	EntityPersistedEvent,
+	EntityPersistFailedEvent,
+	EntityResettingEvent,
+	EntityResetEvent,
+	EntityDeletingEvent,
+	EntityDeletedEvent,
+	ErrorAddedEvent,
+	ErrorsClearedEvent,
+	LoadStateChangedEvent,
+	BeforeEvent,
+	AfterEvent,
+	AnyBindxEvent,
+	EventTypeMap,
+	InterceptorResult,
+	Interceptor,
+	EventListener,
+	Unsubscribe,
+	BeforeEventTypes,
+	AfterEventTypes,
 } from '@contember/bindx'
 
 export {
@@ -124,6 +147,8 @@ export {
 	PersistenceManager,
 	// Undo
 	UndoManager,
+	// Events
+	EventEmitter,
 	// Internal
 	__internal,
 } from '@contember/bindx'
@@ -177,16 +202,23 @@ export {
 	useDispatcher,
 	usePersistence,
 	useBindxContext,
-	useIdentityMap,
 	createBindx,
 	// Undo
 	useUndo,
+	// Events
+	useOnEvent,
+	useOnEntityEvent,
+	useOnFieldEvent,
+	useIntercept,
+	useInterceptEntity,
+	useInterceptField,
 	// Contember
 	ContemberBindxProvider,
 } from './hooks/index.js'
 
 // Undo hook types
 export type { UndoHookResult } from './hooks/useUndo.js'
+
 
 // JSX Components
 export {

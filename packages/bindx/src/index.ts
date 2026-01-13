@@ -41,24 +41,9 @@ export type {
 	AliasOptions,
 } from './selection/index.js'
 
-// Accessor types (interfaces only)
-export type {
-	FieldAccessor,
-	EntityAccessor,
-	EntityAccessorBase,
-	RootEntityAccessor,
-	HasOneAccessor,
-	HasOneRelationState,
-	PlaceholderEntityAccessor,
-	EntityListAccessor,
-	EntityListItem,
-	AccessorFromShape,
-	AccessorFromShapeInternal,
-	RelationChange,
-} from './accessors/index.js'
-
 // Handle types
 export type {
+	HasOneRelationState,
 	InputProps,
 	EntityFields,
 	SelectedEntityFields,
@@ -186,6 +171,51 @@ export type {
 	StoredHasManyState,
 	EntityMeta,
 } from './store/SnapshotStore.js'
+
+// Event types
+export type {
+	BindxEvent,
+	FieldScopedEvent,
+	FieldChangingEvent,
+	FieldChangedEvent,
+	RelationConnectingEvent,
+	RelationConnectedEvent,
+	RelationDisconnectingEvent,
+	RelationDisconnectedEvent,
+	RelationDeletingEvent,
+	RelationDeletedEvent,
+	HasManyConnectingEvent,
+	HasManyConnectedEvent,
+	HasManyDisconnectingEvent,
+	HasManyDisconnectedEvent,
+	EntityPersistingEvent,
+	EntityPersistedEvent,
+	EntityPersistFailedEvent,
+	EntityResettingEvent,
+	EntityResetEvent,
+	EntityDeletingEvent,
+	EntityDeletedEvent,
+	ErrorAddedEvent,
+	ErrorsClearedEvent,
+	LoadStateChangedEvent,
+	BeforeEvent,
+	AfterEvent,
+	AnyBindxEvent,
+	BeforeEventType,
+	AfterEventType,
+	AnyEventType,
+	EventTypeMap,
+	EventByType,
+	InterceptorResult,
+	Interceptor,
+	EventListener,
+	Unsubscribe,
+	BeforeEventTypes,
+	AfterEventTypes,
+	FieldScopedEventTypes,
+} from './events/index.js'
+
+export { EventEmitter } from './events/index.js'
 
 // Error types
 export type {

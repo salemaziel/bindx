@@ -6,8 +6,44 @@
  */
 
 import type { FieldHandle } from './FieldHandle.js'
+
+// ============================================================================
+// Relation State Types
+// ============================================================================
+
+/**
+ * State of a has-one relation.
+ */
+export type HasOneRelationState =
+	| 'connected' // Points to an existing entity
+	| 'disconnected' // Explicitly set to null
+	| 'deleted' // Related entity marked for deletion
+	| 'creating' // Placeholder entity being filled for implicit create
 import type { ComponentBrand, AnyBrand } from '../brand/ComponentBrand.js'
 import type { FieldError, ErrorInput } from '../errors/types.js'
+import type {
+	FieldChangedEvent,
+	FieldChangingEvent,
+	RelationConnectedEvent,
+	RelationDisconnectedEvent,
+	RelationConnectingEvent,
+	RelationDisconnectingEvent,
+	HasManyConnectedEvent,
+	HasManyDisconnectedEvent,
+	HasManyConnectingEvent,
+	HasManyDisconnectingEvent,
+	EntityPersistedEvent,
+	EntityPersistingEvent,
+	EventTypeMap,
+	AfterEventTypes,
+	BeforeEventTypes,
+	EventListener,
+	Interceptor,
+	Unsubscribe as UnsubscribeType,
+} from '../events/types.js'
+
+// Re-export Unsubscribe for convenience
+export type { UnsubscribeType as Unsubscribe }
 
 // ============================================================================
 // Field Type Detection Utilities
@@ -223,6 +259,14 @@ export interface FieldRef<T> {
 
 	/** Clear all errors from this field */
 	clearErrors(): void
+
+	// ==================== Event Subscriptions ====================
+
+	/** Subscribe to field value changes */
+	onChange(listener: EventListener<FieldChangedEvent>): UnsubscribeType
+
+	/** Intercept field value changes (can cancel or modify) */
+	onChanging(interceptor: Interceptor<FieldChangingEvent>): UnsubscribeType
 }
 
 /**
@@ -281,6 +325,20 @@ export interface HasManyRef<TEntity, TSelected = TEntity, TBrand extends AnyBran
 
 	/** Clear all errors from this relation */
 	clearErrors(): void
+
+	// ==================== Event Subscriptions ====================
+
+	/** Subscribe to item connected events */
+	onItemConnected(listener: EventListener<HasManyConnectedEvent>): UnsubscribeType
+
+	/** Subscribe to item disconnected events */
+	onItemDisconnected(listener: EventListener<HasManyDisconnectedEvent>): UnsubscribeType
+
+	/** Intercept item connection (can cancel) */
+	interceptItemConnecting(interceptor: Interceptor<HasManyConnectingEvent>): UnsubscribeType
+
+	/** Intercept item disconnection (can cancel) */
+	interceptItemDisconnecting(interceptor: Interceptor<HasManyDisconnectingEvent>): UnsubscribeType
 }
 
 /**
@@ -336,6 +394,20 @@ export interface HasOneRef<TEntity, TSelected = TEntity, TBrand extends AnyBrand
 
 	/** Clear all errors from this relation */
 	clearErrors(): void
+
+	// ==================== Event Subscriptions ====================
+
+	/** Subscribe to connection events */
+	onConnect(listener: EventListener<RelationConnectedEvent>): UnsubscribeType
+
+	/** Subscribe to disconnection events */
+	onDisconnect(listener: EventListener<RelationDisconnectedEvent>): UnsubscribeType
+
+	/** Intercept connection (can cancel or modify target) */
+	interceptConnect(interceptor: Interceptor<RelationConnectingEvent>): UnsubscribeType
+
+	/** Intercept disconnection (can cancel) */
+	interceptDisconnect(interceptor: Interceptor<RelationDisconnectingEvent>): UnsubscribeType
 }
 
 /**
@@ -422,6 +494,26 @@ export interface EntityRef<
 
 	/** Clear all errors (entity-level, fields, and relations) */
 	clearAllErrors(): void
+
+	// ==================== Event Subscriptions ====================
+
+	/** Subscribe to any event on this entity */
+	on<E extends AfterEventTypes>(
+		eventType: E,
+		listener: EventListener<EventTypeMap[E]>,
+	): UnsubscribeType
+
+	/** Intercept any before event on this entity */
+	intercept<E extends BeforeEventTypes>(
+		eventType: E,
+		interceptor: Interceptor<EventTypeMap[E]>,
+	): UnsubscribeType
+
+	/** Subscribe to persist success events */
+	onPersisted(listener: EventListener<EntityPersistedEvent>): UnsubscribeType
+
+	/** Intercept persist (can cancel) */
+	interceptPersisting(interceptor: Interceptor<EntityPersistingEvent>): UnsubscribeType
 }
 
 // ============================================================================

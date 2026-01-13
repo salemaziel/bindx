@@ -1,9 +1,9 @@
-import type { FieldAccessor } from '@contember/react-bindx'
+import type { FieldRef } from '@contember/react-bindx'
 
 /**
  * Generic number input
  */
-export function NumberInput({ field, label }: { field: FieldAccessor<number>; label: string }) {
+export function NumberInput({ field, label }: { field: FieldRef<number>; label: string }) {
 	return (
 		<div className="field">
 			<label>{label}</label>

@@ -7,6 +7,11 @@ import type { UndoManager } from '../undo/UndoManager.js'
 import type { SchemaRegistry } from '../schema/SchemaRegistry.js'
 import { extractMappedErrors, type ContemberMutationResult } from '../errors/pathMapper.js'
 import { createServerError } from '../errors/types.js'
+import type {
+	EntityPersistingEvent,
+	EntityPersistedEvent,
+	EntityPersistFailedEvent,
+} from '../events/types.js'
 
 /**
  * Pending persist operation tracking
@@ -149,25 +154,70 @@ export class PersistenceManager {
 			return existing.promise
 		}
 
+		// Check if this is a new entity (not yet on server)
+		const isNew = !this.store.existsOnServer(entityType, id)
+		const eventEmitter = this.dispatcher.getEventEmitter()
+
+		// Run interceptors for entity:persisting
+		const persistingEvent: EntityPersistingEvent = {
+			type: 'entity:persisting',
+			timestamp: Date.now(),
+			entityType,
+			entityId: id,
+			isNew,
+		}
+
+		// Set persisting state BEFORE running interceptors (so UI updates immediately)
+		this.dispatcher.dispatch(setPersisting(entityType, id, true))
+
+		const interceptorResult = await eventEmitter.runInterceptors(persistingEvent)
+		if (interceptorResult === null) {
+			// Interceptor cancelled the persist - reset persisting state
+			this.dispatcher.dispatch(setPersisting(entityType, id, false))
+			throw new Error(`Persist cancelled by interceptor for ${entityType}:${id}`)
+		}
+
 		// Clear server errors before new persist attempt
 		this.dispatcher.dispatch(clearAllServerErrors(entityType, id))
 
 		const abortController = new AbortController()
 
-		// Check if this is a new entity (not yet on server)
-		const existsOnServer = this.store.existsOnServer(entityType, id)
+		const promise = isNew
+			? this.doCreate(entityType, id, abortController.signal)
+			: this.doPersist(entityType, id, abortController.signal)
 
-		const promise = existsOnServer
-			? this.doPersist(entityType, id, abortController.signal)
-			: this.doCreate(entityType, id, abortController.signal)
-
-		const wrappedPromise = promise.finally(() => {
-			this.pending.delete(key)
-			this.dispatcher.dispatch(setPersisting(entityType, id, false))
-		})
+		const wrappedPromise = promise
+			.then(() => {
+				// Emit success event
+				const persistedEvent: EntityPersistedEvent = {
+					type: 'entity:persisted',
+					timestamp: Date.now(),
+					entityType,
+					entityId: id,
+					isNew,
+					persistedId: this.store.getPersistedId(entityType, id) ?? id,
+				}
+				eventEmitter.emit(persistedEvent)
+			})
+			.catch((error) => {
+				// Emit failure event
+				const failedEvent: EntityPersistFailedEvent = {
+					type: 'entity:persistFailed',
+					timestamp: Date.now(),
+					entityType,
+					entityId: id,
+					isNew,
+					error: error instanceof Error ? error : new Error(String(error)),
+				}
+				eventEmitter.emit(failedEvent)
+				throw error
+			})
+			.finally(() => {
+				this.pending.delete(key)
+				this.dispatcher.dispatch(setPersisting(entityType, id, false))
+			})
 
 		this.pending.set(key, { promise: wrappedPromise, abortController })
-		this.dispatcher.dispatch(setPersisting(entityType, id, true))
 
 		return wrappedPromise
 	}

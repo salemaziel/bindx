@@ -13,9 +13,26 @@ import {
 	addRelationError,
 	clearRelationErrors,
 } from '../core/actions.js'
-import { FIELD_REF_META, type HasOneRef, type HasManyRef, type FieldRefMeta, type EntityRef, type EntityFields, type SelectedEntityFields } from './types.js'
+import { FIELD_REF_META, type HasOneRef, type HasManyRef, type FieldRefMeta, type EntityRef, type EntityFields, type SelectedEntityFields, type Unsubscribe } from './types.js'
 import { deepEqual } from '../utils/deepEqual.js'
 import { createClientError, type ErrorInput, type FieldError } from '../errors/types.js'
+import type {
+	EventTypeMap,
+	AfterEventTypes,
+	BeforeEventTypes,
+	EventListener,
+	Interceptor,
+	EntityPersistedEvent,
+	EntityPersistingEvent,
+	RelationConnectedEvent,
+	RelationDisconnectedEvent,
+	RelationConnectingEvent,
+	RelationDisconnectingEvent,
+	HasManyConnectedEvent,
+	HasManyDisconnectedEvent,
+	HasManyConnectingEvent,
+	HasManyDisconnectingEvent,
+} from '../events/types.js'
 
 // Type for relation handle cache
 type RelationHandle = HasOneHandle<object> | HasManyListHandle<object>
@@ -413,6 +430,44 @@ export class EntityHandle<T extends object = object, TSelected = T> extends Enti
 			clearAllErrorsAction(this.entityType, this.entityId),
 		)
 	}
+
+	// ==================== Event Subscriptions ====================
+
+	/**
+	 * Subscribe to any event on this entity.
+	 */
+	on<E extends AfterEventTypes>(
+		eventType: E,
+		listener: EventListener<EventTypeMap[E]>,
+	): Unsubscribe {
+		const emitter = this.dispatcher.getEventEmitter()
+		return emitter.onEntity(eventType, this.entityType, this.entityId, listener)
+	}
+
+	/**
+	 * Intercept any before event on this entity.
+	 */
+	intercept<E extends BeforeEventTypes>(
+		eventType: E,
+		interceptor: Interceptor<EventTypeMap[E]>,
+	): Unsubscribe {
+		const emitter = this.dispatcher.getEventEmitter()
+		return emitter.interceptEntity(eventType, this.entityType, this.entityId, interceptor)
+	}
+
+	/**
+	 * Subscribe to persist success events.
+	 */
+	onPersisted(listener: EventListener<EntityPersistedEvent>): Unsubscribe {
+		return this.on('entity:persisted', listener)
+	}
+
+	/**
+	 * Intercept persist (can cancel).
+	 */
+	interceptPersisting(interceptor: Interceptor<EntityPersistingEvent>): Unsubscribe {
+		return this.intercept('entity:persisting', interceptor)
+	}
 }
 
 /**
@@ -720,6 +775,64 @@ export class HasOneHandle<TEntity extends object = object, TSelected = TEntity> 
 			clearRelationErrors(this.entityType, this.entityId, this.fieldName),
 		)
 	}
+
+	// ==================== Event Subscriptions ====================
+
+	/**
+	 * Subscribe to connection events.
+	 */
+	onConnect(listener: EventListener<RelationConnectedEvent>): Unsubscribe {
+		const emitter = this.dispatcher.getEventEmitter()
+		return emitter.onField(
+			'relation:connected',
+			this.entityType,
+			this.entityId,
+			this.fieldName,
+			listener,
+		)
+	}
+
+	/**
+	 * Subscribe to disconnection events.
+	 */
+	onDisconnect(listener: EventListener<RelationDisconnectedEvent>): Unsubscribe {
+		const emitter = this.dispatcher.getEventEmitter()
+		return emitter.onField(
+			'relation:disconnected',
+			this.entityType,
+			this.entityId,
+			this.fieldName,
+			listener,
+		)
+	}
+
+	/**
+	 * Intercept connection (can cancel or modify target).
+	 */
+	interceptConnect(interceptor: Interceptor<RelationConnectingEvent>): Unsubscribe {
+		const emitter = this.dispatcher.getEventEmitter()
+		return emitter.interceptField(
+			'relation:connecting',
+			this.entityType,
+			this.entityId,
+			this.fieldName,
+			interceptor,
+		)
+	}
+
+	/**
+	 * Intercept disconnection (can cancel).
+	 */
+	interceptDisconnect(interceptor: Interceptor<RelationDisconnectingEvent>): Unsubscribe {
+		const emitter = this.dispatcher.getEventEmitter()
+		return emitter.interceptField(
+			'relation:disconnecting',
+			this.entityType,
+			this.entityId,
+			this.fieldName,
+			interceptor,
+		)
+	}
 }
 
 /**
@@ -1007,6 +1120,64 @@ export class HasManyListHandle<TEntity extends object = object, TSelected = TEnt
 			clearRelationErrors(this.entityType, this.entityId, this.fieldName),
 		)
 	}
+
+	// ==================== Event Subscriptions ====================
+
+	/**
+	 * Subscribe to item connected events.
+	 */
+	onItemConnected(listener: EventListener<HasManyConnectedEvent>): Unsubscribe {
+		const emitter = this.dispatcher.getEventEmitter()
+		return emitter.onField(
+			'hasMany:connected',
+			this.entityType,
+			this.entityId,
+			this.fieldName,
+			listener,
+		)
+	}
+
+	/**
+	 * Subscribe to item disconnected events.
+	 */
+	onItemDisconnected(listener: EventListener<HasManyDisconnectedEvent>): Unsubscribe {
+		const emitter = this.dispatcher.getEventEmitter()
+		return emitter.onField(
+			'hasMany:disconnected',
+			this.entityType,
+			this.entityId,
+			this.fieldName,
+			listener,
+		)
+	}
+
+	/**
+	 * Intercept item connection (can cancel).
+	 */
+	interceptItemConnecting(interceptor: Interceptor<HasManyConnectingEvent>): Unsubscribe {
+		const emitter = this.dispatcher.getEventEmitter()
+		return emitter.interceptField(
+			'hasMany:connecting',
+			this.entityType,
+			this.entityId,
+			this.fieldName,
+			interceptor,
+		)
+	}
+
+	/**
+	 * Intercept item disconnection (can cancel).
+	 */
+	interceptItemDisconnecting(interceptor: Interceptor<HasManyDisconnectingEvent>): Unsubscribe {
+		const emitter = this.dispatcher.getEventEmitter()
+		return emitter.interceptField(
+			'hasMany:disconnecting',
+			this.entityType,
+			this.entityId,
+			this.fieldName,
+			interceptor,
+		)
+	}
 }
 
 // ==================== Placeholder Handle ====================
@@ -1242,6 +1413,41 @@ export class PlaceholderHandle<TEntity extends object = object, TSelected = TEnt
 	clearAllErrors(): void {
 		// Placeholder entities don't have errors to clear
 	}
+
+	// ==================== Event Subscriptions ====================
+	// Placeholder entities don't fire events - these are no-ops that return dummy unsubscribe functions
+
+	/**
+	 * No-op for placeholder entities.
+	 */
+	on<E extends AfterEventTypes>(
+		_eventType: E,
+		_listener: EventListener<EventTypeMap[E]>,
+	): Unsubscribe {
+		return () => {}
+	}
+
+	/**
+	 * No-op for placeholder entities.
+	 */
+	intercept<E extends BeforeEventTypes>(
+		_eventType: E,
+		_interceptor: Interceptor<EventTypeMap[E]>,
+	): Unsubscribe {
+		return () => {}
+	}
+
+	/**
+	 * No-op for placeholder entities.
+	 */
+	onPersisted(_listener: EventListener<EntityPersistedEvent>): Unsubscribe {
+		return () => {}
+	}
+
+	/**
+	 * No-op for placeholder entities.
+	 */
+	interceptPersisting(_interceptor: Interceptor<EntityPersistingEvent>): Unsubscribe {
+		return () => {}
+	}
 }
-
-

@@ -121,6 +121,14 @@ export function getAffectedKeys(action: Action): StoreAffectedKeys {
 
 		case 'SET_LOAD_STATE':
 		case 'SET_PERSISTING':
+		case 'ADD_FIELD_ERROR':
+		case 'CLEAR_FIELD_ERRORS':
+		case 'ADD_ENTITY_ERROR':
+		case 'CLEAR_ENTITY_ERRORS':
+		case 'ADD_RELATION_ERROR':
+		case 'CLEAR_RELATION_ERRORS':
+		case 'CLEAR_ALL_SERVER_ERRORS':
+		case 'CLEAR_ALL_ERRORS':
 			// These don't affect undo-able state
 			break
 

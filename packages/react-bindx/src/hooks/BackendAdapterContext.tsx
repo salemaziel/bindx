@@ -185,8 +185,3 @@ export function useQueryBatcher(): QueryBatcher {
 	return context.batcher
 }
 
-// Legacy export for backward compatibility during migration
-export { SnapshotStore as IdentityMap } from '@contember/bindx'
-export function useIdentityMap(): SnapshotStore {
-	return useSnapshotStore()
-}

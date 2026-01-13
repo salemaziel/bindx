@@ -3,6 +3,7 @@ export { FieldHandle } from './FieldHandle.js'
 export { EntityHandle, HasOneHandle, HasManyListHandle } from './EntityHandle.js'
 export {
 	FIELD_REF_META,
+	type HasOneRelationState,
 	type EntityFields,
 	type SelectedEntityFields,
 	type ScalarKeys,
@@ -15,4 +16,5 @@ export {
 	type HasOneRef,
 	type EntityRef,
 	type EntityRefFor,
+	type Unsubscribe,
 } from './types.js'

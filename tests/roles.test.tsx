@@ -759,6 +759,15 @@ describe('Role-aware createComponent', () => {
 			__entityType: {} as EditorArticle,
 			__entityName: 'Article',
 			__availableRoles: ['editor'] as const,
+			errors: [],
+			hasError: false,
+			addError: () => {},
+			clearErrors: () => {},
+			clearAllErrors: () => {},
+			on: () => () => {},
+			intercept: () => () => {},
+			onPersisted: () => () => {},
+			interceptPersisting: () => () => {},
 		}
 
 		// Define what the component expects
@@ -796,6 +805,15 @@ describe('Role-aware createComponent', () => {
 			__entityType: {} as AdminArticle,
 			__entityName: 'Article',
 			__availableRoles: ['admin', 'editor'] as const,
+			errors: [],
+			hasError: false,
+			addError: () => {},
+			clearErrors: () => {},
+			clearAllErrors: () => {},
+			on: () => () => {},
+			intercept: () => () => {},
+			onPersisted: () => () => {},
+			interceptPersisting: () => () => {},
 		}
 
 		// This should work - ['admin'] is subset of ['admin', 'editor']
@@ -820,6 +838,15 @@ describe('Role-aware createComponent', () => {
 			__entityType: {} as AdminArticle,
 			__entityName: 'Article',
 			__availableRoles: ['admin'],
+			errors: [],
+			hasError: false,
+			addError: () => {},
+			clearErrors: () => {},
+			clearAllErrors: () => {},
+			on: () => () => {},
+			intercept: () => () => {},
+			onPersisted: () => () => {},
+			interceptPersisting: () => () => {},
 		}
 
 		// Define what a component with ['admin', 'editor'] roles would expect

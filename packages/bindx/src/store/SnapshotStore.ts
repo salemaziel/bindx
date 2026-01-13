@@ -1,4 +1,4 @@
-import type { HasOneRelationState } from '../accessors/types.js'
+import type { HasOneRelationState } from '../handles/types.js'
 import {
 	createEntitySnapshot,
 	type EntitySnapshot,
@@ -177,6 +177,13 @@ export class SnapshotStore {
 		)
 
 		this.entitySnapshots.set(key, newSnapshot)
+
+		// When setting server data, mark entity as existing on server
+		if (isServerData) {
+			const existingMeta = this.entityMetas.get(key) ?? { existsOnServer: false, isScheduledForDeletion: false }
+			this.entityMetas.set(key, { ...existingMeta, existsOnServer: true })
+		}
+
 		if (!skipNotify) {
 			this.notifyEntitySubscribers(key)
 		}

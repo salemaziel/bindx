@@ -43,6 +43,8 @@ export function createCollectorProxy<T>(
 		},
 	})
 
+	const noop = () => () => {}
+
 	return {
 		id: '__collector__',
 		fields: fieldsProxy,
@@ -53,6 +55,17 @@ export function createCollectorProxy<T>(
 		__entityType: undefined as unknown as T,
 		__entityName: '__collector__',
 		__availableRoles: [] as readonly string[],
+		// Error properties (stubs for collection phase)
+		errors: [],
+		hasError: false,
+		addError: () => {},
+		clearErrors: () => {},
+		clearAllErrors: () => {},
+		// Event methods (stubs for collection phase)
+		on: noop,
+		intercept: noop,
+		onPersisted: noop,
+		interceptPersisting: noop,
 	}
 }
 
@@ -93,6 +106,14 @@ function createCollectorFieldRef(
 			value: null,
 			setValue: () => {},
 		},
+		// Error properties (stubs for collection phase)
+		errors: [],
+		hasError: false,
+		addError: () => {},
+		clearErrors: () => {},
+		// Event methods (stubs for collection phase - FieldRef)
+		onChange: () => () => {},
+		onChanging: () => () => {},
 
 		// HasManyRef properties
 		length: 0,
@@ -117,6 +138,11 @@ function createCollectorFieldRef(
 		add: () => {},
 		remove: () => {},
 		connect: () => {},
+		// HasManyRef event methods (stubs for collection phase)
+		onItemConnected: () => () => {},
+		onItemDisconnected: () => () => {},
+		interceptItemConnecting: () => () => {},
+		interceptItemDisconnecting: () => () => {},
 
 		// HasOneRef properties
 		id: null,
@@ -161,6 +187,11 @@ function createCollectorFieldRef(
 		disconnect: () => {},
 		delete: () => {},
 		reset: () => {},
+		// HasOneRef event methods (stubs for collection phase)
+		onConnect: () => () => {},
+		onDisconnect: () => () => {},
+		interceptConnect: () => () => {},
+		interceptDisconnect: () => () => {},
 
 		// Type brand (phantom property - only exists in type system)
 		__entityType: undefined as unknown,
@@ -204,6 +235,27 @@ export function createRuntimeAccessor<T>(
 		__entityType: undefined as unknown as T,
 		__entityName: entityType,
 		__availableRoles: [] as readonly string[],
+		// Error properties
+		get errors() {
+			return store.getEntityErrors(entityType, entityId)
+		},
+		get hasError() {
+			return store.hasAnyErrors(entityType, entityId)
+		},
+		addError: () => {
+			// No-op in runtime proxy - use handle directly for mutations
+		},
+		clearErrors: () => {
+			// No-op in runtime proxy - use handle directly for mutations
+		},
+		clearAllErrors: () => {
+			// No-op in runtime proxy - use handle directly for mutations
+		},
+		// Event methods (stubs for runtime proxy - use handle directly for subscriptions)
+		on: () => () => {},
+		intercept: () => () => {},
+		onPersisted: () => () => {},
+		interceptPersisting: () => () => {},
 	}
 }
 
@@ -267,6 +319,22 @@ function createRuntimeFieldRef(
 				setValue,
 			}
 		},
+		// Error properties
+		get errors() {
+			return store.getFieldErrors(entityType, entityId, fieldName)
+		},
+		get hasError() {
+			return store.getFieldErrors(entityType, entityId, fieldName).length > 0
+		},
+		addError: () => {
+			// No-op in runtime proxy - use handle directly for mutations
+		},
+		clearErrors: () => {
+			// No-op in runtime proxy - use handle directly for mutations
+		},
+		// Event methods (stubs for runtime proxy - use handle directly for subscriptions)
+		onChange: () => () => {},
+		onChanging: () => () => {},
 
 		// HasManyRef properties
 		get length() {
@@ -340,6 +408,11 @@ function createRuntimeFieldRef(
 			})
 			setValue(filtered)
 		},
+		// HasManyRef event methods (stubs for runtime proxy)
+		onItemConnected: () => () => {},
+		onItemDisconnected: () => () => {},
+		interceptItemConnecting: () => () => {},
+		interceptItemDisconnecting: () => () => {},
 
 		// HasOneRef properties
 		get id() {
@@ -437,6 +510,11 @@ function createRuntimeFieldRef(
 			const serverValue = getServerValue()
 			setValue(serverValue)
 		},
+		// HasOneRef event methods (stubs for runtime proxy)
+		onConnect: () => () => {},
+		onDisconnect: () => () => {},
+		interceptConnect: () => () => {},
+		interceptDisconnect: () => () => {},
 
 		// Type brand (phantom property - only exists in type system)
 		__entityType: undefined as unknown,
@@ -462,6 +540,14 @@ function createNullFieldRef(path: string[], fieldName: string): FieldRef<unknown
 			value: null,
 			setValue: () => {},
 		},
+		// Error properties (stubs for null field ref)
+		errors: [],
+		hasError: false,
+		addError: () => {},
+		clearErrors: () => {},
+		// Event methods (stubs for null field ref)
+		onChange: () => () => {},
+		onChanging: () => () => {},
 	}
 }
 
@@ -507,6 +593,14 @@ function createPlaceholderAccessor<T>(): EntityRef<T> {
 				},
 				path: [fieldName],
 				fieldName,
+				// Error properties (stubs for placeholder fields)
+				errors: [],
+				hasError: false,
+				addError: () => {},
+				clearErrors: () => {},
+				// Event methods (stubs for placeholder fields)
+				onChange: () => () => {},
+				onChanging: () => () => {},
 			}
 		},
 	})
@@ -521,6 +615,17 @@ function createPlaceholderAccessor<T>(): EntityRef<T> {
 		__entityType: undefined as unknown as T,
 		__entityName: '__placeholder__',
 		__availableRoles: [] as readonly string[],
+		// Error properties (stubs for placeholder)
+		errors: [],
+		hasError: false,
+		addError: () => {},
+		clearErrors: () => {},
+		clearAllErrors: () => {},
+		// Event methods (stubs for placeholder)
+		on: () => () => {},
+		intercept: () => () => {},
+		onPersisted: () => () => {},
+		interceptPersisting: () => () => {},
 	}
 }
 

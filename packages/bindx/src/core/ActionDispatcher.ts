@@ -1,5 +1,11 @@
 import type { SnapshotStore } from '../store/SnapshotStore.js'
 import type { Action } from './actions.js'
+import { EventEmitter } from '../events/EventEmitter.js'
+import {
+	createBeforeEvent,
+	createAfterEvent,
+	captureStateBeforeAction,
+} from '../events/eventFactory.js'
 
 /**
  * ActionDispatcher centralizes all state mutations.
@@ -10,14 +16,30 @@ import type { Action } from './actions.js'
  * - Easy to add logging, debugging, middleware
  * - Ensures consistent state updates
  * - Enables action replay/undo if needed
+ * - Event system for subscriptions and interceptors
  */
 export class ActionDispatcher {
 	private readonly middlewares: ActionMiddleware[] = []
+	private readonly eventEmitter: EventEmitter
 
-	constructor(private readonly store: SnapshotStore) {}
+	constructor(
+		private readonly store: SnapshotStore,
+		eventEmitter?: EventEmitter,
+	) {
+		this.eventEmitter = eventEmitter ?? new EventEmitter()
+	}
+
+	/**
+	 * Gets the event emitter for external access.
+	 */
+	getEventEmitter(): EventEmitter {
+		return this.eventEmitter
+	}
 
 	/**
 	 * Dispatches an action to update the store.
+	 * This is the synchronous version that emits after events but does NOT run interceptors.
+	 * Use dispatchAsync() if you need interceptor support.
 	 */
 	dispatch(action: Action): void {
 		// Run through middlewares first
@@ -29,8 +51,91 @@ export class ActionDispatcher {
 			}
 		}
 
+		// Capture state before execution (for after events)
+		const stateBefore = captureStateBeforeAction(action, this.store)
+
 		// Execute the action
 		this.execute(action)
+
+		// Emit after event
+		const afterEvent = createAfterEvent(action, stateBefore, this.store)
+		if (afterEvent) {
+			this.eventEmitter.emit(afterEvent)
+		}
+	}
+
+	/**
+	 * Dispatches an action with full interceptor support.
+	 * Returns true if the action was executed, false if it was cancelled by an interceptor.
+	 */
+	async dispatchAsync(action: Action): Promise<boolean> {
+		// Run through middlewares first
+		for (const middleware of this.middlewares) {
+			const result = middleware(action, this.store)
+			if (result === false) {
+				return false
+			}
+		}
+
+		// Create and run before event through interceptors
+		const beforeEvent = createBeforeEvent(action, this.store)
+		if (beforeEvent) {
+			const result = await this.eventEmitter.runInterceptors(beforeEvent)
+			if (result === null) {
+				// Interceptor cancelled the action
+				return false
+			}
+			// If event was modified, update action accordingly
+			if (result !== beforeEvent) {
+				action = this.updateActionFromEvent(action, result)
+			}
+		}
+
+		// Capture state before execution (for after events)
+		const stateBefore = captureStateBeforeAction(action, this.store)
+
+		// Execute the action
+		this.execute(action)
+
+		// Emit after event
+		const afterEvent = createAfterEvent(action, stateBefore, this.store)
+		if (afterEvent) {
+			this.eventEmitter.emit(afterEvent)
+		}
+
+		return true
+	}
+
+	/**
+	 * Updates an action based on a modified before event.
+	 * Used when an interceptor modifies the event.
+	 */
+	private updateActionFromEvent(action: Action, event: ReturnType<typeof createBeforeEvent>): Action {
+		if (!event) return action
+
+		switch (action.type) {
+			case 'SET_FIELD':
+				if (event.type === 'field:changing') {
+					return {
+						...action,
+						value: event.newValue,
+					}
+				}
+				break
+
+			case 'CONNECT_RELATION':
+				if (event.type === 'relation:connecting') {
+					return {
+						...action,
+						targetId: event.targetId,
+					}
+				}
+				break
+
+			// Other action types don't have modifiable properties in their before events
+		}
+
+		return action
 	}
 
 	/**

@@ -5,7 +5,6 @@ export {
 	useDispatcher,
 	usePersistence,
 	useBindxContext,
-	useIdentityMap, // Legacy alias
 	type BindxProviderProps,
 	type BindxContextValue,
 } from './BackendAdapterContext.js'
@@ -30,3 +29,12 @@ export {
 } from './ContemberBindxProvider.js'
 
 export { useUndo, type UndoHookResult } from './useUndo.js'
+
+export {
+	useOnEvent,
+	useOnEntityEvent,
+	useOnFieldEvent,
+	useIntercept,
+	useInterceptEntity,
+	useInterceptField,
+} from './useBindxEvents.js'

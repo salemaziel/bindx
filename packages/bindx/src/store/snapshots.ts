@@ -3,7 +3,7 @@
  * All snapshots are frozen objects that are replaced (not mutated) on changes.
  */
 
-import type { HasOneRelationState } from '../accessors/types.js'
+import type { HasOneRelationState } from '../handles/types.js'
 
 /**
  * Status of a data load operation

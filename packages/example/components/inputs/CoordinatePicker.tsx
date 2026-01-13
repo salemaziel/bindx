@@ -1,4 +1,4 @@
-import type { FieldAccessor } from '@contember/react-bindx'
+import type { FieldRef } from '@contember/react-bindx'
 
 /**
  * Generic coordinate picker - takes two number fields
@@ -7,8 +7,8 @@ export function CoordinatePicker({
 	lat,
 	lng,
 }: {
-	lat: FieldAccessor<number>
-	lng: FieldAccessor<number>
+	lat: FieldRef<number>
+	lng: FieldRef<number>
 }) {
 	return (
 		<div className="coordinate-picker">
