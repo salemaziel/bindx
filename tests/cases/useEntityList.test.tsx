@@ -508,4 +508,313 @@ describe('useEntityList', () => {
 			expect(store.isScheduledForDeletion('Author', 'author-2')).toBe(true)
 		})
 	})
+
+	describe('move() method', () => {
+		test('move() reorders items correctly (move forward)', async () => {
+			const adapter = new MockAdapter(createMockData(), { delay: 0 })
+
+			function TestComponent(): React.ReactElement {
+				const authors = useEntityList('Author', {}, a => a.id().name().email())
+
+				if (authors.isLoading) {
+					return <div data-testid="loading">Loading...</div>
+				}
+
+				return (
+					<div>
+						<span data-testid="count">{authors.length}</span>
+						<ul data-testid="list">
+							{authors.items.map((author, index) => (
+								<li key={author.id} data-testid={`author-${index}`}>
+									{author.fields.name.value}
+								</li>
+							))}
+						</ul>
+						<button
+							data-testid="move-button"
+							onClick={() => authors.move(0, 1)}
+						>
+							Move First to Last
+						</button>
+					</div>
+				)
+			}
+
+			const { container } = render(
+				<BindxProvider adapter={adapter}>
+					<TestComponent />
+				</BindxProvider>,
+			)
+
+			// Wait for data to load
+			await waitFor(() => {
+				expect(queryByTestId(container, 'count')).not.toBeNull()
+			})
+
+			// Initially John is first, Jane is second
+			expect(getByTestId(container, 'author-0').textContent).toBe('John Doe')
+			expect(getByTestId(container, 'author-1').textContent).toBe('Jane Smith')
+
+			// Move first item to last position
+			act(() => {
+				const button = getByTestId(container, 'move-button') as HTMLButtonElement
+				button.click()
+			})
+
+			// Now Jane is first, John is second
+			expect(getByTestId(container, 'author-0').textContent).toBe('Jane Smith')
+			expect(getByTestId(container, 'author-1').textContent).toBe('John Doe')
+		})
+
+		test('move() reorders items correctly (move backward)', async () => {
+			const adapter = new MockAdapter(createMockData(), { delay: 0 })
+
+			function TestComponent(): React.ReactElement {
+				const authors = useEntityList('Author', {}, a => a.id().name().email())
+
+				if (authors.isLoading) {
+					return <div data-testid="loading">Loading...</div>
+				}
+
+				return (
+					<div>
+						<span data-testid="count">{authors.length}</span>
+						<ul data-testid="list">
+							{authors.items.map((author, index) => (
+								<li key={author.id} data-testid={`author-${index}`}>
+									{author.fields.name.value}
+								</li>
+							))}
+						</ul>
+						<button
+							data-testid="move-button"
+							onClick={() => authors.move(1, 0)}
+						>
+							Move Last to First
+						</button>
+					</div>
+				)
+			}
+
+			const { container } = render(
+				<BindxProvider adapter={adapter}>
+					<TestComponent />
+				</BindxProvider>,
+			)
+
+			// Wait for data to load
+			await waitFor(() => {
+				expect(queryByTestId(container, 'count')).not.toBeNull()
+			})
+
+			// Initially John is first, Jane is second
+			expect(getByTestId(container, 'author-0').textContent).toBe('John Doe')
+			expect(getByTestId(container, 'author-1').textContent).toBe('Jane Smith')
+
+			// Move last item to first position
+			act(() => {
+				const button = getByTestId(container, 'move-button') as HTMLButtonElement
+				button.click()
+			})
+
+			// Now Jane is first, John is second
+			expect(getByTestId(container, 'author-0').textContent).toBe('Jane Smith')
+			expect(getByTestId(container, 'author-1').textContent).toBe('John Doe')
+		})
+
+		test('move() with invalid indices does nothing', async () => {
+			const adapter = new MockAdapter(createMockData(), { delay: 0 })
+
+			function TestComponent(): React.ReactElement {
+				const authors = useEntityList('Author', {}, a => a.id().name().email())
+
+				if (authors.isLoading) {
+					return <div data-testid="loading">Loading...</div>
+				}
+
+				return (
+					<div>
+						<span data-testid="count">{authors.length}</span>
+						<ul data-testid="list">
+							{authors.items.map((author, index) => (
+								<li key={author.id} data-testid={`author-${index}`}>
+									{author.fields.name.value}
+								</li>
+							))}
+						</ul>
+						<button
+							data-testid="move-negative"
+							onClick={() => authors.move(-1, 0)}
+						>
+							Move Negative
+						</button>
+						<button
+							data-testid="move-out-of-bounds"
+							onClick={() => authors.move(0, 10)}
+						>
+							Move Out of Bounds
+						</button>
+					</div>
+				)
+			}
+
+			const { container } = render(
+				<BindxProvider adapter={adapter}>
+					<TestComponent />
+				</BindxProvider>,
+			)
+
+			// Wait for data to load
+			await waitFor(() => {
+				expect(queryByTestId(container, 'count')).not.toBeNull()
+			})
+
+			// Try invalid moves - they should not change the order
+			act(() => {
+				const button = getByTestId(container, 'move-negative') as HTMLButtonElement
+				button.click()
+			})
+
+			// Order unchanged
+			expect(getByTestId(container, 'author-0').textContent).toBe('John Doe')
+			expect(getByTestId(container, 'author-1').textContent).toBe('Jane Smith')
+
+			act(() => {
+				const button = getByTestId(container, 'move-out-of-bounds') as HTMLButtonElement
+				button.click()
+			})
+
+			// Order still unchanged
+			expect(getByTestId(container, 'author-0').textContent).toBe('John Doe')
+			expect(getByTestId(container, 'author-1').textContent).toBe('Jane Smith')
+		})
+
+		test('move() with same index does nothing', async () => {
+			const adapter = new MockAdapter(createMockData(), { delay: 0 })
+
+			function TestComponent(): React.ReactElement {
+				const authors = useEntityList('Author', {}, a => a.id().name().email())
+
+				if (authors.isLoading) {
+					return <div data-testid="loading">Loading...</div>
+				}
+
+				return (
+					<div>
+						<span data-testid="count">{authors.length}</span>
+						<ul data-testid="list">
+							{authors.items.map((author, index) => (
+								<li key={author.id} data-testid={`author-${index}`}>
+									{author.fields.name.value}
+								</li>
+							))}
+						</ul>
+						<button
+							data-testid="move-same"
+							onClick={() => authors.move(0, 0)}
+						>
+							Move Same
+						</button>
+					</div>
+				)
+			}
+
+			const { container } = render(
+				<BindxProvider adapter={adapter}>
+					<TestComponent />
+				</BindxProvider>,
+			)
+
+			// Wait for data to load
+			await waitFor(() => {
+				expect(queryByTestId(container, 'count')).not.toBeNull()
+			})
+
+			// Move to same position
+			act(() => {
+				const button = getByTestId(container, 'move-same') as HTMLButtonElement
+				button.click()
+			})
+
+			// Order unchanged
+			expect(getByTestId(container, 'author-0').textContent).toBe('John Doe')
+			expect(getByTestId(container, 'author-1').textContent).toBe('Jane Smith')
+		})
+
+		test('move() works with newly added entities', async () => {
+			const adapter = new MockAdapter(createMockData(), { delay: 0 })
+
+			function TestComponent(): React.ReactElement {
+				const authors = useEntityList('Author', {}, a => a.id().name().email())
+
+				if (authors.isLoading) {
+					return <div data-testid="loading">Loading...</div>
+				}
+
+				return (
+					<div>
+						<span data-testid="count">{authors.length}</span>
+						<ul data-testid="list">
+							{authors.items.map((author, index) => (
+								<li key={author.id} data-testid={`author-${index}`}>
+									{author.fields.name.value ?? 'unnamed'}
+								</li>
+							))}
+						</ul>
+						<button
+							data-testid="add-button"
+							onClick={() => {
+								authors.add({ name: 'New Author', email: 'new@example.com' })
+							}}
+						>
+							Add
+						</button>
+						<button
+							data-testid="move-new-to-first"
+							onClick={() => authors.move(2, 0)}
+						>
+							Move New to First
+						</button>
+					</div>
+				)
+			}
+
+			const { container } = render(
+				<BindxProvider adapter={adapter}>
+					<TestComponent />
+				</BindxProvider>,
+			)
+
+			// Wait for data to load
+			await waitFor(() => {
+				expect(queryByTestId(container, 'count')).not.toBeNull()
+			})
+
+			// Initially 2 authors
+			expect(getByTestId(container, 'count').textContent).toBe('2')
+
+			// Add new author
+			act(() => {
+				const button = getByTestId(container, 'add-button') as HTMLButtonElement
+				button.click()
+			})
+
+			// Should have 3 authors, new one at end
+			expect(getByTestId(container, 'count').textContent).toBe('3')
+			expect(getByTestId(container, 'author-0').textContent).toBe('John Doe')
+			expect(getByTestId(container, 'author-1').textContent).toBe('Jane Smith')
+			expect(getByTestId(container, 'author-2').textContent).toBe('New Author')
+
+			// Move the new author to the first position
+			act(() => {
+				const button = getByTestId(container, 'move-new-to-first') as HTMLButtonElement
+				button.click()
+			})
+
+			// New author should now be first
+			expect(getByTestId(container, 'author-0').textContent).toBe('New Author')
+			expect(getByTestId(container, 'author-1').textContent).toBe('John Doe')
+			expect(getByTestId(container, 'author-2').textContent).toBe('Jane Smith')
+		})
+	})
 })
