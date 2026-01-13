@@ -1,5 +1,5 @@
 import type { SnapshotStore } from '@contember/bindx'
-import { SelectionMetaCollector } from './SelectionMeta.js'
+import { SelectionScope } from '@contember/bindx'
 import {
 	type EntityRef,
 	type EntityFields,
@@ -7,9 +7,12 @@ import {
 	type HasManyRef,
 	type HasOneRef,
 	FIELD_REF_META,
-	NESTED_SELECTION_REF,
+	SCOPE_REF,
 } from './types.js'
 import { deepEqual } from '@contember/bindx'
+
+// Re-export SCOPE_REF for use in other modules
+export { SCOPE_REF }
 
 /**
  * Notify change callback type
@@ -18,35 +21,25 @@ type NotifyChange = () => void
 
 /**
  * Creates a collector proxy for the collection phase.
- * This proxy captures field access and builds selection metadata.
+ * This proxy captures field access and builds selection metadata using SelectionScope.
+ *
+ * @param scope - The SelectionScope to collect fields into
  */
 export function createCollectorProxy<T>(
-	selection: SelectionMetaCollector,
-	path: string[] = [],
+	scope: SelectionScope,
 ): EntityRef<T> {
 	const fieldsProxy = new Proxy({} as EntityFields<T>, {
 		get(_, fieldName: string): FieldRef<unknown> | HasManyRef<unknown> | HasOneRef<unknown> {
-			const fieldPath = [...path, fieldName]
-
-			// Register the field access
-			selection.addField({
-				fieldName,
-				alias: fieldName,
-				path: fieldPath,
-				isArray: false,
-				isRelation: false,
-			})
-
 			// Return a collector ref that works for all field types
 			// The actual type (scalar/hasMany/hasOne) will be determined
 			// by how it's used in components
-			return createCollectorFieldRef(selection, fieldPath, fieldName)
+			return createCollectorFieldRef(scope, fieldName)
 		},
 	})
 
 	const noop = () => () => {}
 
-	return {
+	const ref: EntityRef<T> = {
 		id: '__collector__',
 		fields: fieldsProxy,
 		data: null,
@@ -68,6 +61,12 @@ export function createCollectorProxy<T>(
 		onPersisted: noop,
 		interceptPersisting: noop,
 	}
+
+	// Add scope reference for nested component merging
+	// This is an internal implementation detail, not part of public EntityRef interface
+	;(ref as unknown as Record<symbol, unknown>)[SCOPE_REF] = scope
+
+	return ref
 }
 
 /**
@@ -76,20 +75,38 @@ export function createCollectorProxy<T>(
 type CollectorRef = FieldRef<unknown> & HasManyRef<unknown> & HasOneRef<unknown>
 
 /**
- * Creates a field reference for collection phase
+ * Creates a field reference for collection phase using SelectionScope.
+ *
+ * Key design:
+ * - Initially marks field as scalar
+ * - Lazily creates child scope when relation access happens (.fields, .entity, .map)
+ * - Child scope creation automatically upgrades from scalar to relation
+ *
+ * @param parentScope - The parent SelectionScope
+ * @param fieldName - The field being accessed
  */
 function createCollectorFieldRef(
-	selection: SelectionMetaCollector,
-	path: string[],
+	parentScope: SelectionScope,
 	fieldName: string,
 ): CollectorRef {
-	// Create nested selection for relations
-	const nestedSelection = new SelectionMetaCollector()
+	// Initially add as scalar (will be upgraded to relation if .fields/.entity/.map is accessed)
+	parentScope.addScalar(fieldName)
+
+	// Lazy child scope - created only when relation access happens
+	let childScope: SelectionScope | null = null
+
+	const getChildScope = (): SelectionScope => {
+		if (!childScope) {
+			// This automatically removes from scalars and creates relation
+			childScope = parentScope.child(fieldName)
+		}
+		return childScope
+	}
 
 	const meta = {
 		entityType: '', // Collection phase - no entity
 		entityId: '', // Collection phase - no entity
-		path,
+		path: [fieldName],
 		fieldName,
 		isArray: false as boolean,
 		isRelation: false as boolean,
@@ -122,19 +139,12 @@ function createCollectorFieldRef(
 		length: 0,
 		items: [],
 		map: <R>(fn: (item: EntityRef<unknown>, index: number) => R): R[] => {
-			// Update selection to mark as array relation
-			selection.addField({
-				fieldName,
-				alias: fieldName,
-				path,
-				isArray: true,
-				isRelation: true,
-				nested: nestedSelection,
-			})
+			// Get child scope and mark as array relation
+			const scope = getChildScope()
+			parentScope.markAsArray(fieldName)
 
 			// Call fn once with collector to gather nested selection
-			const nestedCollector = createCollectorProxy<unknown>(nestedSelection, [])
-			fn(nestedCollector, 0)
+			fn(createCollectorProxy<unknown>(scope), 0)
 
 			return []
 		},
@@ -152,47 +162,17 @@ function createCollectorFieldRef(
 		id: null,
 		fields: new Proxy({} as EntityFields<unknown>, {
 			get(_, nestedFieldName: string) {
-				// Update selection to mark as has-one relation
-				selection.addField({
-					fieldName,
-					alias: fieldName,
-					path,
-					isArray: false,
-					isRelation: true,
-					nested: nestedSelection,
-				})
+				// Get child scope (upgrades to relation)
+				const scope = getChildScope()
 
-				const nestedPath = [...path, nestedFieldName]
-				nestedSelection.addField({
-					fieldName: nestedFieldName,
-					alias: nestedFieldName,
-					path: [nestedFieldName],
-					isArray: false,
-					isRelation: false,
-				})
-
-				return createCollectorFieldRef(nestedSelection, [nestedFieldName], nestedFieldName)
+				// Create nested field ref in the child scope
+				return createCollectorFieldRef(scope, nestedFieldName)
 			},
 		}),
 		get entity(): EntityRef<unknown> {
-			// For collection phase, return a collector proxy as EntityRef
-			// Update selection to mark as has-one relation
-			selection.addField({
-				fieldName,
-				alias: fieldName,
-				path,
-				isArray: false,
-				isRelation: true,
-				nested: nestedSelection,
-			})
-			// Create collector proxy with FIELD_REF_META and NESTED_SELECTION_REF
-			// FIELD_REF_META preserves path context for path-based lookups
-			// NESTED_SELECTION_REF allows direct access to the nested selection for merging
-			const entityProxy = createCollectorProxy<unknown>(nestedSelection, [])
-			return Object.assign(entityProxy, {
-				[FIELD_REF_META]: meta,
-				[NESTED_SELECTION_REF]: nestedSelection,
-			})
+			// Get child scope (upgrades to relation) and return proxy with scope
+			const scope = getChildScope()
+			return createCollectorProxy<unknown>(scope)
 		},
 		// HasOneRef methods (connect already added above for HasManyRef)
 		disconnect: () => {},

@@ -18,6 +18,7 @@ import {
 	SELECTION_META,
 	ComponentBrand,
 	createSelectionBuilder,
+	SelectionScope,
 } from '@contember/bindx'
 import type {
 	ComponentBuilder,
@@ -326,13 +327,13 @@ function collectImplicitSelections<TProps extends object>(
 	roles: readonly string[],
 	hasInterfacesMode: boolean,
 ): void {
-	const propCollectors = new Map<string, SelectionMetaCollector>()
+	const propScopes = new Map<string, SelectionScope>()
 	const implicitPropNames = new Set(implicitConfigs.map(([name]) => name))
 	const explicitPropNames = new Set(
 		[...selectionsMap.keys()].filter(name => !implicitPropNames.has(name)),
 	)
 
-	// Create proxy for props that captures field accesses
+	// Create proxy for props that captures field accesses using SelectionScope
 	const propsProxy = new Proxy({} as TProps, {
 		get(_target, propName: string | symbol): unknown {
 			if (typeof propName === 'symbol') {
@@ -345,19 +346,19 @@ function collectImplicitSelections<TProps extends object>(
 				return createExplicitPropMock()
 			}
 
-			// For implicit entity props, create collectors
+			// For implicit entity props, create scopes
 			if (implicitPropNames.has(propName)) {
-				const selection = new SelectionMetaCollector()
-				propCollectors.set(propName, selection)
-				return createCollectorProxy(selection)
+				const scope = new SelectionScope()
+				propScopes.set(propName, scope)
+				return createCollectorProxy(scope)
 			}
 
 			// In interfaces mode, any unknown prop could be an interface entity prop
-			// Create a collector for it and return a collector proxy
+			// Create a scope for it and return a collector proxy
 			if (hasInterfacesMode) {
-				const selection = new SelectionMetaCollector()
-				propCollectors.set(propName, selection)
-				return createCollectorProxy(selection)
+				const scope = new SelectionScope()
+				propScopes.set(propName, scope)
+				return createCollectorProxy(scope)
 			}
 
 			// Scalar prop - return undefined
@@ -368,17 +369,17 @@ function collectImplicitSelections<TProps extends object>(
 	// Execute render to capture field accesses
 	const jsx = renderFn(propsProxy)
 
-	// Analyze JSX tree for component-level selections
-	const jsxSelection = collectSelection(jsx)
+	// Analyze JSX tree for component-level selections (handles nested createComponent)
+	collectSelection(jsx)
 
 	// Create fragments for captured entities
-	for (const [propName, collector] of propCollectors) {
-		if (collector.fields.size > 0) {
-			mergeSelections(collector, jsxSelection)
+	for (const [propName, scope] of propScopes) {
+		if (scope.hasFields()) {
+			const selection = scope.toSelectionMeta()
 
 			selectionsMap.set(propName, {
-				selection: collector,
-				fragment: createFragment(collector, componentBrand, roles),
+				selection,
+				fragment: createFragment(selection, componentBrand, roles),
 			})
 		}
 	}

@@ -28,3 +28,4 @@ export { createSelectionBuilder, getSelectionMeta } from './createSelectionBuild
 export { createFragment } from './createFragment.js'
 export { buildQueryFromSelection, collectPaths, type QuerySpec, type QueryFieldSpec } from './buildQuery.js'
 export { SelectionMetaCollector, mergeSelections, createEmptySelection } from './SelectionMetaCollector.js'
+export { SelectionScope, type HasManyParams } from './SelectionScope.js'

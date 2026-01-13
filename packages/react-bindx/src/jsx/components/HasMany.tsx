@@ -2,7 +2,8 @@ import React, { memo, type ReactElement, type ReactNode } from 'react'
 import type { HasManyProps, SelectionFieldMeta, SelectionMeta, SelectionProvider, EntityRef } from '../types.js'
 import { FIELD_REF_META, BINDX_COMPONENT } from '../types.js'
 import { createCollectorProxy } from '../proxy.js'
-import { SelectionMetaCollector, mergeSelections } from '../SelectionMeta.js'
+import { mergeSelections } from '../SelectionMeta.js'
+import { SelectionScope } from '@contember/bindx'
 
 /**
  * HasMany component - renders a has-many relation
@@ -47,15 +48,18 @@ hasManyWithSelection.getSelection = (
 ): SelectionFieldMeta => {
 	const meta = props.field[FIELD_REF_META]
 
-	// Create nested selection by calling children with collector
-	const nestedSelection = new SelectionMetaCollector()
-	const nestedCollector = createCollectorProxy<unknown>(nestedSelection)
+	// Create nested selection by calling children with collector using SelectionScope
+	const scope = new SelectionScope()
+	const nestedCollector = createCollectorProxy<unknown>(scope)
 
 	// Call children once to gather nested field access
 	const syntheticChildren = props.children(nestedCollector, 0)
 
 	// Also analyze the JSX structure
 	const jsxSelection = collectNested(syntheticChildren)
+
+	// Convert scope to SelectionMeta and merge with JSX selection
+	const nestedSelection = scope.toSelectionMeta()
 	mergeSelections(nestedSelection, jsxSelection)
 
 	return {

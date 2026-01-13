@@ -62,7 +62,7 @@ function EntityListImpl<TSchema, K extends keyof TSchema>({
 	const entityType = name as string
 
 	// Phase 1: Collect JSX selection
-	const { standardSelection, queryKey } = useSelectionCollectionForList({
+	const { selection, queryKey } = useSelectionCollectionForList({
 		entityType,
 		filter,
 		orderBy,
@@ -78,7 +78,7 @@ function EntityListImpl<TSchema, K extends keyof TSchema>({
 		orderBy,
 		limit,
 		offset,
-		selectionMeta: standardSelection,
+		selectionMeta: selection,
 		queryKey,
 	})
 

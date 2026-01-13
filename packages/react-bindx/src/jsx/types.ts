@@ -48,10 +48,11 @@ export type JsxSelectionFieldMeta = SelectionFieldMeta
 export const BINDX_COMPONENT = Symbol('BINDX_COMPONENT')
 
 /**
- * Symbol for carrying nested selection reference on collector proxies
- * Used when passing relation entities to nested createComponent components
+ * Symbol for direct scope access on collector proxies.
+ * Replaces NESTED_SELECTION_REF - carries the SelectionScope directly.
+ * Used when passing relation entities to nested createComponent components.
  */
-export const NESTED_SELECTION_REF = Symbol('NESTED_SELECTION_REF')
+export const SCOPE_REF = Symbol('SCOPE_REF')
 
 
 /**

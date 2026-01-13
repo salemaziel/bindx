@@ -1,8 +1,9 @@
 import type { ReactNode, ReactElement } from 'react'
 import { isValidElement } from 'react'
-import type { JsxSelectionMeta, JsxSelectionFieldMeta, SelectionProvider, SelectionMeta } from './types.js'
-import { FIELD_REF_META, NESTED_SELECTION_REF } from './types.js'
+import type { JsxSelectionMeta, JsxSelectionFieldMeta, SelectionProvider } from './types.js'
+import { FIELD_REF_META, SCOPE_REF } from './types.js'
 import { SelectionMetaCollector, mergeSelections } from './SelectionMeta.js'
+import { SelectionScope } from '@contember/bindx'
 import { isBindxComponent, COMPONENT_SELECTIONS } from './createComponent.js'
 
 /**
@@ -168,12 +169,12 @@ function handleBindxComponent(
 			continue
 		}
 
-		// Case 1: Prop has NESTED_SELECTION_REF - direct reference to nested selection
+		// Case 1: Prop has SCOPE_REF - direct reference to SelectionScope
 		// This is the case when passing relation.entity to a nested component
-		if (NESTED_SELECTION_REF in propValue) {
-			const nestedSelection = (propValue as { [NESTED_SELECTION_REF]: SelectionMeta })[NESTED_SELECTION_REF]
-			// Merge the nested component's selection directly into the relation's nested selection
-			mergeSelections(nestedSelection, meta.selection)
+		if (SCOPE_REF in propValue) {
+			const targetScope = (propValue as { [SCOPE_REF]: SelectionScope })[SCOPE_REF]
+			// Merge the nested component's selection directly into the relation's scope
+			targetScope.mergeFromSelectionMeta(meta.selection)
 		}
 		// Case 2: Prop is a FieldRef from a relation (e.g., article.fields.author)
 		// This has FIELD_REF_META with a path to adjust

@@ -92,7 +92,7 @@ function EntityByMode({
 	const byKey = useMemo(() => JSON.stringify(by), [by])
 
 	// Phase 1: Collect JSX selection
-	const { standardSelection, queryKey } = useSelectionCollection({
+	const { selection, queryKey } = useSelectionCollection({
 		entityType,
 		entityId: byKey,
 		children,
@@ -102,7 +102,7 @@ function EntityByMode({
 	const result = useEntityCore({
 		entityType,
 		by,
-		selectionMeta: standardSelection,
+		selectionMeta: selection,
 		queryKey,
 	})
 

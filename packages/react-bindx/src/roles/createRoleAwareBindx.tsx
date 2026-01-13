@@ -727,7 +727,7 @@ export function createRoleAwareBindx<TRoleSchemas extends RoleSchemasBase<TRoleS
 		const byKey = useMemo(() => JSON.stringify(by), [by])
 
 		// Phase 1: Collect JSX selection (same as standard Entity)
-		const { standardSelection, queryKey } = useSelectionCollection({
+		const { selection, queryKey } = useSelectionCollection({
 			entityType,
 			entityId: byKey,
 			children: renderFn as (entity: JsxEntityRef<object>) => ReactNode,
@@ -737,7 +737,7 @@ export function createRoleAwareBindx<TRoleSchemas extends RoleSchemasBase<TRoleS
 		const result = useEntityCore({
 			entityType,
 			by,
-			selectionMeta: standardSelection,
+			selectionMeta: selection,
 			queryKey,
 		})
 
@@ -808,7 +808,7 @@ export function createRoleAwareBindx<TRoleSchemas extends RoleSchemasBase<TRoleS
 		const entityType = name as string
 
 		// Phase 1: Collect JSX selection (same as standard EntityList)
-		const { standardSelection, queryKey } = useSelectionCollectionForList({
+		const { selection, queryKey } = useSelectionCollectionForList({
 			entityType,
 			filter,
 			children: renderFn as (entity: JsxEntityRef<object>, index: number) => ReactNode,
@@ -818,7 +818,7 @@ export function createRoleAwareBindx<TRoleSchemas extends RoleSchemasBase<TRoleS
 		const result = useEntityListCore({
 			entityType,
 			filter,
-			selectionMeta: standardSelection,
+			selectionMeta: selection,
 			queryKey,
 		})
 

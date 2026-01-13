@@ -1,8 +1,8 @@
 import { useMemo, useRef, type ReactNode } from 'react'
 import { createCollectorProxy } from '../jsx/proxy.js'
 import { collectSelection } from '../jsx/analyzer.js'
-import { SelectionMetaCollector, mergeSelections } from '../jsx/SelectionMeta.js'
-import { buildQueryFromSelection } from '@contember/bindx'
+import { mergeSelections } from '../jsx/SelectionMeta.js'
+import { buildQueryFromSelection, SelectionScope } from '@contember/bindx'
 import type { SelectionMeta } from '@contember/bindx'
 import type { EntityRef } from '../jsx/types.js'
 
@@ -28,10 +28,8 @@ export interface UseSelectionCollectionForListOptions<T> {
  * Result from useSelectionCollectionForList hook.
  */
 export interface SelectionCollectionForListResult {
-	/** JSX selection metadata collector */
-	jsxSelection: SelectionMetaCollector
-	/** Standard selection metadata for query building */
-	standardSelection: SelectionMeta
+	/** Selection metadata for query building */
+	selection: SelectionMeta
 	/** Stable query key for dependency tracking */
 	queryKey: string
 }
@@ -40,8 +38,7 @@ export interface SelectionCollectionForListResult {
  * Cached selection data
  */
 interface SelectionCache {
-	jsxSelection: SelectionMetaCollector
-	standardSelection: SelectionMeta
+	selection: SelectionMeta
 	queryKey: string
 }
 
@@ -76,15 +73,18 @@ export function useSelectionCollectionForList<T>(
 
 	// Collection phase - runs on every render but caches based on content
 	const result = useMemo((): SelectionCollectionForListResult => {
-		// Create collector proxy
-		const selection = new SelectionMetaCollector()
-		const collector = createCollectorProxy<T>(selection)
+		// Create collector proxy using SelectionScope tree
+		const scope = new SelectionScope()
+		const collector = createCollectorProxy<T>(scope)
 
 		// Call children with collector and index 0 to gather field access template
 		const jsx = childrenRef.current(collector, 0)
 
 		// Analyze the returned JSX for component-level selections
 		const jsxSel = collectSelection(jsx)
+
+		// Convert scope to SelectionMeta and merge with JSX selection
+		const selection = scope.toSelectionMeta()
 		mergeSelections(selection, jsxSel)
 
 		// Debug output can be enabled via global flag
@@ -92,11 +92,8 @@ export function useSelectionCollectionForList<T>(
 			console.log('[EntityList] Collected selection for', entityType, ':')
 		}
 
-		// selection is already SelectionMeta - use directly for query building
-		const standardSel = selection
-
 		// Create a stable key from the selection to detect actual changes
-		const query = buildQueryFromSelection(standardSel)
+		const query = buildQueryFromSelection(selection)
 		const newQueryKey = JSON.stringify({ query, filter, orderBy, limit, offset })
 
 		// If the selection hasn't actually changed, return cached values
@@ -107,8 +104,7 @@ export function useSelectionCollectionForList<T>(
 
 		// Update cache with new values
 		const newCache: SelectionCache = {
-			jsxSelection: selection,
-			standardSelection: standardSel,
+			selection,
 			queryKey: newQueryKey,
 		}
 		selectionCacheRef.current = newCache
