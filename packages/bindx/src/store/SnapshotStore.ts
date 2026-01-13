@@ -41,10 +41,14 @@ export type HasManyRemovalType = 'disconnect' | 'delete'
 export interface StoredHasManyState {
 	/** IDs of items from server */
 	serverIds: Set<string>
+	/** Explicit ordered list of item IDs, null means use default order (serverIds + plannedConnections) */
+	orderedIds: string[] | null
 	/** Planned removals (disconnect or delete) keyed by entity ID */
 	plannedRemovals: Map<string, HasManyRemovalType>
 	/** Planned connections (IDs to add to the list) */
 	plannedConnections: Set<string>
+	/** Entity IDs created via add() - tracked for proper remove() semantics and mutation generation */
+	createdEntities: Set<string>
 	version: number
 }
 
@@ -470,8 +474,10 @@ export class SnapshotStore {
 		if (!this.hasManyStates.has(key)) {
 			this.hasManyStates.set(key, {
 				serverIds: new Set(serverIds ?? []),
+				orderedIds: null,
 				plannedRemovals: new Map(),
 				plannedConnections: new Set(),
+				createdEntities: new Set(),
 				version: 0,
 			})
 		}
@@ -506,14 +512,17 @@ export class SnapshotStore {
 		if (!existing) {
 			this.hasManyStates.set(key, {
 				serverIds: new Set(serverIds),
+				orderedIds: null,
 				plannedRemovals: new Map(),
 				plannedConnections: new Set(),
+				createdEntities: new Set(),
 				version: 0,
 			})
 		} else {
 			this.hasManyStates.set(key, {
 				...existing,
 				serverIds: new Set(serverIds),
+				orderedIds: null,
 				version: existing.version + 1,
 			})
 		}
@@ -537,8 +546,10 @@ export class SnapshotStore {
 		if (!existing) {
 			this.hasManyStates.set(key, {
 				serverIds: new Set(),
+				orderedIds: null,
 				plannedRemovals: new Map([[itemId, type]]),
 				plannedConnections: new Set(),
+				createdEntities: new Set(),
 				version: 0,
 			})
 		} else {
@@ -547,10 +558,20 @@ export class SnapshotStore {
 			// If it was planned for connection, cancel that
 			const newPlannedConnections = new Set(existing.plannedConnections)
 			newPlannedConnections.delete(itemId)
+			// Remove from orderedIds if we have explicit ordering
+			let newOrderedIds = existing.orderedIds
+			if (newOrderedIds !== null) {
+				newOrderedIds = newOrderedIds.filter(id => id !== itemId)
+			}
+			// Also remove from createdEntities if it was created via add()
+			const newCreatedEntities = new Set(existing.createdEntities)
+			newCreatedEntities.delete(itemId)
 			this.hasManyStates.set(key, {
 				...existing,
+				orderedIds: newOrderedIds,
 				plannedRemovals: newPlannedRemovals,
 				plannedConnections: newPlannedConnections,
+				createdEntities: newCreatedEntities,
 				version: existing.version + 1,
 			})
 		}
@@ -610,8 +631,10 @@ export class SnapshotStore {
 		if (!existing) {
 			this.hasManyStates.set(key, {
 				serverIds: new Set(),
+				orderedIds: null,
 				plannedRemovals: new Map(),
 				plannedConnections: new Set([itemId]),
+				createdEntities: new Set(),
 				version: 0,
 			})
 		} else {
@@ -620,8 +643,14 @@ export class SnapshotStore {
 			// If it was planned for removal, cancel that
 			const newPlannedRemovals = new Map(existing.plannedRemovals)
 			newPlannedRemovals.delete(itemId)
+			// Add to orderedIds if we have explicit ordering
+			let newOrderedIds = existing.orderedIds
+			if (newOrderedIds !== null && !newOrderedIds.includes(itemId)) {
+				newOrderedIds = [...newOrderedIds, itemId]
+			}
 			this.hasManyStates.set(key, {
 				...existing,
+				orderedIds: newOrderedIds,
 				plannedConnections: newPlannedConnections,
 				plannedRemovals: newPlannedRemovals,
 				version: existing.version + 1,
@@ -682,8 +711,10 @@ export class SnapshotStore {
 
 		this.hasManyStates.set(key, {
 			serverIds: new Set(newServerIds),
+			orderedIds: null,
 			plannedRemovals: new Map(),
 			plannedConnections: new Set(),
+			createdEntities: new Set(),
 			version: (existing?.version ?? 0) + 1,
 		})
 
@@ -705,12 +736,238 @@ export class SnapshotStore {
 
 		this.hasManyStates.set(key, {
 			serverIds: existing.serverIds,
+			orderedIds: null,
 			plannedRemovals: new Map(),
 			plannedConnections: new Set(),
+			createdEntities: new Set(),
 			version: existing.version + 1,
 		})
 
 		this.notifyRelationSubscribers(key)
+	}
+
+	/**
+	 * Adds a newly created entity to a has-many relation.
+	 * Used by HasManyListHandle.add() for inline entity creation.
+	 */
+	addToHasMany(
+		parentType: string,
+		parentId: string,
+		fieldName: string,
+		itemId: string,
+	): void {
+		const key = this.getRelationKey(parentType, parentId, fieldName)
+		const existing = this.hasManyStates.get(key)
+
+		if (!existing) {
+			this.hasManyStates.set(key, {
+				serverIds: new Set(),
+				orderedIds: [itemId],
+				plannedRemovals: new Map(),
+				plannedConnections: new Set([itemId]),
+				createdEntities: new Set([itemId]),
+				version: 0,
+			})
+		} else {
+			const newPlannedConnections = new Set(existing.plannedConnections)
+			newPlannedConnections.add(itemId)
+			const newCreatedEntities = new Set(existing.createdEntities)
+			newCreatedEntities.add(itemId)
+			// Initialize orderedIds if null, then append new item
+			const currentOrderedIds = existing.orderedIds ?? this.computeDefaultOrderedIds(existing)
+			const newOrderedIds = [...currentOrderedIds, itemId]
+			this.hasManyStates.set(key, {
+				...existing,
+				orderedIds: newOrderedIds,
+				plannedConnections: newPlannedConnections,
+				createdEntities: newCreatedEntities,
+				version: existing.version + 1,
+			})
+		}
+
+		this.notifyRelationSubscribers(key)
+	}
+
+	/**
+	 * Removes an entity from a has-many relation.
+	 * For newly created entities (via add()), cancels the connection.
+	 * For existing server entities, plans a disconnect.
+	 */
+	removeFromHasMany(
+		parentType: string,
+		parentId: string,
+		fieldName: string,
+		itemId: string,
+	): void {
+		const key = this.getRelationKey(parentType, parentId, fieldName)
+		const existing = this.hasManyStates.get(key)
+
+		if (!existing) return
+
+		const isCreatedEntity = existing.createdEntities.has(itemId)
+
+		if (isCreatedEntity) {
+			// Entity was created via add() - just cancel the connection
+			const newPlannedConnections = new Set(existing.plannedConnections)
+			newPlannedConnections.delete(itemId)
+			const newCreatedEntities = new Set(existing.createdEntities)
+			newCreatedEntities.delete(itemId)
+			// Remove from orderedIds
+			let newOrderedIds = existing.orderedIds
+			if (newOrderedIds !== null) {
+				newOrderedIds = newOrderedIds.filter(id => id !== itemId)
+			}
+
+			// Check if state is "clean" - reset orderedIds to null if so
+			const newState: StoredHasManyState = {
+				...existing,
+				orderedIds: newOrderedIds,
+				plannedConnections: newPlannedConnections,
+				createdEntities: newCreatedEntities,
+				version: existing.version + 1,
+			}
+
+			// If no changes, check if orderedIds matches default order
+			if (
+				newPlannedConnections.size === 0 &&
+				newCreatedEntities.size === 0 &&
+				existing.plannedRemovals.size === 0 &&
+				newOrderedIds !== null
+			) {
+				const defaultOrder = this.computeDefaultOrderedIds(newState)
+				if (this.arraysEqual(newOrderedIds, defaultOrder)) {
+					newState.orderedIds = null
+				}
+			}
+
+			this.hasManyStates.set(key, newState)
+		} else {
+			// Existing server entity - plan disconnect
+			this.planHasManyRemoval(parentType, parentId, fieldName, itemId, 'disconnect')
+			return // planHasManyRemoval already notifies
+		}
+
+		this.notifyRelationSubscribers(key)
+	}
+
+	/**
+	 * Compares two string arrays for equality.
+	 */
+	private arraysEqual(a: string[], b: string[]): boolean {
+		if (a.length !== b.length) return false
+		for (let i = 0; i < a.length; i++) {
+			if (a[i] !== b[i]) return false
+		}
+		return true
+	}
+
+	/**
+	 * Moves an item within a has-many relation from one index to another.
+	 */
+	moveInHasMany(
+		parentType: string,
+		parentId: string,
+		fieldName: string,
+		fromIndex: number,
+		toIndex: number,
+	): void {
+		const key = this.getRelationKey(parentType, parentId, fieldName)
+		const existing = this.hasManyStates.get(key)
+
+		if (!existing) return
+
+		// Initialize orderedIds if null
+		const currentOrderedIds = existing.orderedIds ?? this.computeDefaultOrderedIds(existing)
+
+		// Validate indices
+		if (fromIndex < 0 || fromIndex >= currentOrderedIds.length) return
+		if (toIndex < 0 || toIndex >= currentOrderedIds.length) return
+		if (fromIndex === toIndex) return
+
+		// Perform the move
+		const newOrderedIds = [...currentOrderedIds]
+		const movedItem = newOrderedIds.splice(fromIndex, 1)[0]
+		if (movedItem === undefined) return
+		newOrderedIds.splice(toIndex, 0, movedItem)
+
+		this.hasManyStates.set(key, {
+			...existing,
+			orderedIds: newOrderedIds,
+			version: existing.version + 1,
+		})
+
+		this.notifyRelationSubscribers(key)
+	}
+
+	/**
+	 * Gets the ordered list of item IDs for a has-many relation.
+	 * Computes the current ordered list based on state.
+	 */
+	getHasManyOrderedIds(
+		parentType: string,
+		parentId: string,
+		fieldName: string,
+	): string[] {
+		const key = this.getRelationKey(parentType, parentId, fieldName)
+		const existing = this.hasManyStates.get(key)
+
+		if (!existing) return []
+
+		if (existing.orderedIds !== null) {
+			return existing.orderedIds
+		}
+
+		return this.computeDefaultOrderedIds(existing)
+	}
+
+	/**
+	 * Computes the default ordered IDs for a has-many relation.
+	 * Order is: serverIds (minus removals) + plannedConnections
+	 */
+	private computeDefaultOrderedIds(state: StoredHasManyState): string[] {
+		const result: string[] = []
+
+		// Add server IDs that are not removed
+		for (const id of state.serverIds) {
+			if (!state.plannedRemovals.has(id)) {
+				result.push(id)
+			}
+		}
+
+		// Add planned connections
+		for (const id of state.plannedConnections) {
+			if (!result.includes(id)) {
+				result.push(id)
+			}
+		}
+
+		return result
+	}
+
+	/**
+	 * Checks if an entity in a has-many relation was created via add().
+	 */
+	isHasManyItemCreated(
+		parentType: string,
+		parentId: string,
+		fieldName: string,
+		itemId: string,
+	): boolean {
+		const key = this.getRelationKey(parentType, parentId, fieldName)
+		const existing = this.hasManyStates.get(key)
+		return existing?.createdEntities.has(itemId) ?? false
+	}
+
+	/**
+	 * Gets the created entities set for a has-many relation.
+	 */
+	getHasManyCreatedEntities(
+		parentType: string,
+		parentId: string,
+		fieldName: string,
+	): Set<string> | undefined {
+		const key = this.getRelationKey(parentType, parentId, fieldName)
+		return this.hasManyStates.get(key)?.createdEntities
 	}
 
 	// ==================== Persisting State ====================
@@ -1402,8 +1659,10 @@ export class SnapshotStore {
 			if (state) {
 				hasManyStates.set(key, {
 					serverIds: new Set(state.serverIds),
+					orderedIds: state.orderedIds ? [...state.orderedIds] : null,
 					plannedRemovals: new Map(state.plannedRemovals),
 					plannedConnections: new Set(state.plannedConnections),
+					createdEntities: new Set(state.createdEntities),
 					version: state.version,
 				})
 			}
@@ -1449,8 +1708,10 @@ export class SnapshotStore {
 		for (const [key, state] of snapshot.hasManyStates) {
 			this.hasManyStates.set(key, {
 				serverIds: new Set(state.serverIds),
+				orderedIds: state.orderedIds ? [...state.orderedIds] : null,
 				plannedRemovals: new Map(state.plannedRemovals),
 				plannedConnections: new Set(state.plannedConnections),
+				createdEntities: new Set(state.createdEntities),
 				version: state.version + 1, // Bump version to trigger re-render
 			})
 			notifiedRelationKeys.add(key)

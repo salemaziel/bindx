@@ -427,14 +427,53 @@ export class MutationCollector {
 			}
 		}
 
-		// Items to connect (in current but not in server, with existing ID, not temp)
+		// Get created entities (via add() method) and planned connections
+		const createdEntities = this.store.getHasManyCreatedEntities(entityType, entityId, fieldName)
+		const plannedConnections = this.store.getHasManyPlannedConnections(entityType, entityId, fieldName)
+
+		// Items to create (entities created via add())
+		if (createdEntities) {
+			const entitySchema = this.schema.entities[entityType]
+			const fieldDef = entitySchema?.fields[fieldName]
+			const targetType = fieldDef?.type === 'many' ? fieldDef.entity : null
+
+			for (const tempId of createdEntities) {
+				if (targetType) {
+					const itemSnapshot = this.store.getEntitySnapshot(targetType, tempId)
+					if (itemSnapshot) {
+						const createData = { ...itemSnapshot.data as Record<string, unknown> }
+						delete createData['id']
+						if (Object.keys(createData).length > 0) {
+							operations.push({ create: this.processNestedData(createData) })
+						} else {
+							// Empty create - just create with no data
+							operations.push({ create: {} })
+						}
+					}
+				}
+			}
+		}
+
+		// Items to connect (planned connections that are not created entities)
+		if (plannedConnections) {
+			for (const connectedId of plannedConnections) {
+				// Skip if it's a created entity (already handled above)
+				if (createdEntities?.has(connectedId)) continue
+				// Skip if already planned for removal
+				if (plannedRemovals?.has(connectedId)) continue
+				operations.push({ connect: { id: connectedId } })
+			}
+		}
+
+		// Items to connect from embedded data (in current but not in server, with existing ID, not temp)
 		for (const item of currentItems) {
 			const itemId = item['id'] as string
 			if (itemId && !itemId.startsWith('__temp_') && !serverIds.has(itemId)) {
-				// Skip if already planned for removal (shouldn't happen, but be safe)
-				if (!plannedRemovals?.has(itemId)) {
-					operations.push({ connect: { id: itemId } })
-				}
+				// Skip if already planned for removal
+				if (plannedRemovals?.has(itemId)) continue
+				// Skip if already in planned connections
+				if (plannedConnections?.has(itemId)) continue
+				operations.push({ connect: { id: itemId } })
 			}
 		}
 
@@ -449,10 +488,12 @@ export class MutationCollector {
 			}
 		}
 
-		// Items to create (items without ID or with temp ID)
+		// Items to create from embedded data (items without ID or with temp ID in currentItems)
 		for (const item of currentItems) {
 			const itemId = item['id'] as string
 			if (!itemId || itemId.startsWith('__temp_')) {
+				// Skip if it's a created entity (already handled above)
+				if (itemId && createdEntities?.has(itemId)) continue
 				const createData = { ...item }
 				delete createData['id']
 				if (Object.keys(createData).length > 0) {

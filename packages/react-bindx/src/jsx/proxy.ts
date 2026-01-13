@@ -137,8 +137,9 @@ function createCollectorFieldRef(
 
 			return []
 		},
-		add: () => {},
+		add: () => '',
 		remove: () => {},
+		move: () => {},
 		connect: () => {},
 		// HasManyRef event methods (stubs for collection phase)
 		onItemConnected: () => () => {},
@@ -396,12 +397,16 @@ function createRuntimeFieldRef(
 				return fn(accessor, index)
 			})
 		},
-		add: (data?: Record<string, unknown>) => {
+		add: (data?: Record<string, unknown>): string => {
 			const items = getValue()
 			const currentItems = Array.isArray(items) ? [...items] : []
 			const newId = `new_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
 			currentItems.push({ id: newId, ...data })
 			setValue(currentItems)
+			return newId
+		},
+		move: (_fromIndex: number, _toIndex: number) => {
+			// Move not implemented in standalone proxy - requires proper store
 		},
 		remove: (key: string) => {
 			const items = getValue()

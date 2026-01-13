@@ -295,11 +295,14 @@ export interface HasManyRef<TEntity, TSelected = TEntity, TBrand extends AnyBran
 	/** Iterate over items - returns selection-aware entity refs */
 	map<R>(fn: (item: EntityRef<TEntity, TSelected, TBrand, string, TAvailableRoles>, index: number) => R): R[]
 
-	/** Add a new item */
-	add(data?: Partial<TEntity>): void
+	/** Add a new item - returns the new entity's ID (temp ID) */
+	add(data?: Partial<TEntity>): string
 
-	/** Remove item by key */
-	remove(key: string): void
+	/** Remove item by ID */
+	remove(itemId: string): void
+
+	/** Move item from one position to another */
+	move(fromIndex: number, toIndex: number): void
 
 	/** Connect an existing entity to this has-many relation */
 	connect(itemId: string): void

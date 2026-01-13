@@ -260,17 +260,36 @@ export class ActionDispatcher {
 				break
 			}
 
-			case 'ADD_TO_LIST':
-				// List operations are handled by the list accessor
-				// This is a placeholder for future implementation
+			case 'ADD_TO_LIST': {
+				// Create entity if itemId not provided
+				const itemId = action.itemId ?? this.store.createEntity(action.targetType, action.itemData)
+				// Add to has-many relation
+				this.store.addToHasMany(
+					action.entityType,
+					action.entityId,
+					action.fieldName,
+					itemId,
+				)
 				break
+			}
 
 			case 'REMOVE_FROM_LIST':
-				// List operations are handled by the list accessor
+				this.store.removeFromHasMany(
+					action.entityType,
+					action.entityId,
+					action.fieldName,
+					action.itemKey,
+				)
 				break
 
 			case 'MOVE_IN_LIST':
-				// List operations are handled by the list accessor
+				this.store.moveInHasMany(
+					action.entityType,
+					action.entityId,
+					action.fieldName,
+					action.fromIndex,
+					action.toIndex,
+				)
 				break
 
 			case 'SET_LOAD_STATE':

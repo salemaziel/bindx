@@ -125,8 +125,9 @@ export interface AddToListAction {
 	readonly entityType: string
 	readonly entityId: string
 	readonly fieldName: string
-	readonly itemData: Record<string, unknown>
-	readonly itemKey?: string
+	readonly targetType: string
+	readonly itemData?: Record<string, unknown>
+	readonly itemId?: string
 }
 
 /**

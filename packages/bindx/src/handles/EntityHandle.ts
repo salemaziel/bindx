@@ -899,6 +899,7 @@ export class HasManyListHandle<TEntity extends object = object, TSelected = TEnt
 	 * Gets the list of items as entity handles.
 	 * Returns selection-aware EntityHandles that implement EntityRef.
 	 * Includes planned connections and excludes planned removals.
+	 * Uses ordered IDs to preserve order including after move() operations.
 	 */
 	get items(): EntityHandle<TEntity, TSelected>[] {
 		const data = this.getEntityData()
@@ -910,36 +911,28 @@ export class HasManyListHandle<TEntity extends object = object, TSelected = TEnt
 		// Ensure snapshots exist for embedded items
 		this.ensureItemSnapshots(listData)
 
-		// Get planned removals and connections
-		const plannedRemovals = this.store.getHasManyPlannedRemovals(
+		// Extract server IDs from embedded data
+		const serverIds = listData
+			.map((item) => item.id)
+			.filter((id): id is string => id !== undefined)
+
+		// Ensure has-many state exists with proper server IDs
+		// This is needed so that connect/disconnect operations work correctly
+		this.store.getOrCreateHasMany(
+			this.entityType,
+			this.entityId,
+			this.fieldName,
+			serverIds,
+		)
+
+		// Use ordered IDs from store (handles removals, connections, and ordering)
+		const orderedIds = this.store.getHasManyOrderedIds(
 			this.entityType,
 			this.entityId,
 			this.fieldName,
 		)
-		const plannedConnections = this.store.getHasManyPlannedConnections(
-			this.entityType,
-			this.entityId,
-			this.fieldName,
-		)
 
-		// Build the list: original items minus removals plus connections
-		const itemIds = new Set<string>()
-
-		// Add original items (excluding removals)
-		for (const item of listData) {
-			if (!plannedRemovals?.has(item.id)) {
-				itemIds.add(item.id)
-			}
-		}
-
-		// Add connected items
-		if (plannedConnections) {
-			for (const itemId of plannedConnections) {
-				itemIds.add(itemId)
-			}
-		}
-
-		return Array.from(itemIds).map((id) => this.getItemHandle(id))
+		return orderedIds.map((id) => this.getItemHandle(id))
 	}
 
 	/**
@@ -1001,21 +994,23 @@ export class HasManyListHandle<TEntity extends object = object, TSelected = TEnt
 	}
 
 	/**
-	 * Checks if the list is dirty (items connected/disconnected).
+	 * Checks if the list is dirty (items added/removed/moved/connected/disconnected).
 	 */
 	get isDirty(): boolean {
-		const plannedRemovals = this.store.getHasManyPlannedRemovals(
-			this.entityType,
-			this.entityId,
-			this.fieldName,
-		)
-		const plannedConnections = this.store.getHasManyPlannedConnections(
+		const state = this.store.getHasMany(
 			this.entityType,
 			this.entityId,
 			this.fieldName,
 		)
 
-		return (plannedRemovals?.size ?? 0) > 0 || (plannedConnections?.size ?? 0) > 0
+		if (!state) return false
+
+		return (
+			state.plannedRemovals.size > 0 ||
+			state.plannedConnections.size > 0 ||
+			state.createdEntities.size > 0 ||
+			state.orderedIds !== null
+		)
 	}
 
 	/**
@@ -1055,23 +1050,58 @@ export class HasManyListHandle<TEntity extends object = object, TSelected = TEnt
 	}
 
 	/**
-	 * Adds a new item to the list.
-	 * Implements HasManyRef interface.
+	 * Adds a new item to the list by creating a new entity.
+	 * Returns the ID of the newly created entity (temp ID).
 	 * For connecting existing entities, use connect() instead.
 	 */
-	add(_data?: Partial<TEntity>): void {
-		// TODO: Implement add for creating new entities
+	add(data?: Partial<TEntity>): string {
 		this.assertNotDisposed()
+
+		// Create new entity with temp ID
+		const tempId = this.store.createEntity(this.itemType, data as Record<string, unknown>)
+
+		// Add to has-many relation
+		this.store.addToHasMany(
+			this.entityType,
+			this.entityId,
+			this.fieldName,
+			tempId,
+		)
+
+		return tempId
 	}
 
 	/**
-	 * Removes an item from the list by key.
-	 * Implements HasManyRef interface.
-	 * For disconnecting, use disconnect() instead.
+	 * Removes an item from the list by ID.
+	 * For newly created entities (via add()), cancels the add operation.
+	 * For existing server entities, plans a disconnect.
 	 */
-	remove(_key: string): void {
-		// TODO: Implement remove - for now, use disconnect()
+	remove(itemId: string): void {
 		this.assertNotDisposed()
+
+		this.store.removeFromHasMany(
+			this.entityType,
+			this.entityId,
+			this.fieldName,
+			itemId,
+		)
+	}
+
+	/**
+	 * Moves an item from one position to another within the list.
+	 * Note: This only affects client-side order. For persistent ordering,
+	 * use an 'order' field on the entity.
+	 */
+	move(fromIndex: number, toIndex: number): void {
+		this.assertNotDisposed()
+
+		this.store.moveInHasMany(
+			this.entityType,
+			this.entityId,
+			this.fieldName,
+			fromIndex,
+			toIndex,
+		)
 	}
 
 	/**
