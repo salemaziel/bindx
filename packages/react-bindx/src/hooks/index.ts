@@ -46,3 +46,8 @@ export {
 	useInterceptEntity,
 	useInterceptField,
 } from './useBindxEvents.js'
+
+export {
+	useEntityErrors,
+	type EntityErrorsState,
+} from './useErrors.js'

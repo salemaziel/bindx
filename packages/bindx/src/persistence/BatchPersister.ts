@@ -13,7 +13,7 @@ import type {
 	TransactionMutation,
 	TransactionResult,
 } from './types.js'
-import { setPersisting, commitEntity, addFieldError, addEntityError, addRelationError, clearAllServerErrors } from '../core/actions.js'
+import { setPersisting, commitEntity, resetEntity, addFieldError, addEntityError, addRelationError, clearAllServerErrors } from '../core/actions.js'
 import { extractMappedErrors, type ContemberMutationResult } from '../errors/pathMapper.js'
 import { createServerError } from '../errors/types.js'
 
@@ -194,7 +194,7 @@ export class BatchPersister {
 			const transactionResult = await this.executeTransaction(mutations, options?.signal)
 
 			// Process results
-			return this.processTransactionResult(sortedEntities, transactionResult, scope)
+			return this.processTransactionResult(sortedEntities, transactionResult, scope, options)
 
 		} finally {
 			// Clear in-flight status
@@ -542,10 +542,12 @@ export class BatchPersister {
 		entities: DirtyEntity[],
 		transactionResult: TransactionResult,
 		scope: PersistScope,
+		options?: BatchPersistOptions,
 	): PersistenceResult {
 		const results: EntityPersistResult[] = []
 		let successCount = 0
 		let failedCount = 0
+		const rollbackOnError = options?.rollbackOnError ?? false
 
 		if (transactionResult.ok) {
 			// All succeeded - commit all
@@ -586,7 +588,7 @@ export class BatchPersister {
 				}
 			}
 		} else {
-			// Transaction failed - map errors, don't commit anything
+			// Transaction failed - map errors and optionally rollback
 			for (const mutationResult of transactionResult.results) {
 				const entity = entities.find(
 					e => e.entityType === mutationResult.entityType && e.entityId === mutationResult.entityId,
@@ -601,6 +603,11 @@ export class BatchPersister {
 							mutationResult.mutationResult,
 							mutationResult.errorMessage,
 						)
+
+						// Rollback optimistic changes if enabled
+						if (rollbackOnError) {
+							this.rollbackEntity(entity)
+						}
 					}
 
 					results.push({
@@ -630,6 +637,32 @@ export class BatchPersister {
 			successCount,
 			failedCount,
 			skippedCount: 0,
+		}
+	}
+
+	/**
+	 * Rolls back an entity's optimistic changes to server state.
+	 * Handles all mutation types: create, update, and delete.
+	 */
+	private rollbackEntity(entity: DirtyEntity): void {
+		switch (entity.changeType) {
+			case 'create':
+				// For new entities, remove them from the store entirely
+				// They don't exist on the server, so there's nothing to revert to
+				this.store.removeEntity(entity.entityType, entity.entityId)
+				break
+
+			case 'update':
+				// Reset entity data to server state
+				this.dispatcher.dispatch(resetEntity(entity.entityType, entity.entityId))
+				// Reset all relations to server state
+				this.store.resetAllRelations(entity.entityType, entity.entityId)
+				break
+
+			case 'delete':
+				// Unschedule deletion - the entity should remain as-is
+				this.store.unscheduleForDeletion(entity.entityType, entity.entityId)
+				break
 		}
 	}
 

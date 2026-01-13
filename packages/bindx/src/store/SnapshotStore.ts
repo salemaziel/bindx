@@ -1414,6 +1414,30 @@ export class SnapshotStore {
 		}
 	}
 
+	/**
+	 * Resets all relations (hasOne and hasMany) for an entity to server state.
+	 * Called when persist fails with rollbackOnError enabled.
+	 */
+	resetAllRelations(entityType: string, entityId: string): void {
+		const keyPrefix = `${entityType}:${entityId}:`
+
+		// Reset all hasOne relations
+		for (const [key] of this.relationStates) {
+			if (key.startsWith(keyPrefix)) {
+				const fieldName = key.slice(keyPrefix.length)
+				this.resetRelation(entityType, entityId, fieldName)
+			}
+		}
+
+		// Reset all hasMany relations
+		for (const [key] of this.hasManyStates) {
+			if (key.startsWith(keyPrefix)) {
+				const fieldName = key.slice(keyPrefix.length)
+				this.resetHasMany(entityType, entityId, fieldName)
+			}
+		}
+	}
+
 	// ==================== Subscriptions ====================
 
 	/**

@@ -160,6 +160,14 @@ export interface BatchPersistOptions {
 	readonly signal?: AbortSignal
 
 	/**
+	 * Automatically rollback optimistic changes when persistence fails.
+	 * When enabled, entity data, relations, and has-many lists are reverted
+	 * to their server state on failure.
+	 * @default false
+	 */
+	readonly rollbackOnError?: boolean
+
+	/**
 	 * Called for each entity before persistence
 	 */
 	readonly onEntityPersisting?: (entityType: string, entityId: string) => void | Promise<void>
