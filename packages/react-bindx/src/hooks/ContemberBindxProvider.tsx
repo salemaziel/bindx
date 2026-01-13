@@ -1,7 +1,7 @@
 import { memo, useMemo, type ReactNode } from 'react'
 import { GraphQlClient } from '@contember/graphql-client'
 import { ContentClient, ContentQueryBuilder, type SchemaNames } from '@contember/client-content'
-import { ContemberAdapter, SnapshotStore, ActionDispatcher, BatchPersister, MutationCollector } from '@contember/bindx'
+import { ContemberAdapter, SnapshotStore, ActionDispatcher, BatchPersister, MutationCollector, UndoManager, type UndoManagerConfig } from '@contember/bindx'
 import { BindxContext, type BindxContextValue } from './BackendAdapterContext.js'
 import { QueryBatcher } from '../batching/QueryBatcher.js'
 
@@ -17,6 +17,11 @@ export interface ContemberBindxProviderProps {
 	children: ReactNode
 
 	client: GraphQlClient
+
+	/** Enable undo/redo functionality. Pass true to auto-create an UndoManager, or pass an UndoManager instance. */
+	undoManager?: UndoManager | boolean
+	/** Configuration for auto-created undo manager (only used when undoManager={true}) */
+	undoConfig?: UndoManagerConfig
 }
 
 /**
@@ -24,19 +29,29 @@ export interface ContemberBindxProviderProps {
  *
  * @example
  * ```tsx
- * import { ContemberBindxProvider } from '@contember/react-bindx'
+ * import { ContemberBindxProvider, useUndo } from '@contember/react-bindx'
  * import { schema } from './generated/schema'
  *
  * function App() {
  *   return (
  *     <ContemberBindxProvider
- *       apiBaseUrl="https://api.example.com"
- *       project="my-project"
- *       stage="live"
+ *       client={graphQlClient}
  *       schema={schema}
+ *       undoManager={true}
  *     >
  *       <ArticleEditor id="123" />
  *     </ContemberBindxProvider>
+ *   )
+ * }
+ *
+ * // Access undo/redo in child components
+ * function UndoControls() {
+ *   const { canUndo, canRedo, undo, redo } = useUndo()
+ *   return (
+ *     <div>
+ *       <button onClick={undo} disabled={!canUndo}>Undo</button>
+ *       <button onClick={redo} disabled={!canRedo}>Redo</button>
+ *     </div>
  *   )
  * }
  * ```
@@ -46,6 +61,8 @@ export const ContemberBindxProvider = memo(function ContemberBindxProvider({
 	store: customStore,
 	children,
 	client: graphQlClient,
+	undoManager: undoManagerProp,
+	undoConfig,
 }: ContemberBindxProviderProps) {
 
 	// Create GraphQL client and adapter
@@ -57,11 +74,22 @@ export const ContemberBindxProvider = memo(function ContemberBindxProvider({
 		const store = customStore ?? new SnapshotStore()
 		const dispatcher = new ActionDispatcher(store)
 
+		// Create undo manager if enabled
+		const undoManager = undoManagerProp === true
+			? new UndoManager(store, undoConfig)
+			: undoManagerProp instanceof UndoManager
+				? undoManagerProp
+				: null
+		if (undoManager) {
+			dispatcher.addMiddleware(undoManager.createMiddleware())
+		}
+
 		// Create mutation collector for proper nested operations
 		const mutationCollector = new MutationCollector(store, schema)
 
 		const batchPersister = new BatchPersister(adapter, store, dispatcher, {
 			mutationCollector,
+			undoManager: undoManager ?? undefined,
 		})
 
 		return {
@@ -71,9 +99,9 @@ export const ContemberBindxProvider = memo(function ContemberBindxProvider({
 			dispatcher,
 			batchPersister,
 			schema: null,
-			undoManager: null, // TODO: Add enableUndo support to ContemberBindxProvider
+			undoManager,
 		}
-	}, [schema, customStore])
+	}, [schema, customStore, undoManagerProp, undoConfig])
 
 	return (
 		<BindxContext.Provider value={bindxValue}>
