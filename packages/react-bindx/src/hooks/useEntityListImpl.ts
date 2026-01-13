@@ -32,7 +32,7 @@ export interface LoadingEntityListAccessor {
 	readonly isDirty: false
 	readonly items: never
 	readonly length: 0
-	add(data: unknown): void
+	add(data?: unknown): string
 	remove(key: string): void
 	move(fromIndex: number, toIndex: number): void
 }
@@ -48,7 +48,7 @@ export interface ErrorEntityListAccessor {
 	readonly isDirty: false
 	readonly items: never
 	readonly length: 0
-	add(data: unknown): void
+	add(data?: unknown): string
 	remove(key: string): void
 	move(fromIndex: number, toIndex: number): void
 }
@@ -71,7 +71,7 @@ export interface ReadyEntityListAccessor<T extends object> {
 		data: T
 	}>
 	readonly length: number
-	add(data: Partial<T>): void
+	add(data?: Partial<T>): string
 	remove(key: string): void
 	move(fromIndex: number, toIndex: number): void
 }
@@ -94,9 +94,15 @@ function createLoadingListAccessor(): LoadingEntityListAccessor {
 			throw new Error('Cannot access items while loading')
 		},
 		length: 0,
-		add() {},
-		remove() {},
-		move() {},
+		add() {
+			throw new Error('Cannot add items while loading')
+		},
+		remove() {
+			throw new Error('Cannot remove items while loading')
+		},
+		move() {
+			throw new Error('Cannot move items while loading')
+		},
 	}
 }
 
@@ -111,9 +117,15 @@ function createErrorListAccessor(error: Error): ErrorEntityListAccessor {
 			throw new Error('Cannot access items after error')
 		},
 		length: 0,
-		add() {},
-		remove() {},
-		move() {},
+		add() {
+			throw new Error('Cannot add items after error')
+		},
+		remove() {
+			throw new Error('Cannot remove items after error')
+		},
+		move() {
+			throw new Error('Cannot move items after error')
+		},
 	}
 }
 
@@ -170,6 +182,54 @@ export function useEntityListImpl<TResult extends object>(
 		[store],
 	)
 
+	// Add a new entity to the list
+	const addItem = useCallback(
+		(data?: Partial<TResult>): string => {
+			// Create entity with temp ID in the store
+			const tempId = store.createEntity(entityType, data as Record<string, unknown>)
+
+			// Add to the local list state
+			const newItem = {
+				id: tempId,
+				data: { id: tempId, ...data } as TResult,
+			}
+			listStateRef.current.items = [...listStateRef.current.items, newItem]
+			versionRef.current++
+			store.notify()
+
+			return tempId
+		},
+		[entityType, store],
+	)
+
+	// Remove an entity from the list
+	const removeItem = useCallback(
+		(key: string): void => {
+			listStateRef.current.items = listStateRef.current.items.filter(item => item.id !== key)
+			versionRef.current++
+			store.notify()
+		},
+		[store],
+	)
+
+	// Move an entity within the list
+	const moveItem = useCallback(
+		(fromIndex: number, toIndex: number): void => {
+			const items = [...listStateRef.current.items]
+			if (fromIndex < 0 || fromIndex >= items.length || toIndex < 0 || toIndex >= items.length) {
+				return
+			}
+			const [removed] = items.splice(fromIndex, 1)
+			if (removed) {
+				items.splice(toIndex, 0, removed)
+				listStateRef.current.items = items
+				versionRef.current++
+				store.notify()
+			}
+		},
+		[store],
+	)
+
 	// Get current snapshot - must return stable references
 	const getSnapshot = useCallback((): EntityListAccessorResult<TResult> => {
 		const state = listStateRef.current
@@ -214,15 +274,9 @@ export function useEntityListImpl<TResult extends object>(
 				isDirty: false,
 				items,
 				length: items.length,
-				add() {
-					// TODO: Implement
-				},
-				remove() {
-					// TODO: Implement
-				},
-				move() {
-					// TODO: Implement
-				},
+				add: addItem,
+				remove: removeItem,
+				move: moveItem,
 			}
 		}
 
@@ -234,7 +288,7 @@ export function useEntityListImpl<TResult extends object>(
 		}
 
 		return result
-	}, [entityType, store, dispatcher, schema])
+	}, [entityType, store, dispatcher, schema, addItem, removeItem, moveItem])
 
 	// Custom equality - always false since getSnapshot returns cached values
 	const isEqual = useCallback(
