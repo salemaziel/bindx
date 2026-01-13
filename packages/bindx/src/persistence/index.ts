@@ -15,4 +15,5 @@ export type {
 	TransactionMutationResult,
 	TransactionResult,
 	BatchPersistOptions,
+	UpdateMode,
 } from './types.js'

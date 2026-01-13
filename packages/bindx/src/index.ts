@@ -168,6 +168,7 @@ export type {
 	TransactionMutationResult,
 	TransactionResult,
 	BatchPersistOptions,
+	UpdateMode,
 } from './persistence/index.js'
 
 // Utils

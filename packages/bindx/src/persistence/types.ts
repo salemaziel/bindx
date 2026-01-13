@@ -145,6 +145,13 @@ export interface TransactionResult {
 // ==================== Options ====================
 
 /**
+ * Update mode for persistence operations.
+ * - 'optimistic': Update UI immediately, revert on failure (default)
+ * - 'pessimistic': Wait for server confirmation before updating UI
+ */
+export type UpdateMode = 'optimistic' | 'pessimistic'
+
+/**
  * Options for batch persist operations
  */
 export interface BatchPersistOptions {
@@ -166,6 +173,20 @@ export interface BatchPersistOptions {
 	 * @default false
 	 */
 	readonly rollbackOnError?: boolean
+
+	/**
+	 * Update mode for this operation.
+	 * - 'optimistic': Changes shown in UI immediately (default)
+	 * - 'pessimistic': Wait for server confirmation before showing in UI
+	 *
+	 * When using pessimistic mode:
+	 * - Changes are staged but not visible in UI until server confirms
+	 * - If server fails, staged changes are discarded (no UI change occurs)
+	 * - Loading state is properly tracked via isPersisting
+	 *
+	 * @default Uses provider-level default or 'optimistic'
+	 */
+	readonly updateMode?: UpdateMode
 
 	/**
 	 * Called for each entity before persistence

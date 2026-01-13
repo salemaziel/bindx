@@ -1,5 +1,5 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react'
-import type { BackendAdapter, MutationDataCollector, SchemaDefinition, UndoManagerConfig } from '@contember/bindx'
+import type { BackendAdapter, MutationDataCollector, SchemaDefinition, UndoManagerConfig, UpdateMode } from '@contember/bindx'
 import { SnapshotStore } from '@contember/bindx'
 import { ActionDispatcher } from '@contember/bindx'
 import { BatchPersister } from '@contember/bindx'
@@ -46,6 +46,12 @@ export interface BindxProviderProps {
 	enableUndo?: boolean
 	/** Configuration for undo manager */
 	undoConfig?: UndoManagerConfig
+	/**
+	 * Default update mode for persistence operations.
+	 * - 'optimistic': Update UI immediately, revert on failure (default)
+	 * - 'pessimistic': Wait for server confirmation before updating UI
+	 */
+	defaultUpdateMode?: UpdateMode
 	children: ReactNode
 }
 
@@ -73,6 +79,7 @@ export function BindxProvider({
 	mutationCollector: customMutationCollector,
 	enableUndo = false,
 	undoConfig,
+	defaultUpdateMode,
 	children,
 }: BindxProviderProps) {
 	// Create services - memoized to maintain stable references
@@ -98,6 +105,7 @@ export function BindxProvider({
 			mutationCollector,
 			undoManager: undoManager ?? undefined,
 			schema: schemaRegistry ?? undefined,
+			defaultUpdateMode,
 		})
 
 		return {
@@ -109,7 +117,7 @@ export function BindxProvider({
 			schema: schemaRegistry,
 			undoManager,
 		}
-	}, [adapter, customStore, schemaDefinition, customMutationCollector, enableUndo, undoConfig])
+	}, [adapter, customStore, schemaDefinition, customMutationCollector, enableUndo, undoConfig, defaultUpdateMode])
 
 	return <BindxContext.Provider value={services}>{children}</BindxContext.Provider>
 }

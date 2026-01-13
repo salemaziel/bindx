@@ -1,7 +1,7 @@
 import { memo, useMemo, type ReactNode } from 'react'
 import { GraphQlClient } from '@contember/graphql-client'
 import { ContentClient, ContentQueryBuilder, type SchemaNames } from '@contember/client-content'
-import { ContemberAdapter, SnapshotStore, ActionDispatcher, BatchPersister, MutationCollector, UndoManager, type UndoManagerConfig } from '@contember/bindx'
+import { ContemberAdapter, SnapshotStore, ActionDispatcher, BatchPersister, MutationCollector, UndoManager, type UndoManagerConfig, type UpdateMode } from '@contember/bindx'
 import { BindxContext, type BindxContextValue } from './BackendAdapterContext.js'
 import { QueryBatcher } from '../batching/QueryBatcher.js'
 
@@ -22,6 +22,12 @@ export interface ContemberBindxProviderProps {
 	undoManager?: UndoManager | boolean
 	/** Configuration for auto-created undo manager (only used when undoManager={true}) */
 	undoConfig?: UndoManagerConfig
+	/**
+	 * Default update mode for persistence operations.
+	 * - 'optimistic': Update UI immediately, revert on failure (default)
+	 * - 'pessimistic': Wait for server confirmation before updating UI
+	 */
+	defaultUpdateMode?: UpdateMode
 }
 
 /**
@@ -63,6 +69,7 @@ export const ContemberBindxProvider = memo(function ContemberBindxProvider({
 	client: graphQlClient,
 	undoManager: undoManagerProp,
 	undoConfig,
+	defaultUpdateMode,
 }: ContemberBindxProviderProps) {
 
 	// Create GraphQL client and adapter
@@ -90,6 +97,7 @@ export const ContemberBindxProvider = memo(function ContemberBindxProvider({
 		const batchPersister = new BatchPersister(adapter, store, dispatcher, {
 			mutationCollector,
 			undoManager: undoManager ?? undefined,
+			defaultUpdateMode,
 		})
 
 		return {
@@ -101,7 +109,7 @@ export const ContemberBindxProvider = memo(function ContemberBindxProvider({
 			schema: null,
 			undoManager,
 		}
-	}, [schema, customStore, undoManagerProp, undoConfig])
+	}, [schema, customStore, undoManagerProp, undoConfig, defaultUpdateMode])
 
 	return (
 		<BindxContext.Provider value={bindxValue}>

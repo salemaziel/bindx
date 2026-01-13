@@ -1438,6 +1438,73 @@ export class SnapshotStore {
 		}
 	}
 
+	/**
+	 * Gets all relation states for an entity.
+	 * Returns a map of relation key -> relation state.
+	 * Used for capturing state in pessimistic mode.
+	 */
+	getAllRelationsForEntity(entityType: string, entityId: string): Map<string, StoredRelationState> {
+		const keyPrefix = `${entityType}:${entityId}:`
+		const result = new Map<string, StoredRelationState>()
+
+		for (const [key, state] of this.relationStates) {
+			if (key.startsWith(keyPrefix)) {
+				// Deep clone the state to avoid mutation
+				result.set(key, { ...state })
+			}
+		}
+
+		return result
+	}
+
+	/**
+	 * Gets all has-many states for an entity.
+	 * Returns a map of has-many key -> has-many state.
+	 * Used for capturing state in pessimistic mode.
+	 */
+	getAllHasManyForEntity(entityType: string, entityId: string): Map<string, StoredHasManyState> {
+		const keyPrefix = `${entityType}:${entityId}:`
+		const result = new Map<string, StoredHasManyState>()
+
+		for (const [key, state] of this.hasManyStates) {
+			if (key.startsWith(keyPrefix)) {
+				// Deep clone the state to avoid mutation
+				result.set(key, {
+					serverIds: new Set(state.serverIds),
+					orderedIds: state.orderedIds ? [...state.orderedIds] : null,
+					plannedRemovals: new Map(state.plannedRemovals),
+					plannedConnections: new Set(state.plannedConnections),
+					createdEntities: new Set(state.createdEntities),
+					version: state.version,
+				})
+			}
+		}
+
+		return result
+	}
+
+	/**
+	 * Restores a has-many state from a captured snapshot.
+	 * Used in pessimistic mode after successful server confirmation.
+	 */
+	restoreHasManyState(
+		parentType: string,
+		parentId: string,
+		fieldName: string,
+		state: StoredHasManyState,
+	): void {
+		const key = this.getRelationKey(parentType, parentId, fieldName)
+		this.hasManyStates.set(key, {
+			serverIds: new Set(state.serverIds),
+			orderedIds: state.orderedIds ? [...state.orderedIds] : null,
+			plannedRemovals: new Map(state.plannedRemovals),
+			plannedConnections: new Set(state.plannedConnections),
+			createdEntities: new Set(state.createdEntities),
+			version: state.version + 1,
+		})
+		this.notifyRelationSubscribers(key)
+	}
+
 	// ==================== Subscriptions ====================
 
 	/**
