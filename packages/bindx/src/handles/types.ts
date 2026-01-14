@@ -447,7 +447,61 @@ export interface HasOneRef<TEntity, TSelected = TEntity, TBrand extends AnyBrand
 	/** Internal metadata for collection phase */
 	readonly [FIELD_REF_META]: FieldRefMeta
 
-	/** Entity ID (placeholder ID if disconnected) */
+	// ==================== EntityRef-compatible properties ====================
+	// These properties make HasOneAccessor structurally compatible with EntityAccessor,
+	// allowing you to pass a has-one relation directly where an entity is expected.
+
+	/**
+	 * Entity ID (placeholder ID if disconnected).
+	 * Compatible with EntityRef.id for structural subtyping.
+	 */
+	readonly id: string
+
+	/** Raw data snapshot of the related entity */
+	readonly $data: TSelected | null
+
+	/** Whether this entity is new (created locally, not yet on server) */
+	readonly $isNew: boolean
+
+	/**
+	 * Server-assigned ID after persistence.
+	 * - null for entities that haven't been persisted yet (temp IDs)
+	 * - string (the real ID) after successful persist
+	 */
+	readonly $persistedId: string | null
+
+	/** Type brand for entity name - carries the entity name as a type */
+	readonly __entityName: string
+
+	/**
+	 * Type brand for available roles - constrains what roles can be used in HasRole.
+	 */
+	readonly __availableRoles: readonly TAvailableRoles[number][]
+
+	/** Clear all errors (entity-level, fields, and relations) */
+	$clearAllErrors(): void
+
+	/** Subscribe to any event on the related entity */
+	$on<E extends AfterEventTypes>(
+		eventType: E,
+		listener: EventListener<EventTypeMap[E]>,
+	): UnsubscribeType
+
+	/** Intercept any before event on the related entity */
+	$intercept<E extends BeforeEventTypes>(
+		eventType: E,
+		interceptor: Interceptor<EventTypeMap[E]>,
+	): UnsubscribeType
+
+	/** Subscribe to persist success events on the related entity */
+	$onPersisted(listener: EventListener<EntityPersistedEvent>): UnsubscribeType
+
+	/** Intercept persist on the related entity (can cancel) */
+	$interceptPersisting(interceptor: Interceptor<EntityPersistingEvent>): UnsubscribeType
+
+	// ==================== HasOne-specific properties ====================
+
+	/** Entity ID (placeholder ID if disconnected) - alias for id with $ prefix */
 	readonly $id: string
 
 	/** Whether relation is dirty */
@@ -492,7 +546,7 @@ export interface HasOneRef<TEntity, TSelected = TEntity, TBrand extends AnyBrand
 	/** Clear all errors from this relation */
 	$clearErrors(): void
 
-	// ==================== Event Subscriptions ====================
+	// ==================== HasOne Event Subscriptions ====================
 
 	/** Subscribe to connection events */
 	$onConnect(listener: EventListener<RelationConnectedEvent>): UnsubscribeType

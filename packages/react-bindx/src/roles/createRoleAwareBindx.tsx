@@ -441,11 +441,11 @@ export interface HasRoleProps<
 	/** Parent entity reference */
 	entity: TEntityRef
 
-	/** Render function receiving entity ref with narrowed type.
+	/** Render function receiving entity accessor with narrowed type and direct field access.
 	 * Type is looked up from role schemas if entity name is known, otherwise uses the input entity type.
 	 */
 	children: (
-		entity: EntityRef<
+		entity: EntityAccessor<
 			EntityTypeForRolesOrFallback<TRoleSchemas, TNewRoles, ExtractEntityName<TEntityRef>, ExtractEntityType<TEntityRef>>,
 			EntityTypeForRolesOrFallback<TRoleSchemas, TNewRoles, ExtractEntityName<TEntityRef>, ExtractEntityType<TEntityRef>>,
 			AnyBrand,
@@ -914,11 +914,16 @@ export function createRoleAwareBindx<TRoleSchemas extends RoleSchemasBase<TRoleS
 			return null // User doesn't have all required roles
 		}
 
-		// Create new entity ref with narrowed available roles
-		const narrowedEntityRef = {
-			...entity,
-			__availableRoles: requestedRoles,
-		}
+		// Create new entity accessor with narrowed available roles using Proxy
+		// We can't use spread because it would break the Proxy behavior for direct field access
+		const narrowedEntityRef = new Proxy(entity, {
+			get(target, prop) {
+				if (prop === '__availableRoles') {
+					return requestedRoles
+				}
+				return Reflect.get(target, prop)
+			},
+		})
 
 		return <>{renderFn(narrowedEntityRef as any)}</>
 	}

@@ -240,6 +240,19 @@ function createCollectorFieldRef(
 		$interceptConnect: noop,
 		$interceptDisconnect: noop,
 
+		// EntityRef-compatible properties (for HasOneAccessor = EntityAccessor compatibility)
+		id: placeholderId,
+		$data: null,
+		$isNew: false,
+		$persistedId: null,
+		__entityName: '',
+		__availableRoles: [] as readonly string[],
+		$clearAllErrors: () => {},
+		$on: noop,
+		$intercept: noop,
+		$onPersisted: noop,
+		$interceptPersisting: noop,
+
 		// Type brand (phantom property - only exists in type system)
 		__entityType: undefined as unknown,
 	}
@@ -709,6 +722,27 @@ function createRuntimeFieldRef(
 		$onDisconnect: noop,
 		$interceptConnect: noop,
 		$interceptDisconnect: noop,
+
+		// EntityRef-compatible properties (for HasOneAccessor = EntityAccessor compatibility)
+		get id() {
+			return getHasOneId()
+		},
+		get $data() {
+			return getEntity().$data
+		},
+		get $isNew() {
+			return getEntity().$isNew
+		},
+		get $persistedId() {
+			return getEntity().$persistedId
+		},
+		__entityName: '',
+		__availableRoles: [] as readonly string[],
+		$clearAllErrors: () => {},
+		$on: noop,
+		$intercept: noop,
+		$onPersisted: noop,
+		$interceptPersisting: noop,
 
 		// Type brand (phantom property - only exists in type system)
 		__entityType: undefined as unknown,

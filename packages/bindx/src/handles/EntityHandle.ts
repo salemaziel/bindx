@@ -998,6 +998,53 @@ export class HasOneHandle<TEntity extends object = object, TSelected = TEntity> 
 		)
 	}
 
+	// ==================== EntityRef-compatible Properties ====================
+	// These make HasOneAccessor structurally compatible with EntityAccessor
+
+	/** Raw data snapshot of the related entity - delegates to $entity */
+	get $data(): TSelected | null { return this.entity.$data }
+
+	/** Whether this entity is new - delegates to $entity */
+	get $isNew(): boolean { return this.entity.$isNew }
+
+	/** Server-assigned ID after persistence - delegates to $entity */
+	get $persistedId(): string | null { return this.entity.$persistedId }
+
+	/** Type brand for entity name */
+	get __entityName(): string { return this.targetType }
+
+	/** Available roles for role-based type checking */
+	get __availableRoles(): readonly string[] { return [] }
+
+	/** Clear all errors - delegates to $entity */
+	$clearAllErrors(): void { this.entity.$clearAllErrors() }
+
+	/** Subscribe to any event on the related entity */
+	$on<E extends AfterEventTypes>(
+		eventType: E,
+		listener: EventListener<EventTypeMap[E]>,
+	): Unsubscribe {
+		return this.entity.$on(eventType, listener)
+	}
+
+	/** Intercept any before event on the related entity */
+	$intercept<E extends BeforeEventTypes>(
+		eventType: E,
+		interceptor: Interceptor<EventTypeMap[E]>,
+	): Unsubscribe {
+		return this.entity.$intercept(eventType, interceptor)
+	}
+
+	/** Subscribe to persist success events on the related entity */
+	$onPersisted(listener: EventListener<EntityPersistedEvent>): Unsubscribe {
+		return this.entity.$onPersisted(listener)
+	}
+
+	/** Intercept persist on the related entity */
+	$interceptPersisting(interceptor: Interceptor<EntityPersistingEvent>): Unsubscribe {
+		return this.entity.$interceptPersisting(interceptor)
+	}
+
 	// ==================== $ Prefixed Aliases ====================
 
 	/** Alias for id */
