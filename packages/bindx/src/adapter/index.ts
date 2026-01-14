@@ -16,5 +16,5 @@ export type {
 	TransactionResult,
 } from './types.js'
 export { MockAdapter, type MockDataStore, type MockAdapterOptions } from './MockAdapter.js'
-export { MockMutationCollector } from './MockMutationCollector.js'
+export { MockQueryEngine } from './MockQueryEngine.js'
 export { ContemberAdapter, type ContemberAdapterOptions } from './ContemberAdapter.js'

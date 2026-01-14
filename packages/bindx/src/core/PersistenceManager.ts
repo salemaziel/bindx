@@ -12,6 +12,10 @@ import type {
 	EntityPersistedEvent,
 	EntityPersistFailedEvent,
 } from '../events/types.js'
+import type { MutationDataCollector } from '../persistence/types.js'
+
+// Re-export for backward compatibility
+export type { MutationDataCollector } from '../persistence/types.js'
 
 /**
  * Pending persist operation tracking
@@ -19,24 +23,6 @@ import type {
 interface PendingPersist {
 	promise: Promise<void>
 	abortController: AbortController
-}
-
-/**
- * Interface for custom mutation data collectors.
- * Used by ContemberAdapter to build proper nested mutations.
- */
-export interface MutationDataCollector {
-	/**
-	 * Collects mutation data for updating an existing entity.
-	 * Returns the mutation input or null if no changes.
-	 */
-	collectUpdateData(entityType: string, entityId: string): Record<string, unknown> | null
-
-	/**
-	 * Collects mutation data for creating a new entity.
-	 * Returns the mutation input or null if no data.
-	 */
-	collectCreateData?(entityType: string, entityId: string): Record<string, unknown> | null
 }
 
 /**

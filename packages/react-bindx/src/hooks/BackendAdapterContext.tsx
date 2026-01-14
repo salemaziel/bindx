@@ -3,7 +3,7 @@ import type { BackendAdapter, MutationDataCollector, SchemaDefinition, UndoManag
 import { SnapshotStore } from '@contember/bindx'
 import { ActionDispatcher } from '@contember/bindx'
 import { BatchPersister } from '@contember/bindx'
-import { MockMutationCollector } from '@contember/bindx'
+import { MutationCollector } from '@contember/bindx'
 import { SchemaRegistry } from '@contember/bindx'
 import { UndoManager } from '@contember/bindx'
 import { QueryBatcher } from '../batching/QueryBatcher.js'
@@ -98,8 +98,9 @@ export function BindxProvider({
 		const schemaRegistry = schemaDefinition ? new SchemaRegistry(schemaDefinition) : null
 
 		// Create mutation collector - use custom, or auto-create from schema
+		// SchemaRegistry implements MutationSchemaProvider interface
 		const mutationCollector =
-			customMutationCollector ?? (schemaRegistry ? new MockMutationCollector(store, schemaRegistry) : undefined)
+			customMutationCollector ?? (schemaRegistry ? new MutationCollector(store, schemaRegistry) : undefined)
 
 		const batchPersister = new BatchPersister(adapter, store, dispatcher, {
 			mutationCollector,

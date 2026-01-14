@@ -1,5 +1,5 @@
-import type { QuerySpec, QueryFieldSpec } from '../selection/buildQuery.js'
 import type { BackendAdapter, Query, QueryResult, QueryOptions, GetQuery, ListQuery, PersistResult, CreateResult, DeleteResult } from './types.js'
+import { MockQueryEngine } from './MockQueryEngine.js'
 
 /**
  * In-memory data store structure
@@ -27,6 +27,7 @@ export interface MockAdapterOptions {
 export class MockAdapter implements BackendAdapter {
 	private readonly delay: number
 	private readonly debug: boolean
+	private readonly queryEngine: MockQueryEngine
 
 	constructor(
 		private store: MockDataStore,
@@ -34,6 +35,7 @@ export class MockAdapter implements BackendAdapter {
 	) {
 		this.delay = options.delay ?? 100
 		this.debug = options.debug ?? false
+		this.queryEngine = new MockQueryEngine()
 	}
 
 	/**
@@ -114,7 +116,7 @@ export class MockAdapter implements BackendAdapter {
 			return { type: 'get', data: null }
 		}
 
-		const result = this.projectFields(entity, query.spec.fields)
+		const result = this.queryEngine.projectFields(entity, query.spec.fields)
 		this.log('executeGet result', result)
 
 		return { type: 'get', data: result }
@@ -128,143 +130,23 @@ export class MockAdapter implements BackendAdapter {
 
 		let entities = Object.values(entityStore)
 
-		// Apply filter (simplified - matches exact values for basic filters)
+		// Apply filter using query engine
 		if (query.filter) {
-			entities = this.applyFilter(entities, query.filter as Record<string, unknown>)
+			entities = this.queryEngine.filter(entities, query.filter as Record<string, unknown>)
 		}
 
-		// Apply ordering
+		// Apply ordering using query engine
 		if (query.orderBy && query.orderBy.length > 0) {
-			entities = this.applyOrderBy(entities, query.orderBy)
+			entities = this.queryEngine.orderBy(entities, query.orderBy)
 		}
 
-		// Apply pagination
-		if (query.offset !== undefined) {
-			entities = entities.slice(query.offset)
-		}
-		if (query.limit !== undefined) {
-			entities = entities.slice(0, query.limit)
-		}
+		// Apply pagination using query engine
+		entities = this.queryEngine.paginate(entities, query.offset, query.limit)
 
-		const results = entities.map(entity => this.projectFields(entity, query.spec.fields))
+		const results = entities.map(entity => this.queryEngine.projectFields(entity, query.spec.fields))
 		this.log('executeList result', results)
 
 		return { type: 'list', data: results }
-	}
-
-	private applyFilter(entities: Record<string, unknown>[], filter: Record<string, unknown>): Record<string, unknown>[] {
-		return entities.filter(entity => this.matchesFilter(entity, filter))
-	}
-
-	private matchesFilter(entity: Record<string, unknown>, filter: Record<string, unknown>): boolean {
-		for (const [key, condition] of Object.entries(filter)) {
-			if (key === 'and' && Array.isArray(condition)) {
-				if (!condition.every(c => this.matchesFilter(entity, c as Record<string, unknown>))) {
-					return false
-				}
-				continue
-			}
-			if (key === 'or' && Array.isArray(condition)) {
-				if (!condition.some(c => this.matchesFilter(entity, c as Record<string, unknown>))) {
-					return false
-				}
-				continue
-			}
-			if (key === 'not' && condition && typeof condition === 'object') {
-				if (this.matchesFilter(entity, condition as Record<string, unknown>)) {
-					return false
-				}
-				continue
-			}
-
-			const fieldValue = entity[key]
-			if (condition && typeof condition === 'object' && !Array.isArray(condition)) {
-				// It's a condition object like { eq: 'value' }
-				if (!this.matchesCondition(fieldValue, condition as Record<string, unknown>)) {
-					return false
-				}
-			} else {
-				// Direct value comparison (for backward compatibility)
-				if (fieldValue !== condition) {
-					return false
-				}
-			}
-		}
-		return true
-	}
-
-	private matchesCondition(value: unknown, condition: Record<string, unknown>): boolean {
-		for (const [op, expected] of Object.entries(condition)) {
-			switch (op) {
-				case 'eq':
-					if (value !== expected) return false
-					break
-				case 'notEq':
-					if (value === expected) return false
-					break
-				case 'in':
-					if (!Array.isArray(expected) || !expected.includes(value)) return false
-					break
-				case 'notIn':
-					if (Array.isArray(expected) && expected.includes(value)) return false
-					break
-				case 'lt':
-					if (typeof value !== 'number' || typeof expected !== 'number' || value >= expected) return false
-					break
-				case 'lte':
-					if (typeof value !== 'number' || typeof expected !== 'number' || value > expected) return false
-					break
-				case 'gt':
-					if (typeof value !== 'number' || typeof expected !== 'number' || value <= expected) return false
-					break
-				case 'gte':
-					if (typeof value !== 'number' || typeof expected !== 'number' || value < expected) return false
-					break
-				case 'isNull':
-					if (expected === true && value !== null && value !== undefined) return false
-					if (expected === false && (value === null || value === undefined)) return false
-					break
-				case 'contains':
-					if (typeof value !== 'string' || typeof expected !== 'string' || !value.includes(expected)) return false
-					break
-				case 'startsWith':
-					if (typeof value !== 'string' || typeof expected !== 'string' || !value.startsWith(expected)) return false
-					break
-				case 'endsWith':
-					if (typeof value !== 'string' || typeof expected !== 'string' || !value.endsWith(expected)) return false
-					break
-				case 'containsCI':
-					if (typeof value !== 'string' || typeof expected !== 'string' || !value.toLowerCase().includes(expected.toLowerCase())) return false
-					break
-			}
-		}
-		return true
-	}
-
-	private applyOrderBy(entities: Record<string, unknown>[], orderBy: readonly Record<string, unknown>[]): Record<string, unknown>[] {
-		return [...entities].sort((a, b) => {
-			for (const order of orderBy) {
-				for (const [field, direction] of Object.entries(order)) {
-					if (field.startsWith('_')) continue // Skip _random, _randomSeeded
-					const aVal = a[field]
-					const bVal = b[field]
-
-					let comparison = 0
-					if (aVal === bVal) comparison = 0
-					else if (aVal === null || aVal === undefined) comparison = 1
-					else if (bVal === null || bVal === undefined) comparison = -1
-					else if (aVal < bVal) comparison = -1
-					else comparison = 1
-
-					if (direction === 'desc' || direction === 'descNullsLast') {
-						comparison = -comparison
-					}
-
-					if (comparison !== 0) return comparison
-				}
-			}
-			return 0
-		})
 	}
 
 	async persist(
@@ -487,62 +369,6 @@ export class MockAdapter implements BackendAdapter {
 		}
 
 		return { ok: true }
-	}
-
-	/**
-	 * Projects only the requested fields from source data
-	 * @param source The source object to project from
-	 * @param fields The field specs to project
-	 * @param basePath The current base path (for nested objects, paths are relative to this)
-	 */
-	private projectFields(
-		source: Record<string, unknown>,
-		fields: QueryFieldSpec[],
-		basePath: string[] = [],
-	): Record<string, unknown> {
-		const result: Record<string, unknown> = {}
-
-		for (const field of fields) {
-			// Get relative path by removing the base path prefix
-			const relativePath = field.sourcePath.slice(basePath.length)
-			const value = this.getNestedValue(source, relativePath)
-
-			if (field.nested && Array.isArray(value)) {
-				// Project each item in array (has-many relation)
-				// Detect array from actual data even if field.isArray is not set
-				result[field.name] = value.map(item =>
-					this.projectFields(item as Record<string, unknown>, field.nested!.fields, []),
-				)
-			} else if (field.nested && value && typeof value === 'object') {
-				// Project nested object (has-one relation)
-				result[field.name] = this.projectFields(
-					value as Record<string, unknown>,
-					field.nested.fields,
-					[], // Empty basePath since we're projecting from the nested object directly
-				)
-			} else {
-				// Scalar or leaf value
-				result[field.name] = value
-			}
-		}
-
-		return result
-	}
-
-	/**
-	 * Gets a nested value from an object using a path
-	 */
-	private getNestedValue(obj: Record<string, unknown>, path: string[]): unknown {
-		let current: unknown = obj
-
-		for (const key of path) {
-			if (current === null || current === undefined || typeof current !== 'object') {
-				return undefined
-			}
-			current = (current as Record<string, unknown>)[key]
-		}
-
-		return current
 	}
 
 	/**

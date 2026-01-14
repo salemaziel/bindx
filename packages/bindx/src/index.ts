@@ -139,7 +139,7 @@ export { EntityHandle, HasOneHandle, HasManyListHandle, FieldHandle } from './ha
 export { FIELD_REF_META } from './handles/index.js'
 
 // Adapter
-export { MockAdapter, MockMutationCollector, ContemberAdapter } from './adapter/index.js'
+export { MockAdapter, ContemberAdapter } from './adapter/index.js'
 
 // Core
 export { createEntityLoader, resolveSelectionMeta, buildQuery } from './core/index.js'
@@ -176,7 +176,8 @@ export type {
 export { deepEqual } from './utils/deepEqual.js'
 
 // Contember integration
-export { MutationCollector } from './contember/index.js'
+export { MutationCollector, ContemberSchemaMutationAdapter } from './contember/index.js'
+export type { MutationSchemaProvider, EntityMutationResult } from './contember/index.js'
 
 // Undo/Redo
 export { UndoManager } from './undo/index.js'

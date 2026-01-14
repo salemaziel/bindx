@@ -1,19 +1,8 @@
-import type { SchemaNames } from '@contember/client-content'
 import type { SnapshotStore } from '../store/SnapshotStore.js'
 import type { EntitySnapshot } from '../store/snapshots.js'
+import type { MutationSchemaProvider } from './MutationSchemaProvider.js'
+import type { MutationDataCollector } from './types.js'
 import { deepEqual } from '../utils/deepEqual.js'
-
-/**
- * Relation state as stored in SnapshotStore
- */
-interface StoredRelationState {
-	currentId: string | null
-	serverId: string | null
-	state: 'connected' | 'disconnected' | 'deleted' | 'creating'
-	serverState: 'connected' | 'disconnected' | 'deleted' | 'creating'
-	placeholderData: Record<string, unknown>
-	version: number
-}
 
 /**
  * Result of collecting mutations for an entity
@@ -33,14 +22,17 @@ export interface EntityMutationResult {
  * MutationCollector builds Contember-compatible mutation input
  * by collecting changes from SnapshotStore including:
  * - Scalar field changes
- * - Has-one relation operations (connect, disconnect, delete, create, update, upsert)
+ * - Has-one relation operations (connect, disconnect, delete, create, update)
  * - Has-many relation operations (connect, disconnect, delete, create, update)
  * - Entity creates and deletes
+ *
+ * This is a unified implementation that works with any schema provider
+ * implementing MutationSchemaProvider interface (SchemaRegistry, Contember SchemaNames via adapter).
  */
-export class MutationCollector {
+export class MutationCollector implements MutationDataCollector {
 	constructor(
 		private readonly store: SnapshotStore,
-		private readonly schema: SchemaNames,
+		private readonly schemaProvider: MutationSchemaProvider,
 	) {}
 
 	// ==================== Main Collection Methods ====================
@@ -115,18 +107,17 @@ export class MutationCollector {
 			return null
 		}
 
-		const entitySchema = this.schema.entities[entityType]
-		if (!entitySchema) {
+		if (!this.schemaProvider.hasEntity(entityType)) {
 			throw new Error(`Entity type '${entityType}' not found in schema`)
 		}
 
 		const mutation: Record<string, unknown> = {}
 
 		// Collect scalar field changes
-		this.collectScalarChanges(snapshot, entitySchema, mutation)
+		this.collectScalarChanges(entityType, snapshot, mutation)
 
 		// Collect relation changes
-		this.collectRelationChanges(entityType, entityId, entitySchema, mutation)
+		this.collectRelationChanges(entityType, entityId, mutation)
 
 		return Object.keys(mutation).length > 0 ? mutation : null
 	}
@@ -144,33 +135,36 @@ export class MutationCollector {
 			return null
 		}
 
-		const entitySchema = this.schema.entities[entityType]
-		if (!entitySchema) {
+		if (!this.schemaProvider.hasEntity(entityType)) {
 			throw new Error(`Entity type '${entityType}' not found in schema`)
 		}
 
 		const data = snapshot.data as Record<string, unknown>
 		const createData: Record<string, unknown> = {}
 
-		// Collect all field values for create
-		for (const [fieldName, fieldDef] of Object.entries(entitySchema.fields)) {
+		// Collect scalar field values
+		const scalarFields = this.schemaProvider.getScalarFields(entityType)
+		for (const fieldName of scalarFields) {
 			if (fieldName === 'id') continue // ID is auto-generated
 
 			const value = data[fieldName]
+			if (value !== undefined && value !== null) {
+				createData[fieldName] = value
+			}
+		}
 
-			if (fieldDef.type === 'column') {
-				// Scalar field - include if has value
-				if (value !== undefined && value !== null) {
-					createData[fieldName] = value
-				}
-			} else if (fieldDef.type === 'one') {
-				// Has-one relation
-				const relationOp = this.collectCreateOneRelation(entityType, entityId, fieldName, value)
+		// Collect relation values
+		const relationFields = this.schemaProvider.getRelationFields(entityType)
+		for (const fieldName of relationFields) {
+			const value = data[fieldName]
+			const relationType = this.schemaProvider.getRelationType(entityType, fieldName)
+
+			if (relationType === 'hasOne') {
+				const relationOp = this.collectCreateOneRelation(value)
 				if (relationOp !== null) {
 					createData[fieldName] = relationOp
 				}
-			} else if (fieldDef.type === 'many') {
-				// Has-many relation
+			} else if (relationType === 'hasMany') {
 				const relationOps = this.collectCreateManyRelation(value)
 				if (relationOps !== null && relationOps.length > 0) {
 					createData[fieldName] = relationOps
@@ -195,8 +189,7 @@ export class MutationCollector {
 			return null
 		}
 
-		const entitySchema = this.schema.entities[entityType]
-		if (!entitySchema) {
+		if (!this.schemaProvider.hasEntity(entityType)) {
 			throw new Error(`Entity type '${entityType}' not found in schema`)
 		}
 
@@ -204,28 +197,28 @@ export class MutationCollector {
 		const serverData = snapshot.serverData as Record<string, unknown>
 		const result: Record<string, unknown> = {}
 
-		for (const fieldName of fieldNames) {
-			const fieldDef = entitySchema.fields[fieldName]
-			if (!fieldDef) continue
+		const scalarFields = new Set(this.schemaProvider.getScalarFields(entityType))
 
-			if (fieldDef.type === 'column') {
+		for (const fieldName of fieldNames) {
+			if (scalarFields.has(fieldName)) {
 				// Scalar field - include if changed
 				const currentValue = data[fieldName]
 				const serverValue = serverData[fieldName]
 				if (!deepEqual(currentValue, serverValue)) {
 					result[fieldName] = currentValue
 				}
-			} else if (fieldDef.type === 'one') {
-				// Has-one relation - include relation operation
-				const operation = this.collectHasOneOperation(entityType, entityId, fieldName)
-				if (operation !== null) {
-					result[fieldName] = operation
-				}
-			} else if (fieldDef.type === 'many') {
-				// Has-many relation - include relation operations
-				const operations = this.collectHasManyOperations(entityType, entityId, fieldName)
-				if (operations !== null && operations.length > 0) {
-					result[fieldName] = operations
+			} else {
+				const relationType = this.schemaProvider.getRelationType(entityType, fieldName)
+				if (relationType === 'hasOne') {
+					const operation = this.collectHasOneOperation(entityType, entityId, fieldName)
+					if (operation !== null) {
+						result[fieldName] = operation
+					}
+				} else if (relationType === 'hasMany') {
+					const operations = this.collectHasManyOperations(entityType, entityId, fieldName)
+					if (operations !== null && operations.length > 0) {
+						result[fieldName] = operations
+					}
 				}
 			}
 		}
@@ -239,16 +232,15 @@ export class MutationCollector {
 	 * Collects scalar field changes by comparing data to serverData.
 	 */
 	private collectScalarChanges(
+		entityType: string,
 		snapshot: EntitySnapshot,
-		entitySchema: SchemaNames['entities'][string],
 		mutation: Record<string, unknown>,
 	): void {
 		const data = snapshot.data as Record<string, unknown>
 		const serverData = snapshot.serverData as Record<string, unknown>
 
-		for (const [fieldName, fieldDef] of Object.entries(entitySchema.fields)) {
-			if (fieldDef.type !== 'column') continue
-
+		const scalarFields = this.schemaProvider.getScalarFields(entityType)
+		for (const fieldName of scalarFields) {
 			const currentValue = data[fieldName]
 			const serverValue = serverData[fieldName]
 
@@ -258,7 +250,7 @@ export class MutationCollector {
 		}
 	}
 
-	// ==================== Has-One Relation Changes ====================
+	// ==================== Relation Changes ====================
 
 	/**
 	 * Collects has-one and has-many relation changes.
@@ -266,18 +258,19 @@ export class MutationCollector {
 	private collectRelationChanges(
 		entityType: string,
 		entityId: string,
-		entitySchema: SchemaNames['entities'][string],
 		mutation: Record<string, unknown>,
 	): void {
-		for (const [fieldName, fieldDef] of Object.entries(entitySchema.fields)) {
-			if (fieldDef.type === 'column') continue
+		const relationFields = this.schemaProvider.getRelationFields(entityType)
 
-			if (fieldDef.type === 'one') {
+		for (const fieldName of relationFields) {
+			const relationType = this.schemaProvider.getRelationType(entityType, fieldName)
+
+			if (relationType === 'hasOne') {
 				const operation = this.collectHasOneOperation(entityType, entityId, fieldName)
 				if (operation !== null) {
 					mutation[fieldName] = operation
 				}
-			} else if (fieldDef.type === 'many') {
+			} else if (relationType === 'hasMany') {
 				const operations = this.collectHasManyOperations(entityType, entityId, fieldName)
 				if (operations !== null && operations.length > 0) {
 					mutation[fieldName] = operations
@@ -310,15 +303,14 @@ export class MutationCollector {
 						return { connect: { id: currentId } }
 					} else if (currentId) {
 						// Entity doesn't exist - might need to create it
-						// But if it's connecting to a non-existent entity, something is wrong
 						// For now, just connect (the entity should be created separately)
 						return { connect: { id: currentId } }
 					}
 				} else if (currentId && serverId && currentId === serverId) {
 					// Same entity - check if we need to update it
-					const relatedEntityType = this.getRelatedEntityType(entityType, fieldName)
-					if (relatedEntityType) {
-						const nestedChanges = this.collectUpdateData(relatedEntityType, currentId)
+					const targetType = this.schemaProvider.getRelationTarget(entityType, fieldName)
+					if (targetType) {
+						const nestedChanges = this.collectUpdateData(targetType, currentId)
 						if (nestedChanges) {
 							return { update: nestedChanges }
 						}
@@ -354,9 +346,6 @@ export class MutationCollector {
 	 * Collects has-one relation for create mutation.
 	 */
 	private collectCreateOneRelation(
-		_entityType: string,
-		_entityId: string,
-		_fieldName: string,
 		value: unknown,
 	): Record<string, unknown> | null {
 		if (value === null || value === undefined) {
@@ -433,9 +422,7 @@ export class MutationCollector {
 
 		// Items to create (entities created via add())
 		if (createdEntities) {
-			const entitySchema = this.schema.entities[entityType]
-			const fieldDef = entitySchema?.fields[fieldName]
-			const targetType = fieldDef?.type === 'many' ? fieldDef.entity : null
+			const targetType = this.schemaProvider.getRelationTarget(entityType, fieldName)
 
 			for (const tempId of createdEntities) {
 				if (targetType) {
@@ -637,18 +624,5 @@ export class MutationCollector {
 	 */
 	private isExistingEntity(id: string): boolean {
 		return !id.startsWith('__temp_')
-	}
-
-	/**
-	 * Gets the related entity type for a relation field.
-	 */
-	private getRelatedEntityType(entityType: string, fieldName: string): string | null {
-		const entitySchema = this.schema.entities[entityType]
-		if (!entitySchema) return null
-
-		const fieldDef = entitySchema.fields[fieldName]
-		if (!fieldDef || fieldDef.type === 'column') return null
-
-		return fieldDef.entity
 	}
 }

@@ -1,6 +1,6 @@
 import type { BackendAdapter } from '../adapter/types.js'
 import type { ActionDispatcher } from '../core/ActionDispatcher.js'
-import type { MutationDataCollector } from '../core/PersistenceManager.js'
+import type { MutationDataCollector } from './types.js'
 import type { SchemaRegistry } from '../schema/SchemaRegistry.js'
 import type { SnapshotStore } from '../store/SnapshotStore.js'
 import type { UndoManager } from '../undo/UndoManager.js'
