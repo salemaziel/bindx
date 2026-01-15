@@ -1,5 +1,5 @@
 import React, { memo, type ReactElement, type ReactNode } from 'react'
-import type { HasManyProps, SelectionFieldMeta, SelectionMeta, SelectionProvider, EntityRef } from '../types.js'
+import type { HasManyProps, SelectionFieldMeta, SelectionMeta, SelectionProvider, EntityRef, AnyBrand } from '../types.js'
 import { FIELD_REF_META, BINDX_COMPONENT } from '../types.js'
 import { createCollectorProxy } from '../proxy.js'
 import { mergeSelections } from '../SelectionMeta.js'
@@ -29,7 +29,12 @@ import { SelectionScope } from '@contember/bindx'
  * </HasMany>
  * ```
  */
-function HasManyImpl<T>({ field, children }: HasManyProps<T>): ReactElement {
+function HasManyImpl<
+	TEntity,
+	TSelected = TEntity,
+	TBrand extends AnyBrand = AnyBrand,
+	TAvailableRoles extends readonly string[] = readonly string[],
+>({ field, children }: HasManyProps<TEntity, TSelected, TBrand, TAvailableRoles>): ReactElement {
 	const items = field.map((item, index) => {
 		return <React.Fragment key={item.id}>{children(item, index)}</React.Fragment>
 	})

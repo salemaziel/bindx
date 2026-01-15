@@ -1,5 +1,5 @@
 import React, { memo, type ReactElement, type ReactNode } from 'react'
-import type { HasOneProps, SelectionFieldMeta, SelectionMeta, SelectionProvider } from '../types.js'
+import type { HasOneProps, SelectionFieldMeta, SelectionMeta, SelectionProvider, AnyBrand } from '../types.js'
 import { FIELD_REF_META, BINDX_COMPONENT } from '../types.js'
 import { createCollectorProxy } from '../proxy.js'
 import { mergeSelections } from '../SelectionMeta.js'
@@ -20,7 +20,12 @@ import { SelectionScope } from '@contember/bindx'
  * </HasOne>
  * ```
  */
-function HasOneImpl<T, TSelected = T>({ field, children }: HasOneProps<T, TSelected>): ReactElement {
+function HasOneImpl<
+	TEntity,
+	TSelected = TEntity,
+	TBrand extends AnyBrand = AnyBrand,
+	TAvailableRoles extends readonly string[] = readonly string[],
+>({ field, children }: HasOneProps<TEntity, TSelected, TBrand, TAvailableRoles>): ReactElement {
 	// Get the related entity reference (always available, may be placeholder with id=null)
 	return <>{children(field.$entity)}</>
 }

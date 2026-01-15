@@ -13,6 +13,7 @@ import type {
 	HasOneRef,
 	EntityRef,
 	EntityAccessor,
+	AnyBrand,
 } from '@contember/bindx'
 
 // Re-export unified types for backwards compatibility
@@ -32,6 +33,7 @@ export type {
 	HasOneRef,
 	EntityRef,
 	EntityAccessor,
+	AnyBrand,
 }
 
 /**
@@ -72,10 +74,17 @@ export interface HasManyComponentOptions {
  *
  * @typeParam TEntity - The full entity type
  * @typeParam TSelected - The selected subset of fields (defaults to TEntity for backwards compatibility)
+ * @typeParam TBrand - Component brand type for validation (defaults to AnyBrand)
+ * @typeParam TAvailableRoles - Available roles for role-based type checking (defaults to readonly string[])
  */
-export interface HasManyProps<TEntity, TSelected = TEntity> {
-	field: HasManyRef<TEntity, TSelected>
-	children: (item: EntityAccessor<TEntity, TSelected>, index: number) => ReactNode
+export interface HasManyProps<
+	TEntity,
+	TSelected = TEntity,
+	TBrand extends AnyBrand = AnyBrand,
+	TAvailableRoles extends readonly string[] = readonly string[],
+> {
+	field: HasManyRef<TEntity, TSelected, TBrand, TAvailableRoles>
+	children: (item: EntityAccessor<TEntity, TSelected, TBrand, string, TAvailableRoles>, index: number) => ReactNode
 	filter?: unknown
 	orderBy?: unknown
 	limit?: number
@@ -88,10 +97,17 @@ export interface HasManyProps<TEntity, TSelected = TEntity> {
  *
  * @typeParam TEntity - The full entity type
  * @typeParam TSelected - The selected subset of fields (defaults to TEntity for backwards compatibility)
+ * @typeParam TBrand - Component brand type for validation (defaults to AnyBrand)
+ * @typeParam TAvailableRoles - Available roles for role-based type checking (defaults to readonly string[])
  */
-export interface HasOneProps<TEntity, TSelected = TEntity> {
-	field: HasOneRef<TEntity, TSelected>
-	children: (entity: EntityAccessor<TEntity, TSelected>) => ReactNode
+export interface HasOneProps<
+	TEntity,
+	TSelected = TEntity,
+	TBrand extends AnyBrand = AnyBrand,
+	TAvailableRoles extends readonly string[] = readonly string[],
+> {
+	field: HasOneRef<TEntity, TSelected, TBrand, TAvailableRoles>
+	children: (entity: EntityAccessor<TEntity, TSelected, TBrand, string, TAvailableRoles>) => ReactNode
 }
 
 /**
