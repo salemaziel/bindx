@@ -1,4 +1,4 @@
-import '../setup'
+import '../../../setup'
 import { describe, test, expect, afterEach } from 'bun:test'
 import { render, waitFor, act, cleanup } from '@testing-library/react'
 import React from 'react'

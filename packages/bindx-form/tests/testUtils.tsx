@@ -1,106 +1,31 @@
 import '../../../tests/setup'
-import {
-	createBindx,
-	MockAdapter,
-	defineSchema,
-	scalar,
-	hasOne,
-	hasMany,
-} from '@contember/bindx-react'
+import { MockAdapter } from '@contember/bindx-react'
 
-// Test types
-export interface Author {
-	id: string
-	name: string
-	bio: string
-}
+// Re-export shared utilities
+export {
+	getByTestId,
+	queryByTestId,
+	getAllByTestId,
+	createClientError,
+} from '../../../tests/shared/helpers'
 
-export interface Tag {
-	id: string
-	name: string
-}
+export {
+	testSchema as schema,
+	useEntity,
+	type Article,
+	type Author,
+	type Tag,
+	type TestSchema,
+} from '../../../tests/shared/schema'
 
-export interface Article {
-	id: string
-	title: string
-	published: boolean | null
-	status: string
-	views: number | null
-	rating: number | null
-	publishedAt: string | null
-	createdAt: string | null
-	author: Author | null
-	tags: Tag[]
-}
-
-// Create typed hooks using createBindx with schema
-export interface TestSchema {
-	Article: Article
-	Author: Author
-	Tag: Tag
-}
-
-export const schema = defineSchema<TestSchema>({
-	entities: {
-		Article: {
-			fields: {
-				id: scalar(),
-				title: scalar(),
-				published: scalar(),
-				status: scalar(),
-				views: scalar(),
-				rating: scalar(),
-				publishedAt: scalar(),
-				createdAt: scalar(),
-				author: hasOne('Author'),
-				tags: hasMany('Tag'),
-			},
-		},
-		Author: {
-			fields: {
-				id: scalar(),
-				name: scalar(),
-				bio: scalar(),
-			},
-		},
-		Tag: {
-			fields: {
-				id: scalar(),
-				name: scalar(),
-			},
-		},
-	},
-})
-
-export const { useEntity } = createBindx(schema)
-
-// Helper to query by data-testid
-export function getByTestId(container: Element, testId: string): Element {
-	const el = container.querySelector(`[data-testid="${testId}"]`)
-	if (!el) throw new Error(`Element with data-testid="${testId}" not found`)
-	return el
-}
-
-export function queryByTestId(container: Element, testId: string): Element | null {
-	return container.querySelector(`[data-testid="${testId}"]`)
-}
-
-export function getAllByTestId(container: Element, testId: string): Element[] {
-	return Array.from(container.querySelectorAll(`[data-testid="${testId}"]`))
-}
-
-// Helper to create client-side errors for testing
-export function createClientError(message: string, code?: string) {
-	return { source: 'client' as const, message, code }
-}
-
-// Test data factory
+// Form-specific mock data factory (simplified for form tests)
 export function createMockData() {
 	return {
 		Article: {
 			'article-1': {
 				id: 'article-1',
 				title: 'Test Article',
+				content: 'Test content',
 				published: true,
 				status: 'draft',
 				views: 100,
@@ -110,16 +35,19 @@ export function createMockData() {
 				author: {
 					id: 'author-1',
 					name: 'John Doe',
+					email: 'john@example.com',
 					bio: 'Writer',
 				},
+				location: null,
 				tags: [
-					{ id: 'tag-1', name: 'JavaScript' },
-					{ id: 'tag-2', name: 'React' },
+					{ id: 'tag-1', name: 'JavaScript', color: '#f7df1e' },
+					{ id: 'tag-2', name: 'React', color: '#61dafb' },
 				],
 			},
 			'article-2': {
 				id: 'article-2',
 				title: 'Another Article',
+				content: 'More content',
 				published: null,
 				status: 'published',
 				views: null,
@@ -127,6 +55,7 @@ export function createMockData() {
 				publishedAt: null,
 				createdAt: null,
 				author: null,
+				location: null,
 				tags: [],
 			},
 		},
@@ -134,12 +63,14 @@ export function createMockData() {
 			'author-1': {
 				id: 'author-1',
 				name: 'John Doe',
+				email: 'john@example.com',
 				bio: 'Writer',
 			},
 		},
+		Location: {},
 		Tag: {
-			'tag-1': { id: 'tag-1', name: 'JavaScript' },
-			'tag-2': { id: 'tag-2', name: 'React' },
+			'tag-1': { id: 'tag-1', name: 'JavaScript', color: '#f7df1e' },
+			'tag-2': { id: 'tag-2', name: 'React', color: '#61dafb' },
 		},
 	}
 }

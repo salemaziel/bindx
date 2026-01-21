@@ -5,7 +5,7 @@
  * narrows entity types based on roles.
  */
 
-import './setup'
+import '../../setup'
 import { describe, test, expect, afterEach } from 'bun:test'
 import React from 'react'
 import { render, waitFor, cleanup } from '@testing-library/react'
