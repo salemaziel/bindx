@@ -1,426 +1,209 @@
-# Bindx Test Architecture - Analýza a Doporučení
+# Bindx Test Architecture
 
-## Současný Stav
+## Current State (Updated)
 
-### Lokace testů
-
-```
-bindx/
-├── tests/                           # Root integrační testy (~26 souborů)
-│   ├── setup.ts                     # Happy-DOM setup
-│   ├── useEntity.test.tsx           # 1473 řádků - monolitický
-│   ├── cases/
-│   │   ├── hasOne.test.tsx          # 1367 řádků
-│   │   ├── hasMany.test.tsx
-│   │   ├── fieldMutations.test.tsx
-│   │   ├── entityCreateMode.test.tsx
-│   │   └── useEntityList.test.tsx
-│   ├── persistence/
-│   │   ├── batchPersister.test.ts
-│   │   ├── fieldPersistence.test.ts
-│   │   ├── deduplication.test.ts
-│   │   ├── errors.test.ts
-│   │   ├── dependencies.test.ts
-│   │   ├── pessimistic.test.ts
-│   │   └── rollback.test.ts
-│   ├── errors/
-│   │   ├── errorClassification.test.ts
-│   │   └── pathMapper.test.ts
-│   ├── repeater/
-│   │   └── repeater.test.tsx
-│   ├── roles.test.tsx
-│   ├── events.test.tsx
-│   ├── undo.test.ts
-│   ├── createComponent.test.tsx
-│   ├── identityMapSync.test.tsx
-│   ├── typedQueries.test.ts
-│   ├── queryBuilding.test.ts
-│   ├── mutationCollector.test.ts
-│   ├── interoperability.test.ts
-│   └── typeSafety.test.ts
-│
-├── packages/
-│   ├── bindx/src/                   # ⚠️ ŽÁDNÉ UNIT TESTY
-│   ├── bindx-react/src/             # ⚠️ ŽÁDNÉ UNIT TESTY
-│   │
-│   ├── bindx-form/tests/            # 6 souborů
-│   │   ├── testUtils.tsx            # Duplikovaný setup
-│   │   ├── formInputs.test.tsx
-│   │   ├── formFieldState.test.tsx
-│   │   ├── formDecorators.test.tsx
-│   │   ├── formRelations.test.tsx
-│   │   ├── integration.test.tsx
-│   │   └── typeSafety.test.ts
-│   │
-│   ├── bindx-uploader/tests/        # 7 souborů
-│   │   ├── setup.ts                 # Vlastní setup
-│   │   ├── components.test.tsx
-│   │   ├── dropzone.test.tsx
-│   │   ├── attrAccept.test.ts
-│   │   ├── extractors.test.ts
-│   │   ├── fileTypes.test.ts
-│   │   └── selection.test.ts
-│   │
-│   └── bindx-generator/tests/       # 1 soubor
-│       └── generator.test.ts        # 450 řádků - všechno v jednom
-```
-
----
-
-## Identifikované Problémy
-
-### 1. Roztříštěná Organizace
-
-| Problém | Popis |
-|---------|-------|
-| **Smíšené vrstvy** | Root `tests/` obsahuje mix unit testů (SnapshotStore) a integračních testů (useEntity + React) |
-| **Nekonzistentní umístění** | Testy pro `@contember/bindx` a `@contember/bindx-react` jsou v root, ne u zdrojového kódu |
-| **Duplikované utility** | Každý balíček má vlastní `testUtils.tsx` s téměř identickým kódem |
-
-### 2. Monolitické Soubory
-
-| Soubor | Řádků | Problém |
-|--------|-------|---------|
-| `useEntity.test.tsx` | 1473 | Testuje loading, rendering, mutations, dirty state, reset, persist, relations - mělo by být rozděleno |
-| `hasOne.test.tsx` | 1367 | 19 test cases v jednom souboru |
-| `generator.test.ts` | 450 | Testuje 6 generátorů najednou |
-
-### 3. Duplikace Mock Dat a Helperů
-
-Následující kód se opakuje v prakticky **každém** testovacím souboru:
-
-```typescript
-// Opakuje se 10+ krát
-interface Article { id: string; title: string; ... }
-interface Author { id: string; name: string; ... }
-
-const schema = defineSchema<TestSchema>({
-  entities: {
-    Article: { fields: { ... } },
-    Author: { fields: { ... } },
-  },
-})
-
-function createMockData() {
-  return {
-    Article: { 'article-1': { ... } },
-    Author: { 'author-1': { ... } },
-  }
-}
-
-function getByTestId(container, testId) { ... }
-function queryByTestId(container, testId) { ... }
-```
-
-### 4. Chybějící Unit Testy pro Core
-
-Balíčky `@contember/bindx` a `@contember/bindx-react` nemají žádné izolované unit testy pro své moduly:
-
-| Modul | Status |
-|-------|--------|
-| `SnapshotStore` | ⚠️ Testováno jen nepřímo přes integrační testy |
-| `ActionDispatcher` | ⚠️ Nepřímé testy |
-| `EventEmitter` | ⚠️ Jen `events.test.tsx` v rootu |
-| `EntityHandle/FieldHandle` | ⚠️ Nepřímé testy |
-| `cond` helpers | ❌ Chybí |
-| `If/HasMany/HasOne` komponenty | ⚠️ Jen integrační testy |
-| `usePersist` hook | ⚠️ Testováno jen přes `useEntity().persist()` |
-
-### 5. Nejednotné Pojmenování
-
-```
-tests/cases/hasOne.test.tsx       # "cases" složka
-tests/persistence/...              # "persistence" složka
-tests/errors/...                   # "errors" složka
-tests/useEntity.test.tsx           # přímo v root
-tests/roles.test.tsx               # přímo v root
-```
-
----
-
-## Co Ponechat (✅)
-
-| Soubor/Oblast | Důvod |
-|---------------|-------|
-| `tests/persistence/*.test.ts` | Dobře strukturované, izolované unit testy pro persistence layer |
-| `tests/errors/*.test.ts` | Čisté unit testy pro error handling |
-| `packages/bindx-uploader/tests/` | Dobře rozdělené, každý aspekt má svůj soubor |
-| `packages/bindx-form/tests/typeSafety.test.ts` | Unikátní type-level testy |
-
----
-
-## Co Rozdělit (🔄)
-
-### `tests/useEntity.test.tsx` → 6 souborů
-
-```
-tests/react/
-├── useEntity/
-│   ├── loading.test.tsx          # loading state testy
-│   ├── rendering.test.tsx        # scalar a relation rendering
-│   ├── mutations.test.tsx        # setValue, optimistic updates
-│   ├── dirtyState.test.tsx       # isDirty, serverValue tracking
-│   ├── reset.test.tsx            # reset functionality
-│   └── persist.test.tsx          # persist functionality
-```
-
-### `tests/cases/hasOne.test.tsx` → 4 soubory
-
-```
-tests/react/relations/hasOne/
-├── connect.test.tsx              # connect operace
-├── disconnect.test.tsx           # disconnect operace
-├── reset.test.tsx                # reset operace
-├── dirtyState.test.tsx           # dirty tracking
-└── persist.test.tsx              # persistence
-```
-
-### `packages/bindx-generator/tests/generator.test.ts` → 4 soubory
-
-```
-packages/bindx-generator/tests/
-├── enumGenerator.test.ts
-├── entityGenerator.test.ts
-├── roleGenerator.test.ts
-└── integration.test.ts           # full generate() function
-```
-
----
-
-## Co Přepsat (🔁)
-
-### Sdílené Test Utilities
-
-Vytvořit centrální `@contember/bindx-test-utils` balíček nebo `tests/shared/`:
-
-```typescript
-// tests/shared/schema.ts
-export interface Article { id: string; title: string; content: string; author: Author | null; tags: Tag[] }
-export interface Author { id: string; name: string; email: string }
-export interface Tag { id: string; name: string; color: string }
-
-export const testSchema = defineSchema<TestSchema>({ ... })
-export const { useEntity, useEntityList } = createBindx(testSchema)
-
-// tests/shared/mockData.ts
-export function createArticleMockData(): MockDataStore { ... }
-export function createAuthorMockData(): MockDataStore { ... }
-
-// tests/shared/helpers.ts
-export { getByTestId, queryByTestId, getAllByTestId } from './helpers'
-export { createMockAdapter } from './adapters'
-export { renderWithBindx } from './render'
-
-// tests/shared/render.tsx
-export function renderWithBindx(
-  ui: ReactElement,
-  options?: { adapter?: BackendAdapter; mockData?: MockDataStore }
-) {
-  const adapter = options?.adapter ?? new MockAdapter(options?.mockData ?? createArticleMockData())
-  return render(
-    <BindxProvider adapter={adapter}>
-      {ui}
-    </BindxProvider>
-  )
-}
-```
-
-### Přeorganizovat Root Tests
+### Test Directory Structure
 
 ```
 tests/
-├── shared/                        # Sdílené utility
-│   ├── schema.ts
-│   ├── mockData.ts
-│   ├── helpers.ts
-│   ├── render.tsx
-│   └── index.ts
+├── setup.ts                        # Happy-DOM setup (test preload)
+├── shared/
+│   └── helpers.ts                  # Shared DOM query helpers
 │
-├── unit/                          # Izolované unit testy
+├── unit/                           # Pure unit tests (no React)
+│   ├── shared/
+│   │   └── unitTestHelpers.ts      # Shared utilities for unit tests
 │   ├── store/
-│   │   ├── snapshotStore.test.ts
-│   │   └── actionDispatcher.test.ts
+│   │   └── snapshotStore.test.ts   # SnapshotStore tests (~50 tests)
+│   ├── events/
+│   │   └── eventEmitter.test.ts    # EventEmitter tests (~20 tests)
+│   ├── core/
+│   │   └── actionDispatcher.test.ts # ActionDispatcher tests (~15 tests)
+│   ├── handles/
+│   │   ├── fieldHandle.test.ts     # FieldHandle tests (~12 tests)
+│   │   ├── entityHandle.test.ts    # EntityHandle tests (~15 tests)
+│   │   ├── hasOneHandle.test.ts    # HasOneHandle tests (~10 tests)
+│   │   └── hasManyHandle.test.ts   # HasManyListHandle tests (~10 tests)
 │   ├── persistence/
 │   │   ├── batchPersister.test.ts
-│   │   ├── changeRegistry.test.ts
-│   │   └── ...
-│   ├── errors/
-│   │   ├── classification.test.ts
-│   │   └── pathMapper.test.ts
-│   ├── events/
-│   │   └── eventEmitter.test.ts
-│   └── undo/
-│       └── undoManager.test.ts
+│   │   ├── deduplication.test.ts
+│   │   ├── dependencies.test.ts
+│   │   ├── errors.test.ts
+│   │   ├── fieldPersistence.test.ts
+│   │   ├── pessimistic.test.ts
+│   │   └── rollback.test.ts
+│   └── errors/
+│       ├── errorClassification.test.ts
+│       └── pathMapper.test.ts
 │
-├── react/                         # React integrační testy
+├── react/                          # React integration tests
 │   ├── hooks/
 │   │   ├── useEntity/
 │   │   │   ├── loading.test.tsx
 │   │   │   ├── rendering.test.tsx
-│   │   │   └── ...
-│   │   ├── useEntityList/
-│   │   │   └── ...
-│   │   ├── usePersist.test.tsx
-│   │   └── useUndo.test.tsx
-│   ├── components/
-│   │   ├── Field.test.tsx
-│   │   ├── If.test.tsx
-│   │   ├── HasMany.test.tsx
-│   │   └── HasOne.test.tsx
+│   │   │   ├── mutations.test.tsx
+│   │   │   ├── dirtyState.test.tsx
+│   │   │   ├── reset.test.tsx
+│   │   │   ├── persist.test.tsx
+│   │   │   └── relations.test.tsx
+│   │   └── useEntityList/
+│   │       └── useEntityList.test.tsx
 │   ├── relations/
 │   │   ├── hasOne/
-│   │   │   └── ...
+│   │   │   ├── connect.test.tsx
+│   │   │   ├── disconnect.test.tsx
+│   │   │   ├── reset.test.tsx
+│   │   │   ├── dirtyState.test.tsx
+│   │   │   └── persist.test.tsx
 │   │   └── hasMany/
-│   │       └── ...
+│   │       ├── items.test.tsx
+│   │       ├── dirtyState.test.tsx
+│   │       ├── persist.test.tsx
+│   │       └── batching.test.tsx
 │   └── roles/
-│       └── hasRole.test.tsx
+│       └── roles.test.tsx
 │
-├── integration/                   # End-to-end scénáře
-│   ├── fullFormCycle.test.tsx    # Load → Edit → Persist
-│   ├── multiEntityEdit.test.tsx
-│   └── errorRecovery.test.tsx
+├── cases/                          # Legacy integration tests (to be reorganized)
+│   ├── entityCreateMode.test.tsx
+│   └── fieldMutations.test.tsx
 │
-└── types/                         # Compile-time type testy
-    └── typeSafety.test.ts
+├── repeater/
+│   └── repeater.test.tsx           # Repeater component tests
+│
+└── (root-level test files)         # High-level integration tests
+    ├── events.test.tsx
+    ├── createComponent.test.tsx
+    ├── identityMapSync.test.tsx
+    ├── typedQueries.test.ts
+    ├── queryBuilding.test.ts
+    ├── interoperability.test.ts
+    ├── typeSafety.test.ts
+    ├── mutationCollector.test.ts
+    └── undo.test.ts
 ```
 
 ---
 
-## Co Doplnit (➕)
+## Completed Phases
 
-### Priorita 1: Chybějící Unit Testy pro Core
+### Phase 1: Test Structure Reorganization ✅
 
-```typescript
-// packages/bindx/tests/store/snapshotStore.test.ts
-describe('SnapshotStore', () => {
-  describe('setEntityData', () => { ... })
-  describe('setFieldValue', () => { ... })
-  describe('getDirtyFields', () => { ... })
-  describe('createEntity', () => { ... })
-  describe('deleteEntity', () => { ... })
-})
+- Split monolithic `useEntity.test.tsx` into focused test files:
+  - `tests/react/hooks/useEntity/loading.test.tsx`
+  - `tests/react/hooks/useEntity/rendering.test.tsx`
+  - `tests/react/hooks/useEntity/mutations.test.tsx`
+  - `tests/react/hooks/useEntity/dirtyState.test.tsx`
+  - `tests/react/hooks/useEntity/reset.test.tsx`
+  - `tests/react/hooks/useEntity/persist.test.tsx`
+  - `tests/react/hooks/useEntity/relations.test.tsx`
 
-// packages/bindx/tests/handles/fieldHandle.test.ts
-describe('FieldHandle', () => {
-  describe('value', () => { ... })
-  describe('setValue', () => { ... })
-  describe('serverValue', () => { ... })
-  describe('isDirty', () => { ... })
-  describe('reset', () => { ... })
-  describe('addError/clearErrors', () => { ... })
-})
+### Phase 2: HasOne Relation Tests ✅
 
-// packages/bindx/tests/handles/hasOneHandle.test.ts
-describe('HasOneHandle', () => {
-  describe('$id', () => { ... })
-  describe('$connect', () => { ... })
-  describe('$disconnect', () => { ... })
-  describe('$isDirty', () => { ... })
-  describe('$reset', () => { ... })
-  describe('$entity', () => { ... })
-})
+- Split `hasOne.test.tsx` into focused test files:
+  - `tests/react/relations/hasOne/connect.test.tsx`
+  - `tests/react/relations/hasOne/disconnect.test.tsx`
+  - `tests/react/relations/hasOne/reset.test.tsx`
+  - `tests/react/relations/hasOne/dirtyState.test.tsx`
+  - `tests/react/relations/hasOne/persist.test.tsx`
 
-// packages/bindx/tests/handles/hasManyHandle.test.ts
-describe('HasManyListHandle', () => {
-  describe('items', () => { ... })
-  describe('length', () => { ... })
-  describe('connect', () => { ... })
-  describe('disconnect', () => { ... })
-  describe('isDirty', () => { ... })
-  describe('map', () => { ... })
-})
-```
+### Phase 3: HasMany Relation Tests ✅
 
-### Priorita 2: Chybějící React Komponenty
+- Split `hasMany.test.tsx` into focused test files:
+  - `tests/react/relations/hasMany/items.test.tsx`
+  - `tests/react/relations/hasMany/dirtyState.test.tsx`
+  - `tests/react/relations/hasMany/persist.test.tsx`
+  - `tests/react/relations/hasMany/batching.test.tsx`
 
-```typescript
-// packages/bindx-react/tests/components/If.test.tsx
-describe('If component', () => {
-  describe('cond.isNotNull', () => { ... })
-  describe('cond.hasItems', () => { ... })
-  describe('cond.isTruthy', () => { ... })
-  describe('cond.isEmpty', () => { ... })
-  describe('cond.equals', () => { ... })
-  describe('nested conditions', () => { ... })
-})
+### Phase 4: Core Module Unit Tests ✅
 
-// packages/bindx-react/tests/components/Field.test.tsx
-describe('Field component', () => {
-  describe('rendering scalar value', () => { ... })
-  describe('format prop', () => { ... })
-  describe('null value handling', () => { ... })
-})
+- Created comprehensive unit tests for core modules:
+  - `tests/unit/store/snapshotStore.test.ts` - ~50 tests covering:
+    - Entity snapshots (create, update, commit, reset, remove, immutability)
+    - Entity metadata (existsOnServer, scheduled deletion, temp IDs)
+    - Has-many state (server IDs, plan connect/disconnect, ordering, move)
+    - Has-one relations (create, update, commit, reset)
+    - Error state (add/clear field/entity/relation errors)
+    - Subscriptions (entity, relation, global notifications)
+    - Dirty tracking
+    - Parent-child relationships
+    - Partial snapshot export/import
 
-// packages/bindx-react/tests/components/HasMany.test.tsx
-describe('HasMany component', () => {
-  describe('iterating over items', () => { ... })
-  describe('orderBy', () => { ... })
-  describe('filter', () => { ... })
-  describe('empty state', () => { ... })
-})
-```
+  - `tests/unit/events/eventEmitter.test.ts` - ~20 tests covering:
+    - Global listener subscriptions
+    - Entity-scoped subscriptions
+    - Field-scoped subscriptions
+    - Listener order (field → entity → global)
+    - Interceptors (global, entity, field scoped)
+    - Interceptor cancel/modify actions
+    - Async interceptors
+    - Utility methods (clear, listenerCount)
 
-### Priorita 3: Edge Cases a Error Handling
+  - `tests/unit/core/actionDispatcher.test.ts` - ~15 tests covering:
+    - Sync dispatch for all action types
+    - Middleware execution and cancellation
+    - Async dispatch with interceptors
+    - Event emission
 
-```typescript
-// tests/react/errorHandling/
-├── loadingErrors.test.tsx         # Network errors, timeouts
-├── persistErrors.test.tsx         # Validation errors, conflicts
-├── optimisticRollback.test.tsx    # Rollback on persist failure
-└── errorBoundaries.test.tsx       # React error boundaries
+  - `tests/unit/handles/fieldHandle.test.ts` - ~12 tests covering:
+    - Value access (value, serverValue)
+    - Dirty state detection
+    - setValue and error clearing
+    - Touched state
+    - Input props
+    - Nested fields
+    - Error handling
+    - Event subscriptions
 
-// tests/react/edgeCases/
-├── nullableFields.test.tsx
-├── circularRelations.test.tsx
-├── deepNesting.test.tsx
-├── largeDatasets.test.tsx
-└── concurrentMutations.test.tsx
-```
+  - `tests/unit/handles/entityHandle.test.ts` - ~15 tests covering:
+    - Identity (id, type)
+    - Data access
+    - Load state
+    - Dirty state
+    - Persisting state
+    - New entity detection
+    - Field access and caching
+    - Relation access
+    - Reset/commit
+    - Errors
+    - Event subscriptions
 
-### Priorita 4: Hooks
+  - `tests/unit/handles/hasOneHandle.test.ts` - ~10 tests covering:
+    - State detection
+    - Related ID access
+    - Entity accessor
+    - Dirty state
+    - Connect/disconnect/delete
+    - Reset
+    - Errors
+    - Event subscriptions
 
-```typescript
-// packages/bindx-react/tests/hooks/usePersist.test.tsx
-describe('usePersist', () => {
-  describe('persistAll', () => { ... })
-  describe('persistFields', () => { ... })
-  describe('persistEntity', () => { ... })
-  describe('error handling', () => { ... })
-})
-
-// packages/bindx-react/tests/hooks/useUndo.test.tsx
-describe('useUndo', () => {
-  describe('undo', () => { ... })
-  describe('redo', () => { ... })
-  describe('canUndo/canRedo', () => { ... })
-  describe('batching', () => { ... })
-})
-
-// packages/bindx-react/tests/hooks/useEntityErrors.test.tsx
-describe('useEntityErrors', () => {
-  describe('field errors', () => { ... })
-  describe('entity errors', () => { ... })
-  describe('clearing errors', () => { ... })
-})
-```
+  - `tests/unit/handles/hasManyHandle.test.ts` - ~10 tests covering:
+    - Items access
+    - Map iteration
+    - Dirty state
+    - Connect/disconnect
+    - Add/remove
+    - Move
+    - Reset
+    - Errors
+    - Event subscriptions
 
 ---
 
-## Navrhovaná Testovací Konvence
+## Test Conventions
 
-### Pojmenování Souborů
+### File Naming
 
 ```
-<module>.test.ts       # Unit testy (bez React)
-<component>.test.tsx   # React komponenty
-<feature>.test.tsx     # Integrační testy
+<module>.test.ts       # Unit tests (no React)
+<component>.test.tsx   # React components
+<feature>.test.tsx     # Integration tests
 ```
 
-### Struktura Testu
+### Test Structure
 
 ```typescript
 describe('<ModuleName>', () => {
-  // Shared setup
   let store: SnapshotStore
 
   beforeEach(() => {
@@ -437,15 +220,15 @@ describe('<ModuleName>', () => {
 })
 ```
 
-### Pojmenování Testů
+### Test Naming
 
 ```typescript
-// ✅ Dobře
+// ✅ Good
 test('should return null when entity does not exist')
 test('should mark field as dirty after setValue')
 test('should throw when called outside provider')
 
-// ❌ Špatně
+// ❌ Bad
 test('works correctly')
 test('test case 1')
 test('handles edge case')
@@ -453,51 +236,82 @@ test('handles edge case')
 
 ---
 
-## Migrační Plán
+## Shared Test Utilities
 
-### Fáze 1: Sdílené Utility (1-2 dny)
+### `tests/shared/helpers.ts`
 
-1. Vytvořit `tests/shared/` s centrálními utilitami
-2. Refaktorovat existující testy aby je používaly
-3. Odstranit duplikovaný kód z jednotlivých souborů
+DOM query helpers for React tests:
+- `getByTestId(container, testId)` - Query by testid, throws if not found
+- `queryByTestId(container, testId)` - Query by testid, returns null if not found
+- `getAllByTestId(container, testId)` - Query all by testid
+- `createClientError(message, code?)` - Create client error object
 
-### Fáze 2: Reorganizace Adresářů (2-3 dny)
+### `tests/unit/shared/unitTestHelpers.ts`
 
-1. Přesunout testy do nové struktury (`unit/`, `react/`, `integration/`)
-2. Rozdělit monolitické soubory
-3. Aktualizovat importy
-
-### Fáze 3: Doplnění Chybějících Testů (průběžně)
-
-1. Unit testy pro `@contember/bindx` core
-2. Testy pro React komponenty (`If`, `Field`, `HasMany`)
-3. Hook testy (`usePersist`, `useUndo`)
-4. Edge case a error handling testy
-
-### Fáze 4: CI/CD Integrace
-
-1. Nastavit coverage reporting
-2. Definovat minimální coverage thresholds
-3. Přidat pre-commit hooks pro spuštění testů
+Utilities for pure unit tests:
+- `createTestStore()` - Create fresh SnapshotStore
+- `createTestDispatcher()` - Create ActionDispatcher with store and EventEmitter
+- `setupEntity()` - Set up test entity with data
+- `createMockSubscriber()` - Create mock subscription function
+- `createArticleData()`, `createAuthorData()`, `createTagData()` - Sample data factories
+- `waitFor()` - Async condition waiting
+- `createDeferred()` - Create controllable promise
 
 ---
 
-## Coverage Cíle
+## Running Tests
 
-| Oblast | Aktuální | Cíl |
-|--------|----------|-----|
-| `@contember/bindx` | ~40% (odhad) | 80%+ |
-| `@contember/bindx-react` | ~50% (odhad) | 80%+ |
-| `@contember/bindx-form` | ~70% | 85%+ |
-| `@contember/bindx-uploader` | ~75% | 85%+ |
-| `@contember/bindx-generator` | ~60% | 80%+ |
+```bash
+# Run all tests
+bun test
+
+# Run a specific test file
+bun test tests/unit/store/snapshotStore.test.ts
+
+# Run tests matching a pattern
+bun test --grep "SnapshotStore"
+
+# Run tests in a directory
+bun test tests/unit/
+
+# Type check
+bun run typecheck
+```
 
 ---
 
-## Závěr
+## Coverage Goals
 
-Současné testy jsou funkční, ale trpí organizačními problémy:
+| Area | Target |
+|------|--------|
+| `@contember/bindx` core | 80%+ |
+| `@contember/react-bindx` | 80%+ |
+| `@contember/bindx-form` | 85%+ |
+| `@contember/bindx-uploader` | 85%+ |
 
-1. **Hlavní pozitiva**: Existuje solidní základ integračních testů, persistence layer je dobře otestovaný
-2. **Hlavní problémy**: Duplikace kódu, monolitické soubory, chybějící unit testy pro core moduly
-3. **Doporučení**: Začít s konsolidací sdílených utilit, postupně rozdělovat velké soubory, doplňovat unit testy pro core
+---
+
+## Future Work
+
+### Potential Improvements
+
+1. **Additional Unit Tests**
+   - Selection builder tests
+   - Query spec tests
+   - Mutation collector tests
+
+2. **Edge Case Tests**
+   - Circular relations
+   - Deep nesting
+   - Large datasets
+   - Concurrent mutations
+
+3. **Performance Tests**
+   - Large entity counts
+   - Rapid mutation sequences
+   - Memory usage
+
+4. **E2E Integration Tests**
+   - Full form lifecycle
+   - Multi-entity editing
+   - Error recovery scenarios

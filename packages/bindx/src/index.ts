@@ -161,7 +161,25 @@ export { MockAdapter, ContemberAdapter } from './adapter/index.js'
 export { createEntityLoader, resolveSelectionMeta, buildQuery } from './core/index.js'
 
 // Actions
-export { setEntityData, setLoadState, setField, resetEntity, commitEntity } from './core/actions.js'
+export {
+	setEntityData,
+	setLoadState,
+	setField,
+	resetEntity,
+	commitEntity,
+	connectRelation,
+	disconnectRelation,
+	deleteRelation,
+	setPersisting,
+	addFieldError,
+	clearFieldErrors,
+	addEntityError,
+	clearEntityErrors,
+	addRelationError,
+	clearRelationErrors,
+	clearAllServerErrors,
+	clearAllErrors,
+} from './core/actions.js'
 
 // Store
 export { SnapshotStore, type HasManyRemovalType, isTempId, isPlaceholderId, isPersistedId, generatePlaceholderId } from './store/SnapshotStore.js'

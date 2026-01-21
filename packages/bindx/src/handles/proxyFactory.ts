@@ -30,6 +30,8 @@ export const ENTITY_HANDLE_PROPERTIES = new Set<string | symbol>([
 	'field', 'hasOne', 'hasMany', 'getSnapshot',
 	'reset', 'commit', 'dispose', 'subscribe',
 	'getDirtyFields', 'getDirtyRelations',
+	// State properties (unlikely to be field names)
+	'serverData', 'isLoaded', 'isLoading', 'isError', 'error', 'isPersisting',
 ])
 
 /**
@@ -38,7 +40,7 @@ export const ENTITY_HANDLE_PROPERTIES = new Set<string | symbol>([
  */
 export const HAS_ONE_HANDLE_PROPERTIES = new Set<string | symbol>([
 	// Type brands (phantom types)
-	'__entityType', '__brands',
+	'__entityType', '__entityName', '__availableRoles', '__brands', '__schema',
 	// Symbol
 	FIELD_REF_META,
 	// Internal implementation details
