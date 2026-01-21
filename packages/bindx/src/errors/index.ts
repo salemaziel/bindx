@@ -19,6 +19,8 @@ export {
 	filterStickyErrors,
 } from './types.js'
 
+export { UnfetchedFieldError } from './UnfetchedFieldError.js'
+
 export {
 	type PathElement,
 	type PathSegment,

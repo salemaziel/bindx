@@ -1,4 +1,4 @@
-import { useSyncExternalStore, useCallback, useMemo } from 'react'
+import { useSyncExternalStore, useCallback, useMemo, useRef } from 'react'
 import {
 	FIELD_REF_META,
 	type BatchPersister,
@@ -111,17 +111,45 @@ export function usePersist(): PersistApi {
 
 	const changeRegistry = batchPersister.getChangeRegistry()
 
+	// Cache for dirty entities snapshot to avoid infinite loops
+	const dirtyEntitiesCacheRef = useRef<readonly DirtyEntity[]>([])
+
 	// Subscribe to store changes for dirty tracking
 	const dirtyEntities = useSyncExternalStore(
 		useCallback((callback) => store.subscribe(callback), [store]),
-		useCallback(() => changeRegistry.getDirtyEntities(), [changeRegistry]),
+		useCallback(() => {
+			const newDirtyEntities = changeRegistry.getDirtyEntities()
+			// Compare by length and entity keys to avoid unnecessary updates
+			const cached = dirtyEntitiesCacheRef.current
+			if (
+				cached.length === newDirtyEntities.length &&
+				cached.every((e, i) => {
+					const newE = newDirtyEntities[i]
+					return newE && e.entityType === newE.entityType && e.entityId === newE.entityId
+				})
+			) {
+				return cached
+			}
+			dirtyEntitiesCacheRef.current = newDirtyEntities
+			return newDirtyEntities
+		}, [changeRegistry]),
 		useCallback(() => changeRegistry.getDirtyEntities(), [changeRegistry]),
 	)
+
+	// Cache for isPersisting snapshot
+	const isPersistingCacheRef = useRef<boolean>(false)
 
 	// Subscribe to in-flight changes
 	const isPersisting = useSyncExternalStore(
 		useCallback((callback) => changeRegistry.subscribe(callback), [changeRegistry]),
-		useCallback(() => changeRegistry.hasInFlight(), [changeRegistry]),
+		useCallback(() => {
+			const newIsPersisting = changeRegistry.hasInFlight()
+			if (isPersistingCacheRef.current === newIsPersisting) {
+				return isPersistingCacheRef.current
+			}
+			isPersistingCacheRef.current = newIsPersisting
+			return newIsPersisting
+		}, [changeRegistry]),
 		useCallback(() => changeRegistry.hasInFlight(), [changeRegistry]),
 	)
 
@@ -251,15 +279,28 @@ export function usePersistEntity(entityType: string, entityId: string): EntityPe
 
 	const changeRegistry = batchPersister.getChangeRegistry()
 
-	// Subscribe to store changes for this entity
-	const entityKey = `${entityType}:${entityId}`
+	// Caches for snapshot stability
+	const dirtyFieldsCacheRef = useRef<readonly string[]>([])
+	const dirtyRelationsCacheRef = useRef<readonly string[]>([])
+	const isPersistingCacheRef = useRef<boolean>(false)
 
 	const dirtyFields = useSyncExternalStore(
 		useCallback(
 			(callback) => store.subscribeToEntity(entityType, entityId, callback),
 			[store, entityType, entityId],
 		),
-		useCallback(() => store.getDirtyFields(entityType, entityId), [store, entityType, entityId]),
+		useCallback(() => {
+			const newDirtyFields = store.getDirtyFields(entityType, entityId)
+			const cached = dirtyFieldsCacheRef.current
+			if (
+				cached.length === newDirtyFields.length &&
+				cached.every((f, i) => f === newDirtyFields[i])
+			) {
+				return cached
+			}
+			dirtyFieldsCacheRef.current = newDirtyFields
+			return newDirtyFields
+		}, [store, entityType, entityId]),
 		useCallback(() => store.getDirtyFields(entityType, entityId), [store, entityType, entityId]),
 	)
 
@@ -268,7 +309,18 @@ export function usePersistEntity(entityType: string, entityId: string): EntityPe
 			(callback) => store.subscribeToEntity(entityType, entityId, callback),
 			[store, entityType, entityId],
 		),
-		useCallback(() => store.getDirtyRelations(entityType, entityId), [store, entityType, entityId]),
+		useCallback(() => {
+			const newDirtyRelations = store.getDirtyRelations(entityType, entityId)
+			const cached = dirtyRelationsCacheRef.current
+			if (
+				cached.length === newDirtyRelations.length &&
+				cached.every((r, i) => r === newDirtyRelations[i])
+			) {
+				return cached
+			}
+			dirtyRelationsCacheRef.current = newDirtyRelations
+			return newDirtyRelations
+		}, [store, entityType, entityId]),
 		useCallback(() => store.getDirtyRelations(entityType, entityId), [store, entityType, entityId]),
 	)
 
@@ -284,10 +336,14 @@ export function usePersistEntity(entityType: string, entityId: string): EntityPe
 			},
 			[store, changeRegistry, entityType, entityId],
 		),
-		useCallback(
-			() => changeRegistry.isInFlight(entityType, entityId),
-			[changeRegistry, entityType, entityId],
-		),
+		useCallback(() => {
+			const newIsPersisting = changeRegistry.isInFlight(entityType, entityId)
+			if (isPersistingCacheRef.current === newIsPersisting) {
+				return isPersistingCacheRef.current
+			}
+			isPersistingCacheRef.current = newIsPersisting
+			return newIsPersisting
+		}, [changeRegistry, entityType, entityId]),
 		useCallback(
 			() => changeRegistry.isInFlight(entityType, entityId),
 			[changeRegistry, entityType, entityId],

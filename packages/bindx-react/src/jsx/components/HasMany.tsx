@@ -1,7 +1,6 @@
 import React, { memo, type ReactElement, type ReactNode } from 'react'
-import type { HasManyProps, SelectionFieldMeta, SelectionMeta, SelectionProvider, EntityRef, AnyBrand } from '../types.js'
-import { FIELD_REF_META, BINDX_COMPONENT } from '../types.js'
-import { createCollectorProxy } from '../proxy.js'
+import type { HasManyProps, SelectionFieldMeta, SelectionMeta, SelectionProvider, EntityRef, AnyBrand, HasManyRef } from '../types.js'
+import { FIELD_REF_META, BINDX_COMPONENT, SCOPE_REF } from '../types.js'
 import { mergeSelections } from '../SelectionMeta.js'
 import { SelectionScope } from '@contember/bindx'
 
@@ -37,7 +36,10 @@ function HasManyImpl<
 	TAvailableRoles extends readonly string[] = readonly string[],
 	TSchema extends Record<string, object> = Record<string, object>,
 >({ field, children }: HasManyProps<TEntity, TSelected, TBrand, TEntityName, TAvailableRoles, TSchema>): ReactElement {
-	const items = field.map((item, index) => {
+	// At runtime, field is always a full HasManyRef (proxy provides all properties)
+	// Props accept HasManyRefBase for type compatibility with both implicit and explicit modes
+	const fullField = field as HasManyRef<TEntity, TSelected, TBrand, TEntityName, TAvailableRoles, TSchema>
+	const items = fullField.map((item, index) => {
 		return <React.Fragment key={item.id}>{children(item, index)}</React.Fragment>
 	})
 
@@ -54,19 +56,31 @@ hasManyWithSelection.getSelection = (
 	collectNested: (children: ReactNode) => SelectionMeta,
 ): SelectionFieldMeta => {
 	const meta = props.field[FIELD_REF_META]
+	// At runtime, field is always a full HasManyRef (proxy provides all properties)
+	const fullField = props.field as HasManyRef<unknown>
 
-	// Create nested selection by calling children with collector using SelectionScope
-	const scope = new SelectionScope()
-	const nestedCollector = createCollectorProxy<unknown>(scope)
+	// Use field's map function to get a properly configured collector with schema info
+	// The map() creates a collector that knows about entity types and relations
+	const result: { syntheticChildren: ReactNode; childScope: SelectionScope | null } = {
+		syntheticChildren: null,
+		childScope: null,
+	}
 
-	// Call children once to gather nested field access
-	const syntheticChildren = props.children(nestedCollector, 0)
+	fullField.map((item, index) => {
+		// Get the scope from the collector entity (it has SCOPE_REF)
+		const scopeRef = (item as unknown as Record<symbol, unknown>)[SCOPE_REF]
+		if (scopeRef instanceof SelectionScope) {
+			result.childScope = scopeRef
+		}
+		result.syntheticChildren = props.children(item, index)
+		return null
+	})
 
 	// Also analyze the JSX structure
-	const jsxSelection = collectNested(syntheticChildren)
+	const jsxSelection = result.syntheticChildren ? collectNested(result.syntheticChildren) : { fields: new Map() }
 
 	// Convert scope to SelectionMeta and merge with JSX selection
-	const nestedSelection = scope.toSelectionMeta()
+	const nestedSelection = result.childScope ? result.childScope.toSelectionMeta() : { fields: new Map() }
 	mergeSelections(nestedSelection, jsxSelection)
 
 	return {

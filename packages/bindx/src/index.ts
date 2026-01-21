@@ -47,16 +47,26 @@ export type {
 	InputProps,
 	EntityFields,
 	SelectedEntityFields,
+	SelectedEntityFieldsBase,
 	ScalarKeys,
 	HasManyKeys,
 	HasOneKeys,
 	FieldRefMeta,
+	// Full types (for explicit selection - have .value, .length, etc.)
 	FieldRef,
 	HasManyRef,
 	HasOneRef,
+	HasOneAccessor,
 	EntityRef,
 	EntityRefFor,
 	EntityAccessor,
+	// Base types (for implicit selection - no .value, .length, etc.)
+	FieldRefBase,
+	HasManyRefBase,
+	HasOneRefBase,
+	HasOneAccessorBase,
+	EntityRefBase,
+	EntityAccessorBase,
 	// Type extraction helpers
 	ExtractHasOneEntityName,
 	ExtractHasOneRoles,
@@ -282,6 +292,7 @@ export {
 	extractMappedErrors,
 	isNestedError,
 	getErrorPathString,
+	UnfetchedFieldError,
 } from './errors/index.js'
 
 

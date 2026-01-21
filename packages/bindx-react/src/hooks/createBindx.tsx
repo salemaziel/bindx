@@ -5,6 +5,7 @@ import {
 	resolveSelectionMeta,
 	type SelectionInput,
 	type EntityRef,
+	type EntityRefBase,
 	type EntityAccessor,
 	type AnyBrand,
 	ContemberSchema,
@@ -93,16 +94,19 @@ function resolveSchemaRegistry(input: SchemaInput): SchemaRegistry {
 // ============================================================================
 
 /**
- * Extract available roles from EntityRef type.
+ * Extract available roles from EntityRef/EntityRefBase type.
  */
-type ExtractAvailableRoles<T> = T extends EntityRef<any, any, any, any, infer TRoles> ? TRoles : readonly string[]
+type ExtractAvailableRoles<T> =
+	T extends EntityRef<any, any, any, any, infer TRoles> ? TRoles :
+	T extends EntityRefBase<any, any, any, any, infer TRoles> ? TRoles :
+	readonly string[]
 
 /**
  * Props for HasRole component.
  */
 export interface HasRoleProps<
 	TRoleSchemas extends RoleSchemasBase<TRoleSchemas>,
-	TEntityRef extends EntityRef<any, any, any, any, any>,
+	TEntityRef extends EntityRefBase<any, any, any, any, any>,
 	TNewRoles extends readonly (ExtractAvailableRoles<TEntityRef>[number] & keyof TRoleSchemas & string)[],
 > {
 	/** Roles to narrow scope to */
@@ -124,7 +128,7 @@ export interface HasRoleProps<
  * HasRole component type.
  */
 export type HasRoleComponent<TRoleSchemas extends RoleSchemasBase<TRoleSchemas>> = <
-	TEntityRef extends EntityRef<any, any, any, any, any>,
+	TEntityRef extends EntityRefBase<any, any, any, any, any>,
 	const TNewRoles extends readonly (ExtractAvailableRoles<TEntityRef>[number] & keyof TRoleSchemas & string)[],
 >(
 	props: HasRoleProps<TRoleSchemas, TEntityRef, TNewRoles>,

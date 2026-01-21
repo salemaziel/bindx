@@ -1,7 +1,14 @@
 import React, { memo, type ReactElement, type ReactNode } from 'react'
-import type { IfProps, SelectionFieldMeta, SelectionMeta, SelectionProvider } from '../types.js'
+import type { IfProps, SelectionFieldMeta, SelectionMeta, SelectionProvider, FieldRef } from '../types.js'
 import { FIELD_REF_META, BINDX_COMPONENT } from '../types.js'
 import { mergeSelections, createEmptySelection } from '../SelectionMeta.js'
+import {
+	type Condition,
+	isCondition,
+	evaluateCondition,
+	collectConditionFields,
+	CONDITION_META,
+} from '../conditions.js'
 
 /**
  * If component - conditional rendering that ensures both branches are analyzed
@@ -9,26 +16,54 @@ import { mergeSelections, createEmptySelection } from '../SelectionMeta.js'
  * During collection phase, BOTH branches are analyzed to capture all required fields.
  * During runtime, only the matching branch is rendered.
  *
+ * Supports three types of conditions:
+ * 1. Boolean literals: `condition={true}` or `condition={someBoolean}`
+ * 2. FieldRef<boolean>: `condition={task.isActive}` - field value is used
+ * 3. Condition objects: `condition={cond.hasItems(task.developers)}` - composable DSL
+ *
  * @example
  * ```tsx
  * // With boolean condition
  * <If condition={showBio} then={
- *   <Field field={author.fields.bio} />
+ *   <Field field={author.bio} />
  * } />
  *
  * // With field condition
  * <If
- *   condition={author.fields.isPublished}
- *   then={<Field field={author.fields.publishedAt} />}
+ *   condition={author.isPublished}
+ *   then={<Field field={author.publishedAt} />}
  *   else={<span>Draft</span>}
+ * />
+ *
+ * // With condition DSL
+ * <If
+ *   condition={cond.hasItems(task.developers)}
+ *   then={<HasMany field={task.developers}>{dev => ...}</HasMany>}
+ * />
+ *
+ * // Complex conditions
+ * <If
+ *   condition={cond.and(
+ *     cond.hasItems(task.developers),
+ *     cond.eq(task.status, 'active')
+ *   )}
+ *   then={<span>Ready to work</span>}
  * />
  * ```
  */
 function IfImpl({ condition, then: thenBranch, else: elseBranch }: IfProps): ReactElement | null {
-	// Resolve condition value
-	const conditionValue = typeof condition === 'boolean'
-		? condition
-		: condition.value
+	let conditionValue: boolean
+
+	if (typeof condition === 'boolean') {
+		// Boolean literal
+		conditionValue = condition
+	} else if (isCondition(condition)) {
+		// Condition DSL object
+		conditionValue = evaluateCondition(condition)
+	} else {
+		// FieldRef<boolean>
+		conditionValue = (condition as FieldRef<boolean>).value ?? false
+	}
 
 	return conditionValue ? <>{thenBranch}</> : <>{elseBranch ?? null}</>
 }
@@ -54,16 +89,34 @@ ifWithSelection.getSelection = (
 		result.push(field)
 	}
 
-	// If condition is a FieldRef, also add that field
+	// Collect fields from condition
 	if (typeof props.condition !== 'boolean') {
-		const meta = props.condition[FIELD_REF_META]
-		result.push({
-			fieldName: meta.fieldName,
-			alias: meta.fieldName,
-			path: meta.path,
-			isArray: false,
-			isRelation: false,
-		})
+		if (isCondition(props.condition)) {
+			// Condition DSL object - collect all referenced fields
+			const conditionFields = collectConditionFields(props.condition)
+			for (const field of conditionFields) {
+				if (field && typeof field === 'object' && FIELD_REF_META in field) {
+					const meta = (field as { [FIELD_REF_META]: { fieldName: string; path: string[]; isArray?: boolean; isRelation?: boolean } })[FIELD_REF_META]
+					result.push({
+						fieldName: meta.fieldName,
+						alias: meta.fieldName,
+						path: meta.path,
+						isArray: meta.isArray ?? false,
+						isRelation: meta.isRelation ?? false,
+					})
+				}
+			}
+		} else {
+			// FieldRef<boolean> - add that field
+			const meta = (props.condition as { [FIELD_REF_META]: { fieldName: string; path: string[]; isArray?: boolean; isRelation?: boolean } })[FIELD_REF_META]
+			result.push({
+				fieldName: meta.fieldName,
+				alias: meta.fieldName,
+				path: meta.path,
+				isArray: false,
+				isRelation: false,
+			})
+		}
 	}
 
 	return result.length > 0 ? result : null

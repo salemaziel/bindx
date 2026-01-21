@@ -33,6 +33,7 @@ import { FIELD_REF_META, BINDX_COMPONENT } from './types.js'
 import { createCollectorProxy } from './proxy.js'
 import { collectSelection } from './analyzer.js'
 import { SelectionMetaCollector, mergeSelections } from './SelectionMeta.js'
+import { type Condition, evaluateCondition, collectConditionFields, CONDITION_META } from './conditions.js'
 
 // ============================================================================
 // Symbols
@@ -84,6 +85,8 @@ export class ComponentBuilderImpl<
 		private readonly entityConfigs: Map<string, EntityConfig>,
 		private readonly roles: readonly string[],
 		private readonly hasInterfacesMode: boolean = false,
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		private readonly conditionFn: ((props: any) => Condition) | null = null,
 	) {}
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -101,6 +104,7 @@ export class ComponentBuilderImpl<
 			newConfigs,
 			this.roles,
 			this.hasInterfacesMode,
+			this.conditionFn,
 		)
 	}
 
@@ -131,6 +135,7 @@ export class ComponentBuilderImpl<
 			newConfigs,
 			this.roles,
 			true, // Enable interfaces mode for discovery of implicit interface props
+			this.conditionFn,
 		)
 	}
 
@@ -142,6 +147,18 @@ export class ComponentBuilderImpl<
 			this.entityConfigs,
 			this.roles,
 			this.hasInterfacesMode,
+			this.conditionFn,
+		)
+	}
+
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	if(conditionFn: (props: any) => Condition): any {
+		return new ComponentBuilderImpl(
+			this.schemaRegistry,
+			this.entityConfigs,
+			this.roles,
+			this.hasInterfacesMode,
+			conditionFn,
 		)
 	}
 
@@ -153,6 +170,7 @@ export class ComponentBuilderImpl<
 			renderFn,
 			this.hasInterfacesMode,
 			this.schemaRegistry,
+			this.conditionFn,
 		)
 	}
 }
@@ -173,6 +191,7 @@ function buildComponent<TProps extends object>(
 	renderFn: (props: TProps) => ReactNode,
 	hasInterfacesMode: boolean,
 	schemaRegistry: SchemaRegistry<Record<string, object>> | null,
+	conditionFn: ((props: TProps) => Condition) | null,
 ): unknown {
 	const selectionsMap = new Map<string, SelectionPropMeta>()
 
@@ -200,16 +219,24 @@ function buildComponent<TProps extends object>(
 	function ensureImplicitCollected(): void {
 		// In interfaces mode, we also need to collect even if no explicit implicit configs exist
 		// (because interface props may be discovered dynamically)
-		if (implicitCollected || (implicitConfigs.length === 0 && !hasInterfacesMode)) {
+		// Also collect if there's a conditionFn (it may access entity fields)
+		if (implicitCollected || (implicitConfigs.length === 0 && !hasInterfacesMode && !conditionFn)) {
 			return
 		}
 		implicitCollected = true
-		collectImplicitSelections(implicitConfigs, renderFn, selectionsMap, componentBrand, roles, hasInterfacesMode, schemaRegistry)
+		collectImplicitSelections(implicitConfigs, renderFn, selectionsMap, componentBrand, roles, hasInterfacesMode, schemaRegistry, conditionFn)
 	}
 
 	// 3. Create React component
 	function ComponentImpl(props: TProps): ReactNode {
 		ensureImplicitCollected()
+		// Evaluate condition at runtime
+		if (conditionFn) {
+			const condition = conditionFn(props)
+			if (!evaluateCondition(condition)) {
+				return null
+			}
+		}
 		return renderFn(props)
 	}
 
@@ -329,6 +356,7 @@ function collectImplicitSelections<TProps extends object>(
 	roles: readonly string[],
 	hasInterfacesMode: boolean,
 	schemaRegistry: SchemaRegistry<Record<string, object>> | null,
+	conditionFn: ((props: TProps) => Condition) | null,
 ): void {
 	const propScopes = new Map<string, SelectionScope>()
 	const implicitConfigsMap = new Map(implicitConfigs)
@@ -350,19 +378,27 @@ function collectImplicitSelections<TProps extends object>(
 				return createExplicitPropMock()
 			}
 
-			// For implicit entity props, create scopes
+			// For implicit entity props, create or reuse scopes
 			if (implicitPropNames.has(propName)) {
-				const scope = new SelectionScope()
-				propScopes.set(propName, scope)
+				// Reuse existing scope or create new one
+				// This ensures both conditionFn and renderFn selections are captured in the same scope
+				let scope = propScopes.get(propName)
+				if (!scope) {
+					scope = new SelectionScope()
+					propScopes.set(propName, scope)
+				}
 				const entityName = implicitConfigsMap.get(propName)?.entityName ?? null
 				return createCollectorProxy(scope, entityName, schemaRegistry)
 			}
 
 			// In interfaces mode, any unknown prop could be an interface entity prop
-			// Create a scope for it and return a collector proxy
+			// Create or reuse a scope for it and return a collector proxy
 			if (hasInterfacesMode) {
-				const scope = new SelectionScope()
-				propScopes.set(propName, scope)
+				let scope = propScopes.get(propName)
+				if (!scope) {
+					scope = new SelectionScope()
+					propScopes.set(propName, scope)
+				}
 				return createCollectorProxy(scope, null, schemaRegistry)
 			}
 
@@ -370,6 +406,11 @@ function collectImplicitSelections<TProps extends object>(
 			return undefined
 		},
 	})
+
+	// Execute conditionFn to capture field accesses from the condition
+	if (conditionFn) {
+		conditionFn(propsProxy)
+	}
 
 	// Execute render to capture field accesses
 	const jsx = renderFn(propsProxy)

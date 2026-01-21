@@ -76,7 +76,7 @@ packages/bindx-form/
 
 ## Phase 2: react-repeater
 
-**Status**: Not started
+**Status**: ✅ DONE
 
 **Purpose**: Has-many list management with add/remove/move operations
 

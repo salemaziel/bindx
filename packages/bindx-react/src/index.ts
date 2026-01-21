@@ -294,6 +294,9 @@ export {
 	EntityList,
 	type EntityListProps,
 	BINDX_COMPONENT,
+	// Condition DSL for <If> component
+	cond,
+	type Condition,
 	// Component (unified API)
 	isBindxComponent,
 	mergeFragments,

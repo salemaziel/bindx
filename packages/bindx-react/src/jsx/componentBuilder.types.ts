@@ -10,12 +10,14 @@ import type { ReactNode, ComponentType } from 'react'
 import type {
 	EntityRef,
 	EntityAccessor,
+	EntityAccessorBase,
 	FluentFragment,
 	SelectionBuilder,
 	AnyBrand,
 	SelectionMeta,
 } from '@contember/bindx'
 import type { SelectionProvider } from './types.js'
+import type { Condition } from './conditions.js'
 
 // ============================================================================
 // Symbols (re-exported from createComponent.ts)
@@ -228,7 +230,16 @@ export type SetScalarProps<
 
 /**
  * Build EntityAccessor props from entity config.
- * Uses EntityAccessor to support direct field access (entity.fieldName.value).
+ *
+ * For explicit selection (selector provided): Returns EntityAccessor with full access
+ * - Allows direct field access: `entity.fieldName.value`
+ * - Allows relation access: `entity.relation.length`, `entity.relation.$entity`
+ *
+ * For implicit selection (no selector): Returns EntityAccessorBase with restricted access
+ * - Blocks direct field access to enforce declarative patterns
+ * - Users must use components: `<Field field={entity.fieldName} />`
+ * - Users must use condition DSL: `<If condition={cond.hasItems(entity.relation)} />`
+ *
  * Preserves entity name literal and schema for proper type narrowing in HasRole and relations.
  */
 export type BuildEntityProps<
@@ -239,18 +250,33 @@ export type BuildEntityProps<
 	readonly [K in keyof TEntityProps]: TEntityProps[K] extends EntityPropConfig<
 		infer TEntityName,
 		infer TSelected,
-		infer _TIsImplicit
+		infer TIsImplicit
 	>
-		? EntityAccessor<
-				TEntityName extends keyof TSchema ? TSchema[TEntityName] : object,
-				TSelected,
-				AnyBrand,
-				TEntityName,  // Preserve entity name literal for HasRole type narrowing
-				TRoles,
-				TSchema  // Pass schema for relation entity name lookups
-			>
-		: TEntityProps[K] extends InterfaceEntityPropConfig<infer TInterface, infer _TIsImplicit>
-			? EntityAccessor<TInterface, TInterface, AnyBrand, string, TRoles, TSchema>
+		? TIsImplicit extends true
+			// Implicit selection -> restricted EntityAccessorBase (no .value, .length access)
+			? EntityAccessorBase<
+					TEntityName extends keyof TSchema ? TSchema[TEntityName] : object,
+					TSelected,
+					AnyBrand,
+					TEntityName,
+					TRoles,
+					TSchema
+				>
+			// Explicit selection -> full EntityAccessor (full access)
+			: EntityAccessor<
+					TEntityName extends keyof TSchema ? TSchema[TEntityName] : object,
+					TSelected,
+					AnyBrand,
+					TEntityName,  // Preserve entity name literal for HasRole type narrowing
+					TRoles,
+					TSchema  // Pass schema for relation entity name lookups
+				>
+		: TEntityProps[K] extends InterfaceEntityPropConfig<infer TInterface, infer TIsImplicit>
+			? TIsImplicit extends true
+				// Implicit interface -> restricted
+				? EntityAccessorBase<TInterface, TInterface, AnyBrand, string, TRoles, TSchema>
+				// Explicit interface -> full access
+				: EntityAccessor<TInterface, TInterface, AnyBrand, string, TRoles, TSchema>
 			: never
 }
 
@@ -413,6 +439,27 @@ export interface ComponentBuilder<
 	 * ```
 	 */
 	props<TNewScalarProps extends object>(): ComponentBuilder<TSchema, SetScalarProps<TState, TNewScalarProps>>
+
+	/**
+	 * Add a condition that must be true for the component to render.
+	 * If the condition is false, the component renders null.
+	 *
+	 * Fields used in the condition are automatically collected for the GraphQL query.
+	 *
+	 * @param conditionFn - Function that receives entity props and returns a Condition
+	 *
+	 * @example
+	 * ```typescript
+	 * createComponent({ roles })
+	 *   .entity('task', 'Task')
+	 *   .if(({ task }) => cond.isTruthy(task.project.company.canSeeTimeEstimates))
+	 *   .render(({ task }) => (
+	 *     // Only renders if canSeeTimeEstimates is truthy
+	 *     <div>...</div>
+	 *   ))
+	 * ```
+	 */
+	if(conditionFn: (props: BuildEntityProps<TState['__entityProps'], TSchema, TState['__roles']>) => Condition): ComponentBuilder<TSchema, TState>
 
 	/**
 	 * Build the component with the render function.

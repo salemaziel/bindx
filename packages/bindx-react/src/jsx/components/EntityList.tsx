@@ -111,6 +111,8 @@ function EntityListImpl<TSchema, K extends keyof TSchema>({
 			item.id,
 			store,
 			() => {}, // Changes are automatically handled by useSyncExternalStore
+			[],
+			selection,
 		)
 
 		// Wrap accessor in Proxy to inject __availableRoles for role-aware components

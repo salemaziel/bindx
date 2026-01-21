@@ -136,6 +136,8 @@ function EntityByMode({
 		entityId,
 		store,
 		() => {}, // Changes are automatically handled by useSyncExternalStore
+		[],
+		selection,
 	)
 
 	// Wrap accessor in Proxy to inject __availableRoles for role-aware components

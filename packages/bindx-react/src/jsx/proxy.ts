@@ -1,5 +1,5 @@
-import type { SnapshotStore, FieldError, SchemaRegistry } from '@contember/bindx'
-import { SelectionScope, generatePlaceholderId } from '@contember/bindx'
+import type { SnapshotStore, FieldError, SchemaRegistry, SelectionMeta } from '@contember/bindx'
+import { SelectionScope, generatePlaceholderId, UnfetchedFieldError } from '@contember/bindx'
 import {
 	type EntityRef,
 	type EntityAccessor,
@@ -205,6 +205,11 @@ function createCollectorFieldRef(
 	// Components will use only the parts they need
 	const refObject = {
 		[FIELD_REF_META]: meta,
+		// SCOPE_REF allows nested components to merge their selection into this field's scope
+		// This is accessed lazily to create the child scope only when needed
+		get [SCOPE_REF](): SelectionScope {
+			return getChildScope()
+		},
 
 		// FieldRef properties (non-$ versions)
 		value: null,
@@ -213,7 +218,7 @@ function createCollectorFieldRef(
 		isTouched: false,
 		touch: () => {},
 		setValue: () => {},
-		inputProps: { value: null, setValue: () => {} },
+		inputProps: { value: null, setValue: () => {}, onChange: () => {} },
 		errors: [],
 		hasError: false,
 		addError: () => {},
@@ -277,12 +282,14 @@ function createCollectorFieldRef(
 		__entityType: undefined as unknown,
 	}
 
-	// For hasOne relations, wrap in proxy to support direct field access (e.g., task.project.name)
-	if (isHasOneRelation) {
-		return wrapCollectorRefWithFieldAccessProxy(refObject, hasOneFieldsProxy)
-	}
-
-	return refObject
+	// Always wrap in proxy to support direct field access (e.g., task.project.name).
+	// This works for all field types:
+	// - Scalar fields: Accessing ref.value works (exists on target, passes through)
+	// - Has-many fields: Accessing ref.items/length works (exists on target, passes through)
+	// - Has-one with schema: Direct field access proxies to $fields
+	// - Has-one without schema: Same - direct field access proxies to $fields
+	// The hasOneFieldsProxy creates nested collector refs which properly track selection.
+	return wrapCollectorRefWithFieldAccessProxy(refObject, hasOneFieldsProxy)
 }
 
 /**
@@ -316,6 +323,8 @@ function wrapCollectorRefWithFieldAccessProxy(
 /**
  * Creates a runtime accessor with real data from SnapshotStore.
  * Supports direct field access: `entity.fieldName` is equivalent to `entity.$fields.fieldName`.
+ *
+ * @param selection - Optional selection metadata. When provided, accessing fields not in the selection will throw UnfetchedFieldError.
  */
 export function createRuntimeAccessor<T>(
 	entityType: string,
@@ -323,13 +332,27 @@ export function createRuntimeAccessor<T>(
 	store: SnapshotStore,
 	notifyChange: NotifyChange,
 	path: string[] = [],
+	selection?: SelectionMeta,
 ): EntityAccessor<T> {
 	const snapshot = store.getEntitySnapshot(entityType, entityId)
 
+	// Cache field refs to maintain stable references across renders
+	const fieldRefCache = new Map<string, FieldRef<unknown> | HasManyRef<unknown> | HasOneRef<unknown>>()
+
 	const fieldsProxy = new Proxy({} as EntityFields<T>, {
 		get(_, fieldName: string): FieldRef<unknown> | HasManyRef<unknown> | HasOneRef<unknown> {
+			// Return cached ref if available
+			const cached = fieldRefCache.get(fieldName)
+			if (cached) {
+				return cached
+			}
+
 			const fieldPath = [...path, fieldName]
-			return createRuntimeFieldRef(entityType, entityId, store, notifyChange, fieldPath, fieldName)
+			// Get the field's selection metadata (if selection is provided)
+			const fieldSelection = selection?.fields.get(fieldName)
+			const ref = createRuntimeFieldRef(entityType, entityId, store, notifyChange, fieldPath, fieldName, selection, fieldSelection?.nested)
+			fieldRefCache.set(fieldName, ref)
+			return ref
 		},
 	})
 
@@ -388,6 +411,9 @@ type RuntimeRef = FieldRef<unknown> & HasManyRef<unknown> & HasOneRef<unknown>
 
 /**
  * Creates a field reference for runtime phase with real data access
+ *
+ * @param selection - The parent entity's selection metadata (for checking if field was selected)
+ * @param nestedSelection - The nested selection for this field (if it's a relation)
  */
 function createRuntimeFieldRef(
 	entityType: string,
@@ -396,6 +422,8 @@ function createRuntimeFieldRef(
 	notifyChange: NotifyChange,
 	path: string[],
 	fieldName: string,
+	selection?: SelectionMeta,
+	nestedSelection?: SelectionMeta,
 ): RuntimeRef {
 	const meta = {
 		entityType,
@@ -409,6 +437,13 @@ function createRuntimeFieldRef(
 	const getValue = (): unknown => {
 		const snapshot = store.getEntitySnapshot(entityType, entityId)
 		if (!snapshot) return null
+
+		// Check if this field was included in the selection
+		// Only check when selection is provided (JSX pattern with selection tracking)
+		if (selection && !selection.fields.has(fieldName)) {
+			throw new UnfetchedFieldError(entityType, entityId, path)
+		}
+
 		return getNestedValue(snapshot.data, path)
 	}
 
@@ -445,6 +480,8 @@ function createRuntimeFieldRef(
 				itemId,
 				store,
 				notifyChange,
+				[],
+				nestedSelection,
 			)
 		})
 	}
@@ -473,6 +510,8 @@ function createRuntimeFieldRef(
 				itemId,
 				store,
 				notifyChange,
+				[],
+				nestedSelection,
 			)
 			return fn(accessor, index)
 		})
@@ -567,21 +606,9 @@ function createRuntimeFieldRef(
 			})
 		}
 
-		const relatedId = (value as { id: string }).id
-		const nestedEntityType = `${entityType}_${fieldName}`
-
-		// Ensure related entity is in store
-		if (!store.hasEntity(nestedEntityType, relatedId)) {
-			store.setEntityData(nestedEntityType, relatedId, value as Record<string, unknown>, true)
-		}
-
-		const relatedAccessor = createRuntimeAccessor<unknown>(
-			nestedEntityType,
-			relatedId,
-			store,
-			notifyChange,
-		)
-		return relatedAccessor.$fields
+		// Create inline fields proxy that reads directly from nested data
+		// This avoids modifying the store during render
+		return createInlineFieldsProxy(value as Record<string, unknown>, [...path], store, notifyChange, nestedSelection)
 	}
 
 	const getEntity = (): EntityAccessor<unknown> => {
@@ -590,20 +617,10 @@ function createRuntimeFieldRef(
 			// Return placeholder accessor with placeholder ID
 			return createPlaceholderAccessor<unknown>()
 		}
-		const relatedId = (value as { id: string }).id
-		const nestedEntityType = `${entityType}_${fieldName}`
 
-		// Ensure related entity is in store
-		if (!store.hasEntity(nestedEntityType, relatedId)) {
-			store.setEntityData(nestedEntityType, relatedId, value as Record<string, unknown>, true)
-		}
-
-		return createRuntimeAccessor<unknown>(
-			nestedEntityType,
-			relatedId,
-			store,
-			notifyChange,
-		)
+		// Create inline accessor that reads directly from nested data
+		// This avoids modifying the store during render
+		return createInlineAccessor(value as Record<string, unknown>, [...path], store, notifyChange, nestedSelection)
 	}
 
 	const getHasOneId = (): string => {
@@ -628,9 +645,10 @@ function createRuntimeFieldRef(
 	const getValueOrNull = (): unknown => getValue() ?? null
 	const getServerValueOrNull = (): unknown => getServerValue() ?? null
 	const getIsDirty = (): boolean => !deepEqual(getValue(), getServerValue())
-	const getInputProps = (): { value: unknown; setValue: (value: unknown) => void } => ({
+	const getInputProps = (): { value: unknown; setValue: (value: unknown) => void; onChange: (value: unknown) => void } => ({
 		value: getValue() ?? null,
 		setValue,
+		onChange: setValue,
 	})
 	const getErrors = (): readonly FieldError[] => store.getFieldErrors(entityType, entityId, fieldName)
 	const getHasError = (): boolean => store.getFieldErrors(entityType, entityId, fieldName).length > 0
@@ -641,7 +659,7 @@ function createRuntimeFieldRef(
 		// No-op in runtime proxy - use handle directly for mutations
 	}
 
-	return {
+	const refObject = {
 		[FIELD_REF_META]: meta,
 
 		// FieldRef properties (non-$ versions)
@@ -748,6 +766,69 @@ function createRuntimeFieldRef(
 		// Type brand (phantom property - only exists in type system)
 		__entityType: undefined as unknown,
 	}
+
+	// Always wrap in field access proxy to support direct field access on has-one relations.
+	// This works for all cases:
+	// - Scalar fields: Accessing ref.value works (exists on target, passes through)
+	// - Has-many fields: Accessing ref.items/length works (exists on target, passes through)
+	// - Has-one connected: Accessing ref.fieldName proxies to ref.$fields.fieldName
+	// - Has-one disconnected: Accessing ref.fieldName proxies to ref.$fields.fieldName (returns null field ref)
+	// The getFieldsProxy handles null values gracefully by returning null field refs.
+	return wrapRuntimeRefWithFieldAccessProxy(refObject, getFieldsProxy)
+}
+
+/**
+ * Properties that should never be treated as field access.
+ * These are checked by React, Promise-like detection, iterators, etc.
+ */
+const NON_FIELD_PROPERTIES = new Set([
+	'then', 'catch', 'finally', // Promise-like checks
+	'toJSON', 'valueOf', 'toString', // Serialization
+	'constructor', 'prototype', // Object internals
+	'length', 'size', // Collection-like checks
+	'$$typeof', '@@iterator', 'Symbol(Symbol.iterator)', // React/iterator internals
+	'_reactFragment', '_owner', // React internals
+	'nodeType', 'tagName', // DOM checks
+])
+
+/**
+ * Wraps a runtime ref in a Proxy that supports direct field access for hasOne relations.
+ * - `ref.fieldName` is equivalent to `ref.$fields.fieldName`
+ * - Known ref properties pass through to the target
+ */
+function wrapRuntimeRefWithFieldAccessProxy(
+	ref: RuntimeRef,
+	getFieldsProxy: () => EntityFields<unknown>,
+): RuntimeRef {
+	// Cache the fields proxy to avoid creating new objects on each access
+	let cachedFieldsProxy: EntityFields<unknown> | null = null
+
+	return new Proxy(ref, {
+		get(target, prop) {
+			// Symbols - pass through
+			if (typeof prop !== 'string') {
+				return Reflect.get(target, prop)
+			}
+
+			// Check if property exists on target - if so, pass through
+			if (prop in target) {
+				return Reflect.get(target, prop)
+			}
+
+			// Skip known non-field properties (React internals, Promise checks, etc.)
+			if (NON_FIELD_PROPERTIES.has(prop) || prop.startsWith('@@') || prop.startsWith('_')) {
+				return undefined
+			}
+
+			// Cache and reuse the fields proxy
+			if (!cachedFieldsProxy) {
+				cachedFieldsProxy = getFieldsProxy()
+			}
+
+			// Treat as field access on the related entity
+			return cachedFieldsProxy[prop as keyof EntityFields<unknown>]
+		},
+	}) as RuntimeRef
 }
 
 /**
@@ -760,6 +841,7 @@ function createNullFieldRef(path: string[], fieldName: string): FieldRef<unknown
 	const inputPropsValue = {
 		value: null,
 		setValue: setValueFn,
+		onChange: setValueFn,
 	}
 
 	return {
@@ -812,7 +894,7 @@ function getNestedValue(obj: unknown, path: string[]): unknown {
  */
 function createPlaceholderAccessor<T>(): EntityAccessor<T> {
 	const noop = () => () => {}
-	const inputProps = { value: null, setValue: () => {} }
+	const inputProps = { value: null, setValue: () => {}, onChange: () => {} }
 
 	const fieldsProxy = new Proxy({} as EntityFields<T>, {
 		get(_, fieldName: string): FieldRef<unknown> {
@@ -867,5 +949,249 @@ function createPlaceholderAccessor<T>(): EntityAccessor<T> {
 
 	// Wrap in Proxy to support direct field access
 	return wrapEntityRefWithFieldAccessProxy(ref)
+}
+
+/**
+ * Creates a fields proxy that reads directly from inline data.
+ * Used for nested relations to avoid store modifications during render.
+ */
+function createInlineFieldsProxy(
+	data: Record<string, unknown>,
+	basePath: string[],
+	store: SnapshotStore,
+	notifyChange: NotifyChange,
+	selection?: SelectionMeta,
+): EntityFields<unknown> {
+	return new Proxy({} as EntityFields<unknown>, {
+		get(_, fieldName: string): FieldRef<unknown> | HasManyRef<unknown> | HasOneRef<unknown> {
+			const fieldSelection = selection?.fields.get(fieldName)
+			return createInlineFieldRef(data, fieldName, basePath, store, notifyChange, selection, fieldSelection?.nested)
+		},
+	})
+}
+
+/**
+ * Creates an accessor that reads directly from inline data.
+ * Used for nested relations to avoid store modifications during render.
+ */
+function createInlineAccessor(
+	data: Record<string, unknown>,
+	basePath: string[],
+	store: SnapshotStore,
+	notifyChange: NotifyChange,
+	selection?: SelectionMeta,
+): EntityAccessor<unknown> {
+	const noop = () => () => {}
+	const entityId = (data as { id?: string }).id ?? ''
+
+	const fieldsProxy = createInlineFieldsProxy(data, basePath, store, notifyChange, selection)
+
+	const ref: EntityRef<unknown> = {
+		id: entityId,
+		$fields: fieldsProxy,
+		$data: data as unknown,
+		$isDirty: false,
+		$persistedId: entityId,
+		$isNew: false,
+		__entityType: undefined as unknown,
+		__entityName: '',
+		__availableRoles: [] as readonly string[],
+		__schema: {} as Record<string, object>,
+		$errors: [] as FieldError[],
+		$hasError: false,
+		$addError: () => {},
+		$clearErrors: () => {},
+		$clearAllErrors: () => {},
+		$on: noop,
+		$intercept: noop,
+		$onPersisted: noop,
+		$interceptPersisting: noop,
+	}
+
+	return wrapEntityRefWithFieldAccessProxy(ref)
+}
+
+/**
+ * Creates a field ref that reads directly from inline data.
+ */
+function createInlineFieldRef(
+	data: Record<string, unknown>,
+	fieldName: string,
+	basePath: string[],
+	store: SnapshotStore,
+	notifyChange: NotifyChange,
+	selection?: SelectionMeta,
+	nestedSelection?: SelectionMeta,
+): FieldRef<unknown> & HasManyRef<unknown> & HasOneRef<unknown> {
+	const path = [...basePath, fieldName]
+	const noop = () => () => {}
+
+	const getValue = (): unknown => {
+		// Check if this field was included in the selection
+		// Only check when selection is provided
+		if (selection && !selection.fields.has(fieldName)) {
+			throw new UnfetchedFieldError('inline', '', path)
+		}
+		return data[fieldName]
+	}
+
+	const meta = {
+		entityType: '',
+		entityId: '',
+		path,
+		fieldName,
+		isArray: false,
+		isRelation: false,
+	}
+
+	const getFieldsProxy = (): EntityFields<unknown> => {
+		const value = getValue()
+		if (typeof value !== 'object' || value === null || !('id' in value)) {
+			return new Proxy({} as EntityFields<unknown>, {
+				get(_, nestedFieldName: string) {
+					return createNullFieldRef([...path, nestedFieldName], nestedFieldName)
+				},
+			})
+		}
+		return createInlineFieldsProxy(value as Record<string, unknown>, path, store, notifyChange, nestedSelection)
+	}
+
+	const getEntity = (): EntityAccessor<unknown> => {
+		const value = getValue()
+		if (typeof value !== 'object' || value === null || !('id' in value)) {
+			return createPlaceholderAccessor<unknown>()
+		}
+		return createInlineAccessor(value as Record<string, unknown>, path, store, notifyChange, nestedSelection)
+	}
+
+	const mapFn = <R>(fn: (item: EntityAccessor<unknown>, index: number) => R): R[] => {
+		const items = getValue()
+		if (!Array.isArray(items)) return []
+		return items.map((item: unknown, index: number) => {
+			if (typeof item !== 'object' || item === null) {
+				return fn(createPlaceholderAccessor<unknown>(), index)
+			}
+			return fn(createInlineAccessor(item as Record<string, unknown>, [...path, String(index)], store, notifyChange, nestedSelection), index)
+		})
+	}
+
+	const getItems = (): EntityAccessor<unknown>[] => {
+		const items = getValue()
+		if (!Array.isArray(items)) return []
+		return items.map((item: unknown, index: number) => {
+			if (typeof item !== 'object' || item === null) {
+				return createPlaceholderAccessor<unknown>()
+			}
+			return createInlineAccessor(item as Record<string, unknown>, [...path, String(index)], store, notifyChange, nestedSelection)
+		})
+	}
+
+	const inputProps = { value: getValue() ?? null, setValue: () => {}, onChange: () => {} }
+
+	const refObject = {
+		[FIELD_REF_META]: meta,
+
+		// FieldRef properties
+		get value() { return getValue() ?? null },
+		serverValue: getValue() ?? null,
+		isDirty: false,
+		isTouched: false,
+		touch: () => {},
+		setValue: () => {},
+		inputProps,
+		errors: [] as FieldError[],
+		hasError: false,
+		addError: () => {},
+		clearErrors: () => {},
+		onChange: noop,
+		onChanging: noop,
+
+		// HasManyRef properties
+		get length() { const v = getValue(); return Array.isArray(v) ? v.length : 0 },
+		get items() { return getItems() },
+		map: mapFn,
+		add: () => '',
+		remove: () => {},
+		move: () => {},
+		connect: () => {},
+		disconnect: () => {},
+		reset: () => {},
+		onItemConnected: noop,
+		onItemDisconnected: noop,
+		interceptItemConnecting: noop,
+		interceptItemDisconnecting: noop,
+
+		// HasOneRef properties
+		get $id() { const v = getValue(); return (typeof v === 'object' && v !== null && 'id' in v) ? (v as {id: string}).id : '' },
+		$isDirty: false,
+		get $fields() { return getFieldsProxy() },
+		get $entity() { return getEntity() },
+		get $state() { const v = getValue(); return (typeof v === 'object' && v !== null && 'id' in v) ? 'connected' as const : 'disconnected' as const },
+		$delete: () => {},
+		$errors: [] as FieldError[],
+		$hasError: false,
+		$addError: () => {},
+		$clearErrors: () => {},
+		$connect: () => {},
+		$disconnect: () => {},
+		$reset: () => {},
+		$onConnect: noop,
+		$onDisconnect: noop,
+		$interceptConnect: noop,
+		$interceptDisconnect: noop,
+
+		// EntityRef compatibility
+		get id() { const v = getValue(); return (typeof v === 'object' && v !== null && 'id' in v) ? (v as {id: string}).id : '' },
+		get $data() { return getEntity().$data },
+		$isNew: false,
+		$persistedId: null,
+		__entityName: '',
+		__availableRoles: [] as readonly string[],
+		__schema: {} as Record<string, object>,
+		$clearAllErrors: () => {},
+		$on: noop,
+		$intercept: noop,
+		$onPersisted: noop,
+		$interceptPersisting: noop,
+		__entityType: undefined as unknown,
+	}
+
+	// Only wrap for hasOne relations
+	const value = getValue()
+	const isHasOneRelation = typeof value === 'object' && value !== null && 'id' in value && !Array.isArray(value)
+
+	if (isHasOneRelation) {
+		return wrapInlineRefWithFieldAccessProxy(refObject, getFieldsProxy)
+	}
+
+	return refObject as RuntimeRef
+}
+
+/**
+ * Wraps an inline field ref with direct field access proxy.
+ */
+function wrapInlineRefWithFieldAccessProxy(
+	ref: RuntimeRef,
+	getFieldsProxy: () => EntityFields<unknown>,
+): RuntimeRef {
+	let cachedFieldsProxy: EntityFields<unknown> | null = null
+
+	return new Proxy(ref, {
+		get(target, prop) {
+			if (typeof prop !== 'string') {
+				return Reflect.get(target, prop)
+			}
+			if (prop in target) {
+				return Reflect.get(target, prop)
+			}
+			if (NON_FIELD_PROPERTIES.has(prop) || prop.startsWith('@@') || prop.startsWith('_')) {
+				return undefined
+			}
+			if (!cachedFieldsProxy) {
+				cachedFieldsProxy = getFieldsProxy()
+			}
+			return cachedFieldsProxy[prop as keyof EntityFields<unknown>]
+		},
+	}) as RuntimeRef
 }
 

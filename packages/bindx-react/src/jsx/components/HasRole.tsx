@@ -1,14 +1,14 @@
 import React, { memo, type ReactElement, type ReactNode } from 'react'
 import type { SelectionMeta, SelectionFieldMeta, SelectionProvider, AnyBrand } from '../types.js'
 import { BINDX_COMPONENT } from '../types.js'
-import type { EntityRef, EntityAccessor } from '@contember/bindx'
+import type { EntityRef, EntityRefBase, EntityAccessor } from '@contember/bindx'
 import { useHasRoleContext } from '../../roles/RoleContext.js'
 
 /**
  * Props for HasRole component.
  */
 export interface HasRoleComponentProps<
-	TEntityRef extends EntityRef<any, any, any, any, any>,
+	TEntityRef extends EntityRefBase<any, any, any, any, any>,
 	TNewRoles extends readonly string[],
 > {
 	/** Roles to narrow scope to */
@@ -43,7 +43,7 @@ export interface HasRoleComponentProps<
  * ```
  */
 function HasRoleImpl<
-	TEntityRef extends EntityRef<any, any, any, any, any>,
+	TEntityRef extends EntityRefBase<any, any, any, any, any>,
 	const TNewRoles extends readonly string[],
 >({
 	roles: requestedRoles,

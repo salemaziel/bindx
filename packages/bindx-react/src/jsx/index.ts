@@ -3,12 +3,25 @@ export {
 	BINDX_COMPONENT,
 	FIELD_REF_META,
 	type FieldRefMeta,
+	// Full types
 	type FieldRef,
 	type HasManyRef,
 	type HasOneRef,
+	type HasOneAccessor,
 	type EntityRef,
+	type EntityAccessor,
+	// Base types
+	type FieldRefBase,
+	type HasManyRefBase,
+	type HasOneRefBase,
+	type HasOneAccessorBase,
+	type EntityRefBase,
+	type EntityAccessorBase,
+	// Field mapping types
 	type EntityFields,
 	type SelectedEntityFields,
+	type SelectedEntityFieldsBase,
+	// Component props
 	type FieldProps,
 	type HasManyProps,
 	type HasOneProps,
@@ -18,6 +31,7 @@ export {
 	type SelectionFieldMeta,
 	type HasManyComponentOptions,
 	type SelectionProvider,
+	type AnyBrand,
 } from './types.js'
 
 // Selection metadata
@@ -50,6 +64,17 @@ export { If, IfWithMeta } from './components/If.js'
 export { Show, ShowWithMeta, type ShowProps } from './components/Show.js'
 export { Entity, type EntityProps } from './components/Entity.js'
 export { EntityList, type EntityListProps } from './components/EntityList.js'
+
+// Condition DSL for <If> component
+export {
+	cond,
+	isCondition,
+	evaluateCondition,
+	collectConditionFields,
+	CONDITION_META,
+	type Condition,
+	type ConditionMeta,
+} from './conditions.js'
 
 // Component builder (unified API)
 export {
