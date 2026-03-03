@@ -397,10 +397,10 @@ export class BatchPersister {
 				data = this.collectFieldsData(entity.entityType, entity.entityId, scope.fields)
 			} else if (entity.changeType === 'create') {
 				data = this.mutationCollector?.collectCreateData?.(entity.entityType, entity.entityId)
-					?? this.collectCreateData(entity.entityType, entity.entityId)
+					?? this.collectCreateDataWithRelationCheck(entity)
 			} else {
 				data = this.mutationCollector?.collectUpdateData(entity.entityType, entity.entityId)
-					?? this.collectUpdateData(entity.entityType, entity.entityId)
+					?? this.collectUpdateDataWithRelationCheck(entity)
 			}
 
 			if (data && Object.keys(data).length > 0) {
@@ -414,6 +414,35 @@ export class BatchPersister {
 		}
 
 		return mutations
+	}
+
+	/**
+	 * Collects create data, throwing if dirty relations exist without a MutationCollector.
+	 */
+	private collectCreateDataWithRelationCheck(entity: DirtyEntity): Record<string, unknown> | null {
+		this.assertNoRelationChanges(entity)
+		return this.collectCreateData(entity.entityType, entity.entityId)
+	}
+
+	/**
+	 * Collects update data, throwing if dirty relations exist without a MutationCollector.
+	 */
+	private collectUpdateDataWithRelationCheck(entity: DirtyEntity): Record<string, unknown> | null {
+		this.assertNoRelationChanges(entity)
+		return this.collectUpdateData(entity.entityType, entity.entityId)
+	}
+
+	/**
+	 * Throws if the entity has dirty relations but no MutationCollector is configured.
+	 */
+	private assertNoRelationChanges(entity: DirtyEntity): void {
+		if (entity.dirtyRelations.length > 0) {
+			throw new Error(
+				`Entity ${entity.entityType}:${entity.entityId} has dirty relations (${entity.dirtyRelations.join(', ')}), ` +
+				`but no MutationCollector is configured. Relation changes would be silently lost. ` +
+				`Provide a 'schema' or 'mutationCollector' option to enable relation persistence.`,
+			)
+		}
 	}
 
 	/**

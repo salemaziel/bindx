@@ -5,7 +5,7 @@
 - [x] 001 - `not_found` state treated as loading
 - [x] 002 - Memoization bug — `definer` missing from useMemo deps
 - [x] 003 - Temp ID prefix mismatch in JSX proxy
-- [ ] 004 - Silent data loss without MutationCollector
+- [x] 004 - Silent data loss without MutationCollector
 - [ ] 005 - `JSON.stringify` vs `deepEqual` inconsistency
 
 ## Important

@@ -3,10 +3,46 @@ import {
 	SnapshotStore,
 	ActionDispatcher,
 	BatchPersister,
+	MutationCollector,
+	ContemberSchemaMutationAdapter,
 	type BackendAdapter,
 	type TransactionResult,
 	type TransactionMutation,
+	type SchemaNames,
 } from '@contember/bindx'
+
+const testSchema: SchemaNames = {
+	entities: {
+		Article: {
+			name: 'Article',
+			scalars: ['id', 'title', 'content'],
+			fields: {
+				id: { type: 'column' },
+				title: { type: 'column' },
+				content: { type: 'column' },
+				author: { type: 'one', entity: 'Author' },
+				tags: { type: 'many', entity: 'Tag' },
+			},
+		},
+		Author: {
+			name: 'Author',
+			scalars: ['id', 'name'],
+			fields: {
+				id: { type: 'column' },
+				name: { type: 'column' },
+			},
+		},
+		Tag: {
+			name: 'Tag',
+			scalars: ['id', 'name'],
+			fields: {
+				id: { type: 'column' },
+				name: { type: 'column' },
+			},
+		},
+	},
+	enums: {},
+}
 
 // Mock adapter that can be configured to fail
 function createMockAdapter(options?: {
@@ -120,7 +156,9 @@ describe('BatchPersister rollback', () => {
 
 		test('should rollback hasOne relations on failure', async () => {
 			const adapter = createFailingTransactionAdapter()
-			const persister = new BatchPersister(adapter, store, dispatcher)
+			const schemaAdapter = new ContemberSchemaMutationAdapter(testSchema)
+			const mutationCollector = new MutationCollector(store, schemaAdapter)
+			const persister = new BatchPersister(adapter, store, dispatcher, { mutationCollector })
 
 			// Setup entity with server data including relation
 			store.setEntityData('Article', 'a-1', {
@@ -166,7 +204,9 @@ describe('BatchPersister rollback', () => {
 
 		test('should rollback hasMany relations on failure', async () => {
 			const adapter = createFailingTransactionAdapter()
-			const persister = new BatchPersister(adapter, store, dispatcher)
+			const schemaAdapter = new ContemberSchemaMutationAdapter(testSchema)
+			const mutationCollector = new MutationCollector(store, schemaAdapter)
+			const persister = new BatchPersister(adapter, store, dispatcher, { mutationCollector })
 
 			// Setup entity with server has-many relation
 			store.setEntityData('Article', 'a-1', {

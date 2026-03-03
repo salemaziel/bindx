@@ -240,6 +240,60 @@ describe('BatchPersister', () => {
 		})
 	})
 
+	describe('dirty relations without MutationCollector', () => {
+		test('should throw when entity has dirty hasOne relation and no MutationCollector', async () => {
+			store.setEntityData('Article', 'a-1', {
+				id: 'a-1',
+				title: 'Article',
+				author: { id: 'auth-1', name: 'John' },
+			}, true)
+
+			// Create dirty hasOne relation
+			store.getOrCreateRelation('Article', 'a-1', 'author', {
+				currentId: 'auth-1',
+				serverId: 'auth-1',
+				state: 'connected',
+				serverState: 'connected',
+				placeholderData: {},
+			})
+			store.setRelation('Article', 'a-1', 'author', {
+				currentId: 'auth-2',
+				state: 'connected',
+			})
+
+			// Persist without MutationCollector should throw
+			await expect(persister.persistAll()).rejects.toThrow(
+				/dirty relations.*author.*MutationCollector/,
+			)
+		})
+
+		test('should throw when entity has dirty hasMany relation and no MutationCollector', async () => {
+			store.setEntityData('Article', 'a-1', {
+				id: 'a-1',
+				title: 'Article',
+				tags: [{ id: 'tag-1', name: 'Tag1' }],
+			}, true)
+
+			// Create dirty hasMany relation
+			store.getOrCreateHasMany('Article', 'a-1', 'tags', ['tag-1'])
+			store.planHasManyRemoval('Article', 'a-1', 'tags', 'tag-1', 'disconnect')
+
+			await expect(persister.persistAll()).rejects.toThrow(
+				/dirty relations.*tags.*MutationCollector/,
+			)
+		})
+
+		test('should persist scalar-only changes without MutationCollector', async () => {
+			store.setEntityData('Article', 'a-1', { id: 'a-1', title: 'Original' }, true)
+			store.setFieldValue('Article', 'a-1', ['title'], 'Updated')
+
+			const result = await persister.persistAll()
+
+			expect(result.success).toBe(true)
+			expect(result.successCount).toBe(1)
+		})
+	})
+
 	describe('client validation errors', () => {
 		test('should block persist when entity has client errors', async () => {
 			store.setEntityData('Article', 'a-1', { id: 'a-1', title: 'Original' }, true)
