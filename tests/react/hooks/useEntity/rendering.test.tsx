@@ -23,7 +23,7 @@ describe('useEntity hook - data rendering', () => {
 			if (article.isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError) {
+			if (article.isError || article.isNotFound) {
 				return <div>Error</div>
 			}
 
@@ -62,7 +62,7 @@ describe('useEntity hook - data rendering', () => {
 			if (article.isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError) {
+			if (article.isError || article.isNotFound) {
 				return <div>Error</div>
 			}
 
@@ -103,7 +103,7 @@ describe('useEntity hook - data rendering', () => {
 			if (article.isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError) {
+			if (article.isError || article.isNotFound) {
 				return <div>Error</div>
 			}
 
@@ -149,7 +149,7 @@ describe('useEntity hook - data rendering', () => {
 			if (article.isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError) {
+			if (article.isError || article.isNotFound) {
 				return <div>Error</div>
 			}
 
@@ -243,7 +243,7 @@ describe('useEntity hook - data rendering', () => {
 			if (article.isLoading) {
 				return <div data-testid="editor-loading">Loading editor...</div>
 			}
-			if (article.isError) {
+			if (article.isError || article.isNotFound) {
 				return <div>Error</div>
 			}
 
@@ -267,7 +267,7 @@ describe('useEntity hook - data rendering', () => {
 			if (article.isLoading) {
 				return <div data-testid="view-loading">Loading view...</div>
 			}
-			if (article.isError) {
+			if (article.isError || article.isNotFound) {
 				return <div>Error</div>
 			}
 
@@ -314,7 +314,7 @@ describe('useEntity hook - data rendering', () => {
 			if (article.isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError) {
+			if (article.isError || article.isNotFound) {
 				return <div>Error</div>
 			}
 
@@ -353,7 +353,7 @@ describe('useEntity hook - data rendering', () => {
 			if (article.isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError) {
+			if (article.isError || article.isNotFound) {
 				return <div>Error</div>
 			}
 

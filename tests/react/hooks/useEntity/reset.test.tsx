@@ -19,7 +19,7 @@ describe('useEntity hook - reset functionality', () => {
 			if (article.isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError) {
+			if (article.isError || article.isNotFound) {
 				return <div>Error</div>
 			}
 

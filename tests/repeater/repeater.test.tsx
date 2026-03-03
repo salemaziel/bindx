@@ -104,7 +104,7 @@ describe('Repeater Component', () => {
 				)
 
 				if (author.isLoading) return <div data-testid="loading">Loading</div>
-				if (author.isError) return <div>Error</div>
+				if (author.isError || author.isNotFound) return <div>Error</div>
 
 				return (
 					<Repeater field={author.articles}>
@@ -162,7 +162,7 @@ describe('Repeater Component', () => {
 				)
 
 				if (author.isLoading) return <div data-testid="loading">Loading</div>
-				if (author.isError) return <div>Error</div>
+				if (author.isError || author.isNotFound) return <div>Error</div>
 
 				return (
 					<Repeater field={author.articles}>
@@ -201,7 +201,7 @@ describe('Repeater Component', () => {
 				)
 
 				if (author.isLoading) return <div data-testid="loading">Loading</div>
-				if (author.isError) return <div>Error</div>
+				if (author.isError || author.isNotFound) return <div>Error</div>
 
 				return (
 					<Repeater field={author.articles}>
@@ -240,7 +240,7 @@ describe('Repeater Component', () => {
 				)
 
 				if (author.isLoading) return <div data-testid="loading">Loading</div>
-				if (author.isError) return <div>Error</div>
+				if (author.isError || author.isNotFound) return <div>Error</div>
 
 				return (
 					<Repeater field={author.articles}>
@@ -282,7 +282,7 @@ describe('Repeater Component', () => {
 				)
 
 				if (author.isLoading) return <div data-testid="loading">Loading</div>
-				if (author.isError) return <div>Error</div>
+				if (author.isError || author.isNotFound) return <div>Error</div>
 
 				return (
 					<Repeater field={author.articles}>
@@ -330,7 +330,7 @@ describe('Repeater Component', () => {
 				)
 
 				if (author.isLoading) return <div data-testid="loading">Loading</div>
-				if (author.isError) return <div>Error</div>
+				if (author.isError || author.isNotFound) return <div>Error</div>
 
 				return (
 					<Repeater field={author.articles}>
@@ -396,7 +396,7 @@ describe('Repeater Component', () => {
 				)
 
 				if (author.isLoading) return <div data-testid="loading">Loading</div>
-				if (author.isError) return <div>Error</div>
+				if (author.isError || author.isNotFound) return <div>Error</div>
 
 				return (
 					<Repeater field={author.articles} sortableBy="order">
@@ -436,7 +436,7 @@ describe('Repeater Component', () => {
 				)
 
 				if (author.isLoading) return <div data-testid="loading">Loading</div>
-				if (author.isError) return <div>Error</div>
+				if (author.isError || author.isNotFound) return <div>Error</div>
 
 				return (
 					<Repeater field={author.articles} sortableBy="order">
@@ -490,7 +490,7 @@ describe('Repeater Component', () => {
 				)
 
 				if (author.isLoading) return <div data-testid="loading">Loading</div>
-				if (author.isError) return <div>Error</div>
+				if (author.isError || author.isNotFound) return <div>Error</div>
 
 				return (
 					<Repeater field={author.articles} sortableBy="order">
@@ -540,7 +540,7 @@ describe('Repeater Component', () => {
 				)
 
 				if (author.isLoading) return <div data-testid="loading">Loading</div>
-				if (author.isError) return <div>Error</div>
+				if (author.isError || author.isNotFound) return <div>Error</div>
 
 				return (
 					<Repeater field={author.articles}>

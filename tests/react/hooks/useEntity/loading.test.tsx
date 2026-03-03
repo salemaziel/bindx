@@ -19,7 +19,7 @@ describe('useEntity hook - loading state', () => {
 			if (article.isLoading) {
 				return <div data-testid="loading">Loading...</div>
 			}
-			if (article.isError) {
+			if (article.isError || article.isNotFound) {
 				return <div>Error</div>
 			}
 

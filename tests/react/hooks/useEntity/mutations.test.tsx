@@ -19,7 +19,7 @@ describe('useEntity hook - optimistic updates', () => {
 			if (article.isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError) {
+			if (article.isError || article.isNotFound) {
 				return <div>Error</div>
 			}
 
@@ -73,7 +73,7 @@ describe('useEntity hook - optimistic updates', () => {
 			if (article.isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError) {
+			if (article.isError || article.isNotFound) {
 				return <div>Error</div>
 			}
 

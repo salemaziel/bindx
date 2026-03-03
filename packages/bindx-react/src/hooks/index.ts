@@ -24,6 +24,7 @@ export {
 	type UseEntityListOptions,
 	type LoadingEntityAccessor,
 	type ErrorEntityAccessor,
+	type NotFoundEntityAccessor,
 	type ReadyEntityAccessor,
 	type EntityAccessorResult,
 	type EntityFields,

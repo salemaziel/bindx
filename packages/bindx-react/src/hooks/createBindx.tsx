@@ -40,7 +40,7 @@ export { COMPONENT_MARKER, COMPONENT_SELECTIONS, type SelectionPropMeta } from '
 
 // Re-export types for convenience
 export type { EntityFields } from '@contember/bindx'
-export type { UseEntityOptions, EntityAccessorResult, LoadingEntityAccessor, ErrorEntityAccessor, ReadyEntityAccessor } from './useEntityImpl.js'
+export type { UseEntityOptions, EntityAccessorResult, LoadingEntityAccessor, ErrorEntityAccessor, NotFoundEntityAccessor, ReadyEntityAccessor } from './useEntityImpl.js'
 export type { UseEntityListOptions, EntityListAccessorResult, LoadingEntityListAccessor, ErrorEntityListAccessor, ReadyEntityListAccessor } from './useEntityListImpl.js'
 
 // ============================================================================

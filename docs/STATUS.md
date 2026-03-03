@@ -2,7 +2,7 @@
 
 ## Critical
 
-- [ ] 001 - `not_found` state treated as loading
+- [x] 001 - `not_found` state treated as loading
 - [ ] 002 - Memoization bug — `definer` missing from useMemo deps
 - [ ] 003 - Temp ID prefix mismatch in JSX proxy
 - [ ] 004 - Silent data loss without MutationCollector

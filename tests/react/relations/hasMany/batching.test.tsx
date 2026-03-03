@@ -18,7 +18,7 @@ function HasManyTestComponent({ articleId }: TestComponentProps): React.ReactEle
 	if (article.isLoading) {
 		return <div>Loading...</div>
 	}
-	if (article.isError) {
+	if (article.isError || article.isNotFound) {
 		return <div data-testid="loading">Loading...</div>
 	}
 
@@ -64,7 +64,7 @@ describe('HasMany Relations - Edge Cases', () => {
 			if (article.isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError) {
+			if (article.isError || article.isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 
@@ -109,7 +109,7 @@ describe('HasMany Relations - Edge Cases', () => {
 			if (article.isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError) {
+			if (article.isError || article.isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 
@@ -154,7 +154,7 @@ describe('HasMany Relations - Edge Cases', () => {
 			if (article.isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError) {
+			if (article.isError || article.isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 
@@ -206,7 +206,7 @@ describe('HasMany Relations - Edge Cases', () => {
 			if (article.isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError) {
+			if (article.isError || article.isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 
@@ -334,7 +334,7 @@ describe('HasMany Relations - UI Reactivity', () => {
 			if (article.isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError) {
+			if (article.isError || article.isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 
@@ -385,7 +385,7 @@ describe('HasMany Relations - Nested Entity Reactivity', () => {
 			if (article.isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError) {
+			if (article.isError || article.isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 
@@ -441,7 +441,7 @@ describe('HasMany Relations - Nested Entity Reactivity', () => {
 			if (article.isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError) {
+			if (article.isError || article.isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 

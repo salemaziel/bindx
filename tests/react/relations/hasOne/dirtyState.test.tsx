@@ -29,7 +29,7 @@ describe('HasOne Relations - Dirty State Tracking', () => {
 			if (article.isLoading || allAuthors.isLoading) {
 				return <div data-testid="loading">Loading...</div>
 			}
-			if (article.isError || allAuthors.isError) {
+			if (article.isError || article.isNotFound || allAuthors.isError) {
 				return <div>Error</div>
 			}
 
@@ -85,7 +85,7 @@ describe('HasOne Relations - Dirty State Tracking', () => {
 			if (article.isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError) {
+			if (article.isError || article.isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 
@@ -144,7 +144,7 @@ describe('HasOne Relations - Dirty State Tracking', () => {
 			if (article.isLoading || allAuthors.isLoading) {
 				return <div data-testid="loading">Loading...</div>
 			}
-			if (article.isError || allAuthors.isError) {
+			if (article.isError || article.isNotFound || allAuthors.isError) {
 				return <div>Error</div>
 			}
 
@@ -208,7 +208,7 @@ describe('HasOne Relations - Dirty State Tracking', () => {
 			if (article.isLoading || allAuthors.isLoading) {
 				return <div data-testid="loading">Loading...</div>
 			}
-			if (article.isError || allAuthors.isError) {
+			if (article.isError || article.isNotFound || allAuthors.isError) {
 				return <div>Error</div>
 			}
 
@@ -277,7 +277,7 @@ describe('HasOne Relations - Dirty State Tracking', () => {
 			if (article.isLoading || allAuthors.isLoading) {
 				return <div data-testid="loading">Loading...</div>
 			}
-			if (article.isError || allAuthors.isError) {
+			if (article.isError || article.isNotFound || allAuthors.isError) {
 				return <div>Error</div>
 			}
 
@@ -344,7 +344,7 @@ describe('HasOne Relations - Dirty State Tracking', () => {
 			if (article.isLoading || allAuthors.isLoading) {
 				return <div data-testid="loading">Loading...</div>
 			}
-			if (article.isError || allAuthors.isError) {
+			if (article.isError || article.isNotFound || allAuthors.isError) {
 				return <div>Error</div>
 			}
 

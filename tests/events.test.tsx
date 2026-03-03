@@ -438,7 +438,7 @@ describe('Event React Hooks', () => {
 				})
 
 				if (article.isLoading) return <div>Loading...</div>
-				if (article.isError) return <div>Error</div>
+				if (article.isError || article.isNotFound) return <div>Error</div>
 
 				return (
 					<div>
@@ -487,7 +487,7 @@ describe('Event React Hooks', () => {
 				})
 
 				if (article.isLoading) return <div>Loading...</div>
-				if (article.isError) return <div>Error</div>
+				if (article.isError || article.isNotFound) return <div>Error</div>
 
 				return (
 					<div>
@@ -550,7 +550,7 @@ describe('Event React Hooks', () => {
 				})
 
 				if (article1.isLoading || article2.isLoading) return <div>Loading...</div>
-				if (article1.isError || article2.isError) return <div>Error</div>
+				if (article1.isError || article1.isNotFound || article2.isError || article2.isNotFound) return <div>Error</div>
 
 				return (
 					<div>
@@ -617,7 +617,7 @@ describe('Event React Hooks', () => {
 				})
 
 				if (article.isLoading) return <div>Loading...</div>
-				if (article.isError) return <div>Error</div>
+				if (article.isError || article.isNotFound) return <div>Error</div>
 
 				return (
 					<div>
@@ -691,7 +691,7 @@ describe('Event React Hooks', () => {
 				const article = useEntity('Article', { by: { id: 'article-1' } }, e => e.id().title())
 
 				if (article.isLoading) return <div>Loading...</div>
-				if (article.isError) return <div>Error</div>
+				if (article.isError || article.isNotFound) return <div>Error</div>
 
 				return (
 					<div>

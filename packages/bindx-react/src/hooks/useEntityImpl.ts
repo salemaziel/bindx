@@ -24,6 +24,7 @@ export interface LoadingEntityAccessor {
 	readonly status: 'loading'
 	readonly isLoading: true
 	readonly isError: false
+	readonly isNotFound: false
 	readonly isPersisting: false
 	readonly isDirty: false
 	readonly id: string
@@ -40,7 +41,25 @@ export interface ErrorEntityAccessor {
 	readonly status: 'error'
 	readonly isLoading: false
 	readonly isError: true
+	readonly isNotFound: false
 	readonly error: Error
+	readonly isPersisting: false
+	readonly isDirty: false
+	readonly id: string
+	readonly fields: never
+	readonly data: never
+	persist(): Promise<void>
+	reset(): void
+}
+
+/**
+ * Not found state for entity accessor
+ */
+export interface NotFoundEntityAccessor {
+	readonly status: 'not_found'
+	readonly isLoading: false
+	readonly isError: false
+	readonly isNotFound: true
 	readonly isPersisting: false
 	readonly isDirty: false
 	readonly id: string
@@ -60,6 +79,7 @@ export interface ReadyEntityAccessorBase<TEntity extends object, TSelected exten
 	readonly status: 'ready'
 	readonly isLoading: false
 	readonly isError: false
+	readonly isNotFound: false
 	readonly isPersisting: boolean
 	readonly isDirty: boolean
 	readonly id: string
@@ -88,6 +108,7 @@ export type ReadyEntityAccessor<TEntity extends object, TSelected extends object
 export type EntityAccessorResult<TEntity extends object, TSelected extends object = TEntity> =
 	| LoadingEntityAccessor
 	| ErrorEntityAccessor
+	| NotFoundEntityAccessor
 	| ReadyEntityAccessor<TEntity, TSelected>
 
 /**
@@ -98,6 +119,7 @@ function createLoadingAccessor(id: string): LoadingEntityAccessor {
 		status: 'loading',
 		isLoading: true,
 		isError: false,
+		isNotFound: false,
 		isPersisting: false,
 		isDirty: false,
 		id,
@@ -124,6 +146,7 @@ function createErrorAccessor(id: string, error: Error): ErrorEntityAccessor {
 		status: 'error',
 		isLoading: false,
 		isError: true,
+		isNotFound: false,
 		error,
 		isPersisting: false,
 		isDirty: false,
@@ -139,6 +162,33 @@ function createErrorAccessor(id: string, error: Error): ErrorEntityAccessor {
 		},
 		reset() {
 			// No-op after error
+		},
+	}
+}
+
+/**
+ * Creates a not found accessor placeholder
+ */
+function createNotFoundAccessor(id: string): NotFoundEntityAccessor {
+	return {
+		status: 'not_found',
+		isLoading: false,
+		isError: false,
+		isNotFound: true,
+		isPersisting: false,
+		isDirty: false,
+		id,
+		get fields(): never {
+			throw new Error('Cannot access fields — entity not found')
+		},
+		get data(): never {
+			throw new Error('Cannot access data — entity not found')
+		},
+		async persist() {
+			// No-op for not found
+		},
+		reset() {
+			// No-op for not found
 		},
 	}
 }
@@ -201,7 +251,7 @@ export function useEntityImpl<TEntity extends object, TSelected extends object>(
 		}
 
 		if (coreResult.status === 'not_found') {
-			return createLoadingAccessor(derivedId) // Treat not_found as loading for now
+			return createNotFoundAccessor(derivedId)
 		}
 
 		// Ready state - use real ID from snapshot if available
@@ -212,6 +262,7 @@ export function useEntityImpl<TEntity extends object, TSelected extends object>(
 			status: 'ready',
 			isLoading: false,
 			isError: false,
+			isNotFound: false,
 			isPersisting: coreResult.isPersisting,
 			get isDirty() {
 				// Use handle.$isDirty which includes scalar and relation changes

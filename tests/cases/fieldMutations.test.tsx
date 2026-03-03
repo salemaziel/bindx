@@ -79,7 +79,7 @@ describe('Field Mutations', () => {
 				if (article.isLoading) {
 					return <div>Loading...</div>
 				}
-				if (article.isError) {
+				if (article.isError || article.isNotFound) {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -132,7 +132,7 @@ describe('Field Mutations', () => {
 				if (article.isLoading) {
 					return <div>Loading...</div>
 				}
-				if (article.isError) {
+				if (article.isError || article.isNotFound) {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -197,7 +197,7 @@ describe('Field Mutations', () => {
 				if (article.isLoading) {
 					return <div>Loading...</div>
 				}
-				if (article.isError) {
+				if (article.isError || article.isNotFound) {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -262,7 +262,7 @@ describe('Field Mutations', () => {
 				if (article.isLoading) {
 					return <div>Loading...</div>
 				}
-				if (article.isError) {
+				if (article.isError || article.isNotFound) {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -313,7 +313,7 @@ describe('Field Mutations', () => {
 				if (article.isLoading) {
 					return <div>Loading...</div>
 				}
-				if (article.isError) {
+				if (article.isError || article.isNotFound) {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -387,7 +387,7 @@ describe('Field Mutations', () => {
 				if (article.isLoading) {
 					return <div>Loading...</div>
 				}
-				if (article.isError) {
+				if (article.isError || article.isNotFound) {
 					return <div data-testid="loading">Loading...</div>
 				}
 

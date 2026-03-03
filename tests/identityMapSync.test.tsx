@@ -135,7 +135,7 @@ describe('Store Synchronization', () => {
 					return <div data-testid="a-loading">Loading A...</div>
 				}
 
-				if (author.isError) {
+				if (author.isError || author.isNotFound) {
 					return <div data-testid="a-error">Error A</div>
 				}
 
@@ -160,7 +160,7 @@ describe('Store Synchronization', () => {
 					return <div data-testid="b-loading">Loading B...</div>
 				}
 
-				if (author.isError) {
+				if (author.isError || author.isNotFound) {
 					return <div data-testid="b-error">Error B</div>
 				}
 
@@ -228,7 +228,7 @@ describe('Store Synchronization', () => {
 					return <div data-testid="article-loading">Loading...</div>
 				}
 
-				if (article.isError) {
+				if (article.isError || article.isNotFound) {
 					return <div data-testid="article-error">Error</div>
 				}
 
@@ -248,7 +248,7 @@ describe('Store Synchronization', () => {
 					return <div data-testid="author-loading">Loading...</div>
 				}
 
-				if (author.isError) {
+				if (author.isError || author.isNotFound) {
 					return <div data-testid="author-error">Error</div>
 				}
 
@@ -293,7 +293,7 @@ describe('Store Synchronization', () => {
 				const author = useEntity('Author', { by: { id: 'author-1' } }, e => e.name())
 
 				if (author.isLoading) return <div>Loading...</div>
-				if (author.isError) return <div>Error</div>
+				if (author.isError || author.isNotFound) return <div>Error</div>
 
 				return (
 					<div>
@@ -313,7 +313,7 @@ describe('Store Synchronization', () => {
 				const author = useEntity('Author', { by: { id: 'author-1' } }, e => e.name())
 
 				if (author.isLoading) return <div>Loading...</div>
-				if (author.isError) return <div>Error</div>
+				if (author.isError || author.isNotFound) return <div>Error</div>
 
 				return (
 					<div>
@@ -365,7 +365,7 @@ describe('Store Synchronization', () => {
 					return <div data-testid="loading">Loading...</div>
 				}
 
-				if (author.isError) {
+				if (author.isError || author.isNotFound) {
 					return <div data-testid="error">Error</div>
 				}
 
@@ -398,7 +398,7 @@ describe('Store Synchronization', () => {
 				)
 
 				if (article.isLoading) return <div>Loading...</div>
-				if (article.isError) return <div>Error</div>
+				if (article.isError || article.isNotFound) return <div>Error</div>
 
 				return (
 					<div data-testid="tags">

@@ -177,6 +177,7 @@ export type {
 	UseEntityListOptions,
 	LoadingEntityAccessor,
 	ErrorEntityAccessor,
+	NotFoundEntityAccessor,
 	ReadyEntityAccessor,
 	EntityAccessorResult,
 	LoadingEntityListAccessor,

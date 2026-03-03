@@ -18,7 +18,7 @@ function HasManyTestComponent({ articleId }: TestComponentProps): React.ReactEle
 	if (article.isLoading) {
 		return <div>Loading...</div>
 	}
-	if (article.isError) {
+	if (article.isError || article.isNotFound) {
 		return <div data-testid="loading">Loading...</div>
 	}
 
@@ -122,7 +122,7 @@ describe('HasMany Relations - Reset Operations', () => {
 			if (article.isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError) {
+			if (article.isError || article.isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 
@@ -181,7 +181,7 @@ describe('HasMany Relations - Reset Operations', () => {
 			if (article.isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError) {
+			if (article.isError || article.isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 
@@ -240,7 +240,7 @@ describe('HasMany Relations - Reset Operations', () => {
 			if (article.isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError) {
+			if (article.isError || article.isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 

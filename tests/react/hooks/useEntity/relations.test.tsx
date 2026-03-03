@@ -27,7 +27,7 @@ describe('useEntity hook - relation field handles', () => {
 			if (article.isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError) {
+			if (article.isError || article.isNotFound) {
 				return <div>Error</div>
 			}
 
@@ -69,7 +69,7 @@ describe('useEntity hook - relation field handles', () => {
 			if (article.isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError) {
+			if (article.isError || article.isNotFound) {
 				return <div>Error</div>
 			}
 
@@ -120,7 +120,7 @@ describe('useEntity hook - relation field handles', () => {
 			if (article.isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError) {
+			if (article.isError || article.isNotFound) {
 				return <div>Error</div>
 			}
 
@@ -168,7 +168,7 @@ describe('useEntity hook - fragment composition', () => {
 			if (article.isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError) {
+			if (article.isError || article.isNotFound) {
 				return <div>Error</div>
 			}
 
@@ -232,7 +232,7 @@ describe('useEntity hook - fragment composition', () => {
 			if (article.isLoading) {
 				return <div data-testid="loading">Loading...</div>
 			}
-			if (article.isError) {
+			if (article.isError || article.isNotFound) {
 				return <div>Error</div>
 			}
 
@@ -275,7 +275,7 @@ describe('useEntity hook - has-many connect/disconnect', () => {
 			if (article.isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError) {
+			if (article.isError || article.isNotFound) {
 				return <div>Error</div>
 			}
 
@@ -340,7 +340,7 @@ describe('useEntity hook - has-many connect/disconnect', () => {
 			if (article.isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError) {
+			if (article.isError || article.isNotFound) {
 				return <div>Error</div>
 			}
 
@@ -404,7 +404,7 @@ describe('useEntity hook - has-many connect/disconnect', () => {
 			if (article.isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError) {
+			if (article.isError || article.isNotFound) {
 				return <div>Error</div>
 			}
 
