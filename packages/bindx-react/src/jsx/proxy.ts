@@ -520,7 +520,7 @@ function createRuntimeFieldRef(
 	const addFn = (data?: Record<string, unknown>): string => {
 		const items = getValue()
 		const currentItems = Array.isArray(items) ? [...items] : []
-		const newId = `new_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
+		const newId = `__temp_${crypto.randomUUID()}`
 		currentItems.push({ id: newId, ...data })
 		setValue(currentItems)
 		return newId

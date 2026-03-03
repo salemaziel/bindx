@@ -6,6 +6,7 @@ import {
 	BindxProvider,
 	MockAdapter,
 	HasMany,
+	isTempId,
 } from '@contember/bindx-react'
 import {
 	testSchema,
@@ -480,6 +481,55 @@ describe('HasMany component', () => {
 
 			expect(getByTestId(container, 'count').textContent).toBe('3')
 			expect(getAllByTestId(container, 'tag')).toHaveLength(3)
+		})
+
+		test('add() generates IDs recognized by isTempId()', async () => {
+			const adapter = new MockAdapter(createMockData(), { delay: 0 })
+			let addedId: string | null = null
+
+			function TestComponent(): React.ReactElement {
+				const article = useEntity('Article', { by: { id: 'article-1' } }, a =>
+					a.id().tags(t => t.id().name()),
+				)
+
+				if (article.isLoading) {
+					return <div data-testid="loading">Loading...</div>
+				}
+				if (article.isError || article.isNotFound) {
+					return <div data-testid="error">Error</div>
+				}
+
+				return (
+					<div>
+						<button
+							data-testid="add-btn"
+							onClick={() => {
+								addedId = article.tags.add({ name: 'New' })
+							}}
+						>
+							Add
+						</button>
+					</div>
+				)
+			}
+
+			const { container } = render(
+				<BindxProvider adapter={adapter} schema={testSchema}>
+					<TestComponent />
+				</BindxProvider>,
+			)
+
+			await waitFor(() => {
+				expect(queryByTestId(container, 'loading')).toBeNull()
+			})
+
+			act(() => {
+				const button = getByTestId(container, 'add-btn') as HTMLButtonElement
+				button.click()
+			})
+
+			expect(addedId).not.toBeNull()
+			expect(isTempId(addedId!)).toBe(true)
 		})
 
 		test('updates when relation item field changes', async () => {
