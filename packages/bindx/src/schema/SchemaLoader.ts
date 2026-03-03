@@ -49,14 +49,15 @@ const SCHEMA_QUERY = `query {
 
 /**
  * Loads and caches schema from Contember Content API.
+ * Instance-level cache avoids cross-tenant collisions and test pollution.
  */
 export class SchemaLoader {
-	private static readonly cache = new Map<string, Promise<ContemberSchema>>()
+	private readonly cache = new Map<string, Promise<ContemberSchema>>()
 
 	/**
 	 * Loads schema from the API, with caching per API URL.
 	 */
-	static async loadSchema(
+	async loadSchema(
 		client: SchemaLoaderClient,
 		options?: unknown,
 	): Promise<ContemberSchema> {
@@ -79,14 +80,14 @@ export class SchemaLoader {
 	/**
 	 * Clears the schema cache.
 	 */
-	static clearCache(): void {
+	clearCache(): void {
 		this.cache.clear()
 	}
 
 	/**
 	 * Clears cache for a specific API URL.
 	 */
-	static clearCacheFor(apiUrl: string): void {
+	clearCacheFor(apiUrl: string): void {
 		this.cache.delete(apiUrl)
 	}
 }

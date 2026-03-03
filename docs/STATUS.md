@@ -15,7 +15,7 @@
 - [x] 008 - Interceptors unusable with sync dispatch
 - [x] 009 - `inputProps` creates new object on every access
 - [x] 010 - Constructor anti-pattern with Proxy
-- [ ] 011 - Static schema cache in SchemaLoader
+- [x] 011 - Static schema cache in SchemaLoader
 - [ ] 012 - `JSON.parse(byKey)` roundtrip hack
 
 ## Code Quality
