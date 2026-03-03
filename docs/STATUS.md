@@ -25,7 +25,7 @@
 - [x] 015 - `as` type casts in createBindx
 - [x] 016 - `as any` casts in ContemberAdapter
 - [x] 017 - Hardcoded `__temp_` checks instead of `isTempId()`
-- [ ] 018 - Incomplete packages with TODOs
+- [x] 018 - Incomplete packages with TODOs
 
 ## Minor
 

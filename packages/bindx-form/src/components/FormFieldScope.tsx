@@ -38,13 +38,11 @@ export function FormFieldScope<T>({
 		() => ({
 			entityName,
 			fieldName,
-			enumName: undefined, // TODO: get from schema if needed
 		}),
 		[entityName, fieldName],
 	)
 
 	// Determine required from props or default to false
-	// TODO: Could get nullable from SchemaRegistry if needed
 	const isRequired = required ?? false
 
 	return (
