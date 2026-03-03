@@ -13,7 +13,7 @@
 - [x] 006 - Dual persistence managers
 - [x] 007 - Dual source of truth for has-many state
 - [x] 008 - Interceptors unusable with sync dispatch
-- [ ] 009 - `inputProps` creates new object on every access
+- [x] 009 - `inputProps` creates new object on every access
 - [ ] 010 - Constructor anti-pattern with Proxy
 - [ ] 011 - Static schema cache in SchemaLoader
 - [ ] 012 - `JSON.parse(byKey)` roundtrip hack

@@ -162,6 +162,40 @@ describe('FieldHandle', () => {
 
 			expect(handle.value).toBe('Updated via onChange')
 		})
+
+		test('should return same object reference when value unchanged', () => {
+			store.setEntityData('Article', 'a-1', { id: 'a-1', title: 'Test' }, true)
+			const handle = createFieldHandle<string>(['title'])
+
+			const first = handle.inputProps
+			const second = handle.inputProps
+
+			expect(first).toBe(second)
+		})
+
+		test('should return new object reference when value changes', () => {
+			store.setEntityData('Article', 'a-1', { id: 'a-1', title: 'Original' }, true)
+			const handle = createFieldHandle<string>(['title'])
+
+			const first = handle.inputProps
+			handle.setValue('Updated')
+			const second = handle.inputProps
+
+			expect(first).not.toBe(second)
+			expect(second.value).toBe('Updated')
+		})
+
+		test('should keep stable setValue/onChange references across accesses', () => {
+			store.setEntityData('Article', 'a-1', { id: 'a-1', title: 'Original' }, true)
+			const handle = createFieldHandle<string>(['title'])
+
+			const first = handle.inputProps
+			handle.setValue('Updated')
+			const second = handle.inputProps
+
+			expect(first.setValue).toBe(second.setValue)
+			expect(first.onChange).toBe(second.onChange)
+		})
 	})
 
 	// ==================== Nested Fields ====================

@@ -24,6 +24,11 @@ import { createAliasProxy } from './proxyFactory.js'
  * - Implements FieldRef interface for JSX compatibility
  */
 export class FieldHandle<T = unknown> extends EntityRelatedHandle implements FieldRef<T> {
+	private _cachedInputProps: InputProps<T> | null = null
+	private _cachedInputPropsValue: T | null | undefined = undefined
+
+	private readonly _boundSetValue = (value: T | null): void => this.setValue(value)
+
 	constructor(
 		entityType: string,
 		entityId: string,
@@ -156,12 +161,16 @@ export class FieldHandle<T = unknown> extends EntityRelatedHandle implements Fie
 	 * ```
 	 */
 	get inputProps(): InputProps<T> {
-		const setValue = (value: T | null) => this.setValue(value)
-		return {
-			value: this.value,
-			setValue,
-			onChange: setValue,
+		const currentValue = this.value
+		if (this._cachedInputProps === null || currentValue !== this._cachedInputPropsValue) {
+			this._cachedInputPropsValue = currentValue
+			this._cachedInputProps = {
+				value: currentValue,
+				setValue: this._boundSetValue,
+				onChange: this._boundSetValue,
+			}
 		}
+		return this._cachedInputProps
 	}
 
 	/**
