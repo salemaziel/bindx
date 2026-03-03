@@ -8,6 +8,7 @@
 import type { ReactNode } from 'react'
 import type {
 	SchemaRegistry,
+	SelectionBuilder,
 } from '@contember/bindx'
 import {
 	ComponentBrand,
@@ -32,9 +33,9 @@ import { COMPONENT_MARKER, COMPONENT_BRAND } from './componentFactory.js'
  * Implementation of the ComponentBuilder interface.
  * Accumulates entity configs and builds the component on .render().
  *
- * Note: The implementation uses `any` returns because TypeScript cannot
- * properly infer the accumulating state types through method chaining.
- * Type safety is provided by the interface definition.
+ * Note: The implementation uses broad types (Record<string, unknown>, object)
+ * because TypeScript cannot track the accumulating state types through method chaining.
+ * Type safety for consumers is provided by the ComponentBuilder interface.
  */
 export class ComponentBuilderImpl<
 	TSchema extends Record<string, object>,
@@ -45,18 +46,14 @@ export class ComponentBuilderImpl<
 		private readonly entityConfigs: Map<string, EntityConfig>,
 		private readonly roles: readonly string[],
 		private readonly hasInterfacesMode: boolean = false,
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		private readonly conditionFn: ((props: any) => Condition) | null = null,
+		private readonly conditionFn: ((props: Record<string, unknown>) => Condition) | null = null,
 	) {}
 
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	entity(
 		propName: string,
 		entityName: string,
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		selector?: (builder: any) => any,
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	): any {
+		selector?: (builder: SelectionBuilder<object>) => SelectionBuilder<object, object, object>,
+	): ComponentBuilderImpl<TSchema, TState> {
 		const newConfigs = new Map(this.entityConfigs)
 		newConfigs.set(propName, { entityName, selector })
 		return new ComponentBuilderImpl(
@@ -68,12 +65,9 @@ export class ComponentBuilderImpl<
 		)
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	interfaces(
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		selectors?: Record<string, (builder: any) => any>,
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	): any {
+		selectors?: Record<string, (builder: SelectionBuilder<object>) => SelectionBuilder<object, object, object>>,
+	): ComponentBuilderImpl<TSchema, TState> {
 		// Note: At runtime we don't know the TInterfaces keys, so we rely on
 		// the selectors parameter to determine which props have explicit selectors.
 		// For props without selectors (including pure implicit mode with no selectors param),
@@ -99,8 +93,7 @@ export class ComponentBuilderImpl<
 		)
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	props<TNewScalarProps extends object>(): any {
+	props<TNewScalarProps extends object>(): ComponentBuilderImpl<TSchema, TState> {
 		// Type-only operation - runtime is a no-op
 		return new ComponentBuilderImpl(
 			this.schemaRegistry,
@@ -111,8 +104,7 @@ export class ComponentBuilderImpl<
 		)
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	if(conditionFn: (props: any) => Condition): any {
+	if(conditionFn: (props: Record<string, unknown>) => Condition): ComponentBuilderImpl<TSchema, TState> {
 		return new ComponentBuilderImpl(
 			this.schemaRegistry,
 			this.entityConfigs,
@@ -122,8 +114,7 @@ export class ComponentBuilderImpl<
 		)
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	render(renderFn: (props: any) => ReactNode): any {
+	render(renderFn: (props: Record<string, unknown>) => ReactNode): unknown {
 		return buildComponent(
 			this.entityConfigs,
 			this.roles,
