@@ -2,6 +2,7 @@ import type { BackendAdapter } from '../adapter/types.js'
 import type { SnapshotStore } from '../store/SnapshotStore.js'
 import type { QuerySpec } from '../selection/buildQuery.js'
 import type { EntityWhere, EntityOrderBy } from '../selection/queryTypes.js'
+import { createLoadError, type FieldError } from '../errors/types.js'
 
 /**
  * Checks if an error is an AbortError that should be rethrown.
@@ -22,7 +23,7 @@ function normalizeError(error: unknown): Error {
  */
 export type EntityLoadResult<T> =
 	| { status: 'success'; data: T }
-	| { status: 'error'; error: Error }
+	| { status: 'error'; error: FieldError }
 	| { status: 'not_found' }
 
 /**
@@ -30,7 +31,7 @@ export type EntityLoadResult<T> =
  */
 export type EntityListLoadResult<T> =
 	| { status: 'success'; data: T[] }
-	| { status: 'error'; error: Error }
+	| { status: 'error'; error: FieldError }
 
 /**
  * Options for loading a single entity
@@ -99,7 +100,7 @@ export class EntityLoader {
 			if (isAbortError(error)) {
 				throw error
 			}
-			return { status: 'error', error: normalizeError(error) }
+			return { status: 'error', error: createLoadError(normalizeError(error)) }
 		}
 	}
 
@@ -119,7 +120,7 @@ export class EntityLoader {
 			if (!result || result.type !== 'list') {
 				return {
 					status: 'error',
-					error: new Error('Unexpected query result type'),
+					error: createLoadError(new Error('Unexpected query result type')),
 				}
 			}
 
@@ -136,7 +137,7 @@ export class EntityLoader {
 			if (isAbortError(error)) {
 				throw error
 			}
-			return { status: 'error', error: normalizeError(error) }
+			return { status: 'error', error: createLoadError(normalizeError(error)) }
 		}
 	}
 

@@ -18,6 +18,7 @@ import {
 	clearEntityErrors,
 	clearAllErrors,
 	createServerError,
+	createLoadError,
 } from '@contember/bindx'
 import { createTestStore, createTestDispatcher, createMockSubscriber } from '../shared/unitTestHelpers.js'
 
@@ -150,7 +151,7 @@ describe('ActionDispatcher', () => {
 			})
 
 			test('should set error in load state', () => {
-				const error = new Error('Network error')
+				const error = createLoadError(new Error('Network error'))
 				dispatcher.dispatch(setLoadState('Article', 'a-1', 'error', error))
 
 				const loadState = store.getLoadState('Article', 'a-1')

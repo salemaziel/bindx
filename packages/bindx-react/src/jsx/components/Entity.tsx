@@ -4,7 +4,7 @@ import { useEntityCore } from '../../hooks/useEntityCore.js'
 import { useSelectionCollection } from '../../hooks/useSelectionCollection.js'
 import { createRuntimeAccessor } from '../proxy.js'
 import type { EntityAccessor } from '../types.js'
-import { type EntityUniqueWhere, type AnyBrand } from '@contember/bindx'
+import { type EntityUniqueWhere, type AnyBrand, type FieldError } from '@contember/bindx'
 import { EntityContext, type EntityContextValue } from '../../roles/RoleContext.js'
 
 // ==================== Props Types ====================
@@ -21,7 +21,7 @@ interface EntityBaseProps<TSchema, K extends keyof TSchema & string> {
 	/** Render function receiving typed entity accessor with direct field access */
 	children: (entity: EntityAccessor<TSchema[K], TSchema[K], AnyBrand, K>) => React.ReactNode
 	/** Error fallback */
-	error?: (error: Error) => React.ReactNode
+	error?: (error: FieldError) => React.ReactNode
 }
 
 /**
@@ -66,7 +66,7 @@ interface EntityByModeProps {
 	roles?: readonly string[]
 	children: (entity: EntityAccessor<unknown>) => React.ReactNode
 	loading?: React.ReactNode
-	error?: (error: Error) => React.ReactNode
+	error?: (error: FieldError) => React.ReactNode
 	notFound?: React.ReactNode
 }
 
@@ -74,7 +74,7 @@ interface EntityCreateModeProps {
 	entityType: string
 	roles?: readonly string[]
 	children: (entity: EntityAccessor<unknown>) => React.ReactNode
-	error?: (error: Error) => React.ReactNode
+	error?: (error: FieldError) => React.ReactNode
 	onPersisted?: (id: string) => void
 }
 
@@ -361,7 +361,7 @@ function DefaultLoading(): ReactElement {
 /**
  * Default error component
  */
-function DefaultError({ error }: { error: Error }): ReactElement {
+function DefaultError({ error }: { error: FieldError }): ReactElement {
 	return (
 		<div className="bindx-error">
 			<strong>Error:</strong> {error.message}

@@ -5,6 +5,7 @@ import {
 	EventEmitter,
 	EntityHandle,
 	SchemaRegistry,
+	createLoadError,
 	type SchemaDefinition,
 } from '@contember/bindx'
 import { createTestDispatcher } from '../shared/unitTestHelpers.js'
@@ -148,7 +149,7 @@ describe('EntityHandle', () => {
 		})
 
 		test('should check if entity has error', () => {
-			store.setLoadState('Article', 'a-1', 'error', new Error('Network error'))
+			store.setLoadState('Article', 'a-1', 'error', createLoadError(new Error('Network error')))
 			const handle = createEntityHandle()
 
 			expect(handle.isError).toBe(true)

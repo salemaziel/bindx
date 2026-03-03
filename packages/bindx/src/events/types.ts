@@ -209,7 +209,7 @@ export interface ErrorsClearedEvent extends BindxEvent<'errors:cleared'> {
 export interface LoadStateChangedEvent extends BindxEvent<'load:stateChanged'> {
 	readonly previousStatus: string | undefined
 	readonly newStatus: string
-	readonly error?: Error
+	readonly error?: FieldError
 }
 
 // ============================================================================

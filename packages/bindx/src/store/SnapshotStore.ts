@@ -159,12 +159,12 @@ export class SnapshotStore implements SnapshotVersionBumper {
 
 	// ==================== Load State (delegated to EntityMetaStore) ====================
 
-	getLoadState(entityType: string, id: string): { status: LoadStatus; error?: Error } | undefined {
+	getLoadState(entityType: string, id: string): { status: LoadStatus; error?: FieldError } | undefined {
 		const key = this.getEntityKey(entityType, id)
 		return this.meta.getLoadState(key)
 	}
 
-	setLoadState(entityType: string, id: string, status: LoadStatus, error?: Error): void {
+	setLoadState(entityType: string, id: string, status: LoadStatus, error?: FieldError): void {
 		const key = this.getEntityKey(entityType, id)
 		this.meta.setLoadState(key, status, error)
 		this.notifyEntitySubscribers(key)

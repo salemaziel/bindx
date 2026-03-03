@@ -1,12 +1,13 @@
 import type { LoadStatus } from './snapshots.js'
 import { isPersistedId, isPlaceholderId } from './entityId.js'
+import type { FieldError } from '../errors/types.js'
 
 /**
  * Entity load state tracking.
  */
 export interface EntityLoadState {
 	status: LoadStatus
-	error?: Error
+	error?: FieldError
 }
 
 /**
@@ -44,7 +45,7 @@ export class EntityMetaStore {
 		return this.loadStates.get(key)
 	}
 
-	setLoadState(key: string, status: LoadStatus, error?: Error): void {
+	setLoadState(key: string, status: LoadStatus, error?: FieldError): void {
 		this.loadStates.set(key, { status, error })
 	}
 

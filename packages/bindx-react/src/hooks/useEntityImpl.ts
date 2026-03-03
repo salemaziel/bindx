@@ -1,5 +1,5 @@
 import { useRef, useEffect, useMemo } from 'react'
-import type { SchemaRegistry, EntityUniqueWhere } from '@contember/bindx'
+import type { SchemaRegistry, EntityUniqueWhere, FieldError } from '@contember/bindx'
 import { EntityHandle } from '@contember/bindx'
 import { useBindxContext } from './BackendAdapterContext.js'
 import { useEntityCore } from './useEntityCore.js'
@@ -42,7 +42,7 @@ export interface ErrorEntityAccessor {
 	readonly isLoading: false
 	readonly isError: true
 	readonly isNotFound: false
-	readonly error: Error
+	readonly error: FieldError
 	readonly isPersisting: false
 	readonly isDirty: false
 	readonly id: string
@@ -141,7 +141,7 @@ function createLoadingAccessor(id: string): LoadingEntityAccessor {
 /**
  * Creates an error accessor placeholder
  */
-function createErrorAccessor(id: string, error: Error): ErrorEntityAccessor {
+function createErrorAccessor(id: string, error: FieldError): ErrorEntityAccessor {
 	return {
 		status: 'error',
 		isLoading: false,

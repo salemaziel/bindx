@@ -108,9 +108,22 @@ export interface ServerError extends BindxError {
 }
 
 /**
+ * Load error - from data fetching (queries).
+ */
+export interface LoadError extends BindxError {
+	readonly source: 'load'
+	/** Error category for classification */
+	readonly category: ErrorCategory
+	/** Whether this error might succeed on retry */
+	readonly retryable: boolean
+	/** Original Error object for stack trace access */
+	readonly originalError?: Error
+}
+
+/**
  * Union type for all error sources.
  */
-export type FieldError = ClientError | ServerError
+export type FieldError = ClientError | ServerError | LoadError
 
 /**
  * Error state stored in the SnapshotStore.
@@ -156,6 +169,20 @@ export function createServerError(
 }
 
 /**
+ * Creates a LoadError from a plain Error.
+ * Load errors are always classified as 'transient' and retryable.
+ */
+export function createLoadError(error: Error): LoadError {
+	return {
+		source: 'load',
+		message: error.message,
+		category: 'transient',
+		retryable: true,
+		originalError: error,
+	}
+}
+
+/**
  * Checks if an error is a client error.
  */
 export function isClientError(error: FieldError): error is ClientError {
@@ -170,11 +197,18 @@ export function isServerError(error: FieldError): error is ServerError {
 }
 
 /**
+ * Checks if an error is a load error.
+ */
+export function isLoadError(error: FieldError): error is LoadError {
+	return error.source === 'load'
+}
+
+/**
  * Filters errors by source.
  */
 export function filterErrorsBySource(
 	errors: readonly FieldError[],
-	source: 'client' | 'server',
+	source: 'client' | 'server' | 'load',
 ): FieldError[] {
 	return errors.filter(e => e.source === source)
 }
@@ -182,7 +216,8 @@ export function filterErrorsBySource(
 /**
  * Filters out non-sticky client errors.
  * Used when auto-clearing errors on value change.
+ * Load and server errors are always preserved.
  */
 export function filterStickyErrors(errors: readonly FieldError[]): FieldError[] {
-	return errors.filter(e => e.source === 'server' || e.sticky === true)
+	return errors.filter(e => e.source === 'server' || e.source === 'load' || e.sticky === true)
 }

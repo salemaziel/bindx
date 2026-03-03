@@ -166,7 +166,7 @@ export class EntityHandle<T extends object = object, TSelected = T> extends Enti
 	/**
 	 * Gets the loading error if any.
 	 */
-	get error(): Error | undefined {
+	get error(): FieldError | undefined {
 		const loadState = this.store.getLoadState(this.entityType, this.entityId)
 		return loadState?.error
 	}

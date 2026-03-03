@@ -1,9 +1,9 @@
 import { useRef, useEffect, useMemo, useCallback } from 'react'
 import { useBindxContext } from './BackendAdapterContext.js'
 import { useStoreSubscription } from './useStoreSubscription.js'
-import { setEntityData } from '@contember/bindx'
+import { setEntityData, createLoadError } from '@contember/bindx'
 import { buildQueryFromSelection } from '@contember/bindx'
-import type { SelectionMeta } from '@contember/bindx'
+import type { SelectionMeta, FieldError } from '@contember/bindx'
 
 /**
  * Options for useEntityListCore hook.
@@ -40,7 +40,7 @@ export interface EntityListCoreResult {
 	/** Current load status */
 	status: 'loading' | 'error' | 'ready'
 	/** Error if status is 'error' */
-	error?: Error
+	error?: FieldError
 	/** List items when ready */
 	items: EntityListCoreItem[]
 }
@@ -51,7 +51,7 @@ export interface EntityListCoreResult {
 interface ListSubscriptionSnapshot {
 	status: 'loading' | 'error' | 'ready'
 	items: EntityListCoreItem[]
-	error?: Error
+	error?: FieldError
 }
 
 /**
@@ -89,7 +89,7 @@ export function useEntityListCore(options: UseEntityListCoreOptions): EntityList
 	const listStateRef = useRef<{
 		status: 'loading' | 'error' | 'ready'
 		items: EntityListCoreItem[]
-		error?: Error
+		error?: FieldError
 	}>({
 		status: 'loading',
 		items: [],
@@ -206,10 +206,11 @@ export function useEntityListCore(options: UseEntityListCoreOptions): EntityList
 			} catch (error) {
 				if (abortController.signal.aborted) return
 
+				const normalizedError = error instanceof Error ? error : new Error(String(error))
 				listStateRef.current = {
 					status: 'error',
 					items: [],
-					error: error instanceof Error ? error : new Error(String(error)),
+					error: createLoadError(normalizedError),
 				}
 				versionRef.current++
 				store.notify()

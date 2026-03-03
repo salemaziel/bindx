@@ -3,9 +3,9 @@ import type { SchemaRegistry, EntityAccessor } from '@contember/bindx'
 import { EntityHandle, isTempId } from '@contember/bindx'
 import { useBindxContext } from './BackendAdapterContext.js'
 import { useStoreSubscription } from './useStoreSubscription.js'
-import { setEntityData, setLoadState } from '@contember/bindx'
+import { setEntityData, setLoadState, createLoadError } from '@contember/bindx'
 import { buildQueryFromSelection } from '@contember/bindx'
-import type { SelectionMeta } from '@contember/bindx'
+import type { SelectionMeta, FieldError } from '@contember/bindx'
 
 /**
  * Options for useEntityList hook
@@ -43,7 +43,7 @@ export interface ErrorEntityListAccessor {
 	readonly status: 'error'
 	readonly isLoading: false
 	readonly isError: true
-	readonly error: Error
+	readonly error: FieldError
 	readonly isDirty: false
 	readonly items: never
 	readonly length: 0
@@ -97,7 +97,7 @@ function createLoadingListAccessor(): LoadingEntityListAccessor {
 	}
 }
 
-function createErrorListAccessor(error: Error): ErrorEntityListAccessor {
+function createErrorListAccessor(error: FieldError): ErrorEntityListAccessor {
 	return {
 		status: 'error',
 		isLoading: false,
@@ -149,7 +149,7 @@ export function useEntityListImpl<TResult extends object>(
 	const listStateRef = useRef<{
 		status: 'loading' | 'error' | 'ready'
 		items: Array<{ id: string; data: TResult }>
-		error?: Error
+		error?: FieldError
 	}>({
 		status: 'loading',
 		items: [],
@@ -351,10 +351,11 @@ export function useEntityListImpl<TResult extends object>(
 			} catch (error) {
 				if (abortController.signal.aborted) return
 
+				const normalizedError = error instanceof Error ? error : new Error(String(error))
 				listStateRef.current = {
 					status: 'error',
 					items: [],
-					error: error instanceof Error ? error : new Error(String(error)),
+					error: createLoadError(normalizedError),
 				}
 				versionRef.current++
 				store.notify()

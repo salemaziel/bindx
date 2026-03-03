@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useBindxContext } from './BackendAdapterContext.js'
 import { useStoreSubscription } from './useStoreSubscription.js'
-import { setEntityData, setLoadState } from '@contember/bindx'
+import { setEntityData, setLoadState, createLoadError } from '@contember/bindx'
 import { buildQueryFromSelection } from '@contember/bindx'
-import type { SelectionMeta, EntityUniqueWhere } from '@contember/bindx'
+import type { SelectionMeta, EntityUniqueWhere, FieldError } from '@contember/bindx'
 import type { EntitySnapshot, LoadStatus } from '@contember/bindx'
 
 /**
@@ -27,7 +27,7 @@ export interface UseEntityCoreOptions {
  */
 interface LoadState {
 	status: LoadStatus
-	error?: Error
+	error?: FieldError
 }
 
 /**
@@ -37,7 +37,7 @@ export interface EntityCoreResult {
 	/** Current load status */
 	status: 'loading' | 'error' | 'not_found' | 'ready'
 	/** Error if status is 'error' */
-	error?: Error
+	error?: FieldError
 	/** Entity snapshot when ready */
 	snapshot: EntitySnapshot | undefined
 	/** Load state from store */
@@ -175,12 +175,13 @@ export function useEntityCore(options: UseEntityCoreOptions): EntityCoreResult {
 					return
 				}
 
+				const normalizedError = error instanceof Error ? error : new Error(String(error))
 				dispatcher.dispatch(
 					setLoadState(
 						entityType,
 						id,
 						'error',
-						error instanceof Error ? error : new Error(String(error)),
+						createLoadError(normalizedError),
 					),
 				)
 			}

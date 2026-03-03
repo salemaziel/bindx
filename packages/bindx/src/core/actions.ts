@@ -163,7 +163,7 @@ export interface SetLoadStateAction {
 	readonly entityType: string
 	readonly entityId: string
 	readonly status: 'idle' | 'loading' | 'success' | 'error' | 'not_found'
-	readonly error?: Error
+	readonly error?: FieldError
 }
 
 /**
@@ -371,7 +371,7 @@ export function setLoadState(
 	entityType: string,
 	entityId: string,
 	status: 'idle' | 'loading' | 'success' | 'error' | 'not_found',
-	error?: Error,
+	error?: FieldError,
 ): SetLoadStateAction {
 	return { type: 'SET_LOAD_STATE', entityType, entityId, status, error }
 }

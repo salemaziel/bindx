@@ -1,5 +1,5 @@
 import React, { memo, type ReactElement } from 'react'
-import { type EntityWhere, type EntityOrderBy } from '@contember/bindx'
+import { type EntityWhere, type EntityOrderBy, type FieldError } from '@contember/bindx'
 import { useBindxContext } from '../../hooks/BackendAdapterContext.js'
 import { useEntityListCore } from '../../hooks/useEntityListCore.js'
 import { useSelectionCollectionForList } from '../../hooks/useSelectionCollectionForList.js'
@@ -28,7 +28,7 @@ export interface EntityListProps<TSchema, K extends keyof TSchema> {
 	/** Loading fallback */
 	loading?: React.ReactNode
 	/** Error fallback */
-	error?: (error: Error) => React.ReactNode
+	error?: (error: FieldError) => React.ReactNode
 	/** Empty state fallback (when list has no items) */
 	empty?: React.ReactNode
 }
@@ -155,7 +155,7 @@ function DefaultLoading(): ReactElement {
 /**
  * Default error component
  */
-function DefaultError({ error }: { error: Error }): ReactElement {
+function DefaultError({ error }: { error: FieldError }): ReactElement {
 	return (
 		<div className="bindx-error">
 			<strong>Error:</strong> {error.message}

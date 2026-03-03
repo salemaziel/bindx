@@ -5,8 +5,16 @@ import {
 	isExecutionErrorType,
 	ExecutionErrorTypes,
 	createServerError,
+	createLoadError,
+	createClientError,
+	isLoadError,
+	isClientError,
+	isServerError,
+	filterErrorsBySource,
+	filterStickyErrors,
 	type ExecutionErrorType,
 	type ErrorCategory,
+	type FieldError,
 } from '@contember/bindx'
 
 describe('error classification', () => {
@@ -117,6 +125,95 @@ describe('error classification', () => {
 
 			expect(error.category).toBe('not_found')
 			expect(error.retryable).toBe(false)
+		})
+	})
+
+	describe('createLoadError', () => {
+		test('should create load error from Error with correct metadata', () => {
+			const originalError = new Error('Network timeout')
+			const error = createLoadError(originalError)
+
+			expect(error.source).toBe('load')
+			expect(error.message).toBe('Network timeout')
+			expect(error.category).toBe('transient')
+			expect(error.retryable).toBe(true)
+			expect(error.originalError).toBe(originalError)
+		})
+
+		test('should preserve original error for stack trace access', () => {
+			const originalError = new Error('Connection refused')
+			const error = createLoadError(originalError)
+
+			expect(error.originalError).toBeInstanceOf(Error)
+			expect(error.originalError?.stack).toBeDefined()
+		})
+	})
+
+	describe('isLoadError', () => {
+		test('should return true for load errors', () => {
+			const error = createLoadError(new Error('test'))
+			expect(isLoadError(error)).toBe(true)
+		})
+
+		test('should return false for server errors', () => {
+			const error = createServerError('test')
+			expect(isLoadError(error)).toBe(false)
+		})
+
+		test('should return false for client errors', () => {
+			const error = createClientError('test')
+			expect(isLoadError(error)).toBe(false)
+		})
+	})
+
+	describe('type guards with all error sources', () => {
+		test('isClientError should only match client errors', () => {
+			expect(isClientError(createClientError('test'))).toBe(true)
+			expect(isClientError(createServerError('test'))).toBe(false)
+			expect(isClientError(createLoadError(new Error('test')))).toBe(false)
+		})
+
+		test('isServerError should only match server errors', () => {
+			expect(isServerError(createServerError('test'))).toBe(true)
+			expect(isServerError(createClientError('test'))).toBe(false)
+			expect(isServerError(createLoadError(new Error('test')))).toBe(false)
+		})
+	})
+
+	describe('filterErrorsBySource with load errors', () => {
+		test('should filter load errors', () => {
+			const errors: FieldError[] = [
+				createClientError('client err'),
+				createServerError('server err'),
+				createLoadError(new Error('load err')),
+			]
+
+			const loadErrors = filterErrorsBySource(errors, 'load')
+			expect(loadErrors).toHaveLength(1)
+			expect(loadErrors[0]?.source).toBe('load')
+
+			const clientErrors = filterErrorsBySource(errors, 'client')
+			expect(clientErrors).toHaveLength(1)
+			expect(clientErrors[0]?.source).toBe('client')
+
+			const serverErrors = filterErrorsBySource(errors, 'server')
+			expect(serverErrors).toHaveLength(1)
+			expect(serverErrors[0]?.source).toBe('server')
+		})
+	})
+
+	describe('filterStickyErrors with load errors', () => {
+		test('should preserve load errors when filtering', () => {
+			const errors: FieldError[] = [
+				createClientError('non-sticky client'),
+				{ source: 'client', message: 'sticky client', sticky: true },
+				createServerError('server err'),
+				createLoadError(new Error('load err')),
+			]
+
+			const sticky = filterStickyErrors(errors)
+			expect(sticky).toHaveLength(3)
+			expect(sticky.map(e => e.source)).toEqual(['client', 'server', 'load'])
 		})
 	})
 })

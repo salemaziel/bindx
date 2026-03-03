@@ -4,6 +4,7 @@ export {
 	type BindxError,
 	type ClientError,
 	type ServerError,
+	type LoadError,
 	type FieldError,
 	type ErrorState,
 	type ErrorInput,
@@ -13,8 +14,10 @@ export {
 	isRetryableCategory,
 	createClientError,
 	createServerError,
+	createLoadError,
 	isClientError,
 	isServerError,
+	isLoadError,
 	filterErrorsBySource,
 	filterStickyErrors,
 } from './types.js'

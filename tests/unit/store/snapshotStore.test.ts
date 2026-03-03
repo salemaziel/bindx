@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach } from 'bun:test'
-import { SnapshotStore, isTempId, isPlaceholderId, isPersistedId, createServerError } from '@contember/bindx'
+import { SnapshotStore, isTempId, isPlaceholderId, isPersistedId, createServerError, createLoadError } from '@contember/bindx'
 import { createTestStore, createMockSubscriber, createArticleData, createAuthorData } from '../shared/unitTestHelpers.js'
 
 describe('SnapshotStore', () => {
@@ -288,7 +288,7 @@ describe('SnapshotStore', () => {
 		})
 
 		test('should store error in load state', () => {
-			const error = new Error('Network error')
+			const error = createLoadError(new Error('Network error'))
 			store.setLoadState('Article', 'a-1', 'error', error)
 
 			const loadState = store.getLoadState('Article', 'a-1')
