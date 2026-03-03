@@ -1,0 +1,454 @@
+import { EntityRelatedHandle } from './BaseHandle.js'
+import { EntityHandle } from './EntityHandle.js'
+import type { ActionDispatcher } from '../core/ActionDispatcher.js'
+import type { SnapshotStore } from '../store/SnapshotStore.js'
+import type { SchemaRegistry } from '../schema/SchemaRegistry.js'
+import {
+	addRelationError,
+	clearRelationErrors,
+} from '../core/actions.js'
+import { FIELD_REF_META, type HasManyRef, type FieldRefMeta, type EntityAccessor, type Unsubscribe } from './types.js'
+import { createClientError, type ErrorInput, type FieldError } from '../errors/types.js'
+import type {
+	EventListener,
+	Interceptor,
+	HasManyConnectedEvent,
+	HasManyDisconnectedEvent,
+	HasManyConnectingEvent,
+	HasManyDisconnectingEvent,
+} from '../events/types.js'
+import { createAliasProxy } from './proxyFactory.js'
+
+/**
+ * HasManyListHandle provides access to a has-many relation (list of entities).
+ * Implements HasManyRef interface for JSX compatibility.
+ *
+ * @typeParam TEntity - The full entity type of items in the relation
+ * @typeParam TSelected - The selected subset of fields (defaults to TEntity for backwards compatibility)
+ */
+export class HasManyListHandle<TEntity extends object = object, TSelected = TEntity> extends EntityRelatedHandle implements HasManyRef<TEntity, TSelected> {
+	private itemHandleCache = new Map<string, EntityHandle<TEntity, TSelected>>()
+
+	/** Runtime brand symbols for validation */
+	readonly __brands?: Set<symbol>
+
+	/**
+	 * Type brand - entity name for type inference.
+	 * Implements HasManyRef.__entityName.
+	 */
+	get __entityName(): string {
+		return this.itemType
+	}
+
+	/**
+	 * Type brand - available roles for type inference.
+	 * Returns empty array at runtime; role checking is compile-time only.
+	 */
+	get __availableRoles(): readonly string[] {
+		return []
+	}
+
+	/**
+	 * Type brand - schema for type inference.
+	 * Returns undefined at runtime; schema type is compile-time only.
+	 */
+	get __schema(): undefined {
+		return undefined
+	}
+
+	/**
+	 * Alias for this has-many relation.
+	 * When the same field is used multiple times with different params,
+	 * each instance has a unique alias to store data separately.
+	 */
+	private readonly alias: string
+
+	private constructor(
+		parentEntityType: string,
+		parentEntityId: string,
+		private readonly fieldName: string,
+		private readonly itemType: string,
+		store: SnapshotStore,
+		dispatcher: ActionDispatcher,
+		private readonly schema: SchemaRegistry,
+		brands?: Set<symbol>,
+		alias?: string,
+	) {
+		super(parentEntityType, parentEntityId, store, dispatcher)
+		this.__brands = brands
+		this.alias = alias ?? fieldName
+	}
+
+	static create<TEntity extends object = object, TSelected = TEntity>(
+		parentEntityType: string,
+		parentEntityId: string,
+		fieldName: string,
+		itemType: string,
+		store: SnapshotStore,
+		dispatcher: ActionDispatcher,
+		schema: SchemaRegistry,
+		brands?: Set<symbol>,
+		alias?: string,
+	): HasManyListHandle<TEntity, TSelected> {
+		return createAliasProxy(new HasManyListHandle<TEntity, TSelected>(parentEntityType, parentEntityId, fieldName, itemType, store, dispatcher, schema, brands, alias))
+	}
+
+	/**
+	 * JSX field reference metadata for collection phase.
+	 * Implements HasManyRef interface.
+	 */
+	get [FIELD_REF_META](): FieldRefMeta {
+		return {
+			entityType: this.entityType,
+			entityId: this.entityId,
+			path: [this.fieldName],
+			fieldName: this.fieldName,
+			isArray: true,
+			isRelation: true,
+		}
+	}
+
+	/**
+	 * Gets the list of items as entity accessors with direct field access.
+	 * Returns selection-aware EntityAccessors that support `item.fieldName.value`.
+	 * Includes planned connections and excludes planned removals.
+	 * Uses ordered IDs to preserve order including after move() operations.
+	 */
+	get items(): EntityAccessor<TEntity, TSelected>[] {
+		const data = this.getEntityData()
+		if (!data) return []
+
+		const listData = data[this.fieldName] as Array<{ id: string }> | undefined
+		if (!Array.isArray(listData)) return []
+
+		// Ensure snapshots exist for embedded items
+		this.ensureItemSnapshots(listData)
+
+		// Extract server IDs from embedded data
+		const serverIds = listData
+			.map((item) => item.id)
+			.filter((id): id is string => id !== undefined)
+
+		// Ensure has-many state exists with proper server IDs
+		// This is needed so that connect/disconnect operations work correctly
+		this.store.getOrCreateHasMany(
+			this.entityType,
+			this.entityId,
+			this.fieldName,
+			serverIds,
+			this.alias,
+		)
+
+		// Use ordered IDs from store (handles removals, connections, and ordering)
+		const orderedIds = this.store.getHasManyOrderedIds(
+			this.entityType,
+			this.entityId,
+			this.fieldName,
+			this.alias,
+		)
+
+		return orderedIds.map((id) => this.getItemHandle(id))
+	}
+
+	/**
+	 * Ensures snapshots exist for embedded has-many items.
+	 */
+	private ensureItemSnapshots(listData: Array<Record<string, unknown>>): void {
+		for (const itemData of listData) {
+			const itemId = itemData['id'] as string
+			if (!itemId) continue
+
+			// Register parent-child relationship for change propagation
+			// This needs to happen even if the snapshot already exists
+			this.store.registerParentChild(this.entityType, this.entityId, this.itemType, itemId)
+
+			// Skip if snapshot already exists
+			if (this.store.hasEntity(this.itemType, itemId)) {
+				continue
+			}
+
+			// Create snapshot from embedded data
+			// Skip notification to avoid triggering React state updates during render
+			this.store.setEntityData(
+				this.itemType,
+				itemId,
+				itemData,
+				true, // isServerData
+				true, // skipNotify - called during render, data already exists embedded in parent
+			)
+		}
+	}
+
+	/**
+	 * Gets the number of items.
+	 */
+	get length(): number {
+		return this.items.length
+	}
+
+	/**
+	 * Gets a handle for a specific item.
+	 * Returns selection-aware EntityAccessor that supports direct field access.
+	 */
+	getItemHandle(itemId: string): EntityAccessor<TEntity, TSelected> {
+		let handle = this.itemHandleCache.get(itemId)
+
+		if (!handle) {
+			handle = EntityHandle.create<TEntity, TSelected>(
+				itemId,
+				this.itemType,
+				this.store,
+				this.dispatcher,
+				this.schema,
+				this.__brands,
+			)
+			this.itemHandleCache.set(itemId, handle)
+		}
+
+		// EntityHandle constructor returns a Proxy that implements EntityAccessor
+		return handle as unknown as EntityAccessor<TEntity, TSelected>
+	}
+
+	/**
+	 * Checks if the list is dirty (items added/removed/moved/connected/disconnected).
+	 */
+	get isDirty(): boolean {
+		const state = this.store.getHasMany(
+			this.entityType,
+			this.entityId,
+			this.fieldName,
+			this.alias,
+		)
+
+		if (!state) return false
+
+		return (
+			state.plannedRemovals.size > 0 ||
+			state.plannedConnections.size > 0 ||
+			state.createdEntities.size > 0 ||
+			state.orderedIds !== null
+		)
+	}
+
+	/**
+	 * Maps over items.
+	 * Implements HasManyRef interface - returns selection-aware entity accessors with direct field access.
+	 */
+	map<R>(fn: (item: EntityAccessor<TEntity, TSelected>, index: number) => R): R[] {
+		return this.items.map((handle, index) => fn(handle, index))
+	}
+
+	/**
+	 * Connects an existing entity to this has-many relation.
+	 */
+	connect(itemId: string): void {
+		this.assertNotDisposed()
+		this.store.planHasManyConnection(
+			this.entityType,
+			this.entityId,
+			this.fieldName,
+			itemId,
+			this.alias,
+		)
+	}
+
+	/**
+	 * Disconnects an entity from this has-many relation.
+	 */
+	disconnect(itemId: string): void {
+		this.assertNotDisposed()
+		this.store.planHasManyRemoval(
+			this.entityType,
+			this.entityId,
+			this.fieldName,
+			itemId,
+			'disconnect',
+			this.alias,
+		)
+	}
+
+	/**
+	 * Adds a new item to the list by creating a new entity.
+	 * Returns the ID of the newly created entity (temp ID).
+	 * For connecting existing entities, use connect() instead.
+	 */
+	add(data?: Partial<TEntity>): string {
+		this.assertNotDisposed()
+
+		// Create new entity with temp ID
+		const tempId = this.store.createEntity(this.itemType, data as Record<string, unknown>)
+
+		// Add to has-many relation
+		this.store.addToHasMany(
+			this.entityType,
+			this.entityId,
+			this.fieldName,
+			tempId,
+			this.alias,
+		)
+
+		return tempId
+	}
+
+	/**
+	 * Removes an item from the list by ID.
+	 * For newly created entities (via add()), cancels the add operation.
+	 * For existing server entities, plans a disconnect.
+	 */
+	remove(itemId: string): void {
+		this.assertNotDisposed()
+
+		this.store.removeFromHasMany(
+			this.entityType,
+			this.entityId,
+			this.fieldName,
+			itemId,
+			this.alias,
+		)
+	}
+
+	/**
+	 * Moves an item from one position to another within the list.
+	 * Note: This only affects client-side order. For persistent ordering,
+	 * use an 'order' field on the entity.
+	 */
+	move(fromIndex: number, toIndex: number): void {
+		this.assertNotDisposed()
+
+		this.store.moveInHasMany(
+			this.entityType,
+			this.entityId,
+			this.fieldName,
+			fromIndex,
+			toIndex,
+			this.alias,
+		)
+	}
+
+	/**
+	 * Resets the has-many relation to server state.
+	 * Clears all planned connections and removals.
+	 */
+	reset(): void {
+		this.assertNotDisposed()
+		this.store.resetHasMany(
+			this.entityType,
+			this.entityId,
+			this.fieldName,
+			this.alias,
+		)
+	}
+
+	/**
+	 * Disposes the handle.
+	 */
+	override dispose(): void {
+		super.dispose()
+
+		for (const handle of this.itemHandleCache.values()) {
+			handle.dispose()
+		}
+		this.itemHandleCache.clear()
+	}
+
+	/**
+	 * Type brand - ensures HasManyRef<Author> is not assignable to HasManyRef<Tag>.
+	 * This is a phantom property that only exists in the type system.
+	 */
+	get __entityType(): TEntity {
+		return undefined as unknown as TEntity
+	}
+
+	/**
+	 * Gets the list of errors on this relation.
+	 */
+	get errors(): readonly FieldError[] {
+		return this.store.getRelationErrors(this.entityType, this.entityId, this.fieldName)
+	}
+
+	/**
+	 * Checks if this relation has any errors.
+	 */
+	get hasError(): boolean {
+		return this.errors.length > 0
+	}
+
+	/**
+	 * Adds a client-side error to this relation.
+	 */
+	addError(error: ErrorInput): void {
+		this.assertNotDisposed()
+		this.dispatcher.dispatch(
+			addRelationError(this.entityType, this.entityId, this.fieldName, createClientError(error)),
+		)
+	}
+
+	/**
+	 * Clears all errors from this relation.
+	 */
+	clearErrors(): void {
+		this.assertNotDisposed()
+		this.dispatcher.dispatch(
+			clearRelationErrors(this.entityType, this.entityId, this.fieldName),
+		)
+	}
+
+	// ==================== Event Subscriptions ====================
+
+	/**
+	 * Subscribe to item connected events.
+	 */
+	onItemConnected(listener: EventListener<HasManyConnectedEvent>): Unsubscribe {
+		const emitter = this.dispatcher.getEventEmitter()
+		return emitter.onField(
+			'hasMany:connected',
+			this.entityType,
+			this.entityId,
+			this.fieldName,
+			listener,
+		)
+	}
+
+	/**
+	 * Subscribe to item disconnected events.
+	 */
+	onItemDisconnected(listener: EventListener<HasManyDisconnectedEvent>): Unsubscribe {
+		const emitter = this.dispatcher.getEventEmitter()
+		return emitter.onField(
+			'hasMany:disconnected',
+			this.entityType,
+			this.entityId,
+			this.fieldName,
+			listener,
+		)
+	}
+
+	/**
+	 * Intercept item connection (can cancel).
+	 */
+	interceptItemConnecting(interceptor: Interceptor<HasManyConnectingEvent>): Unsubscribe {
+		const emitter = this.dispatcher.getEventEmitter()
+		return emitter.interceptField(
+			'hasMany:connecting',
+			this.entityType,
+			this.entityId,
+			this.fieldName,
+			interceptor,
+		)
+	}
+
+	/**
+	 * Intercept item disconnection (can cancel).
+	 */
+	interceptItemDisconnecting(interceptor: Interceptor<HasManyDisconnectingEvent>): Unsubscribe {
+		const emitter = this.dispatcher.getEventEmitter()
+		return emitter.interceptField(
+			'hasMany:disconnecting',
+			this.entityType,
+			this.entityId,
+			this.fieldName,
+			interceptor,
+		)
+	}
+
+}

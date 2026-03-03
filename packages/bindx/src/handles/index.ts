@@ -1,6 +1,7 @@
 export { BaseHandle, EntityRelatedHandle } from './BaseHandle.js'
 export { FieldHandle } from './FieldHandle.js'
-export { EntityHandle, HasOneHandle, HasManyListHandle } from './EntityHandle.js'
+export { EntityHandle, HasOneHandle } from './EntityHandle.js'
+export { HasManyListHandle } from './HasManyListHandle.js'
 export {
 	FIELD_REF_META,
 	type HasOneRelationState,
