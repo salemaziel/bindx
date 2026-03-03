@@ -6,7 +6,7 @@
  */
 
 import type { SchemaRegistry } from '../schema/SchemaRegistry.js'
-import { createServerError, type ExecutionErrorType, type ServerError } from './types.js'
+import { createServerError, type ServerError } from './types.js'
 
 /**
  * Contember path element - either a field name or an array index.
@@ -21,7 +21,7 @@ export type PathElement =
 export interface ContemberMutationError {
 	readonly paths: PathElement[][]
 	readonly message: string
-	readonly type: ExecutionErrorType
+	readonly type: string
 }
 
 /**
@@ -173,7 +173,7 @@ function mapPath(
 	entityType: string,
 	schema: SchemaRegistry,
 	message: string,
-	errorType?: ExecutionErrorType,
+	errorType?: string,
 ): MappedError | null {
 	if (path.length === 0) {
 		return null
@@ -240,9 +240,9 @@ function mapPath(
 }
 
 /**
- * Converts Contember ExecutionErrorType to a user-friendly error code.
+ * Converts error type string to a user-friendly error code.
  */
-function getErrorCode(errorType?: ExecutionErrorType): string | undefined {
+function getErrorCode(errorType?: string): string | undefined {
 	if (!errorType) return undefined
 
 	switch (errorType) {

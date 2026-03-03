@@ -47,7 +47,7 @@ export type ErrorCategory = 'validation' | 'constraint' | 'not_found' | 'transie
  * - 'transient': Temporary errors that may succeed on retry
  * - 'unknown': Unclassified errors
  */
-export function classifyError(errorType?: ExecutionErrorType): ErrorCategory {
+export function classifyError(errorType?: string): ErrorCategory {
 	if (!errorType) return 'unknown'
 
 	switch (errorType) {
@@ -99,8 +99,8 @@ export interface ClientError extends BindxError {
  */
 export interface ServerError extends BindxError {
 	readonly source: 'server'
-	/** Contember execution error type for database errors */
-	readonly type?: ExecutionErrorType
+	/** Contember execution error type for database errors (string to support forward-compatible unknown types) */
+	readonly type?: string
 	/** Error category for classification */
 	readonly category: ErrorCategory
 	/** Whether this error might succeed on retry */
@@ -154,7 +154,7 @@ export function createClientError(input: ErrorInput): ClientError {
  */
 export function createServerError(
 	message: string,
-	type?: ExecutionErrorType,
+	type?: string,
 	code?: string,
 ): ServerError {
 	const category = classifyError(type)

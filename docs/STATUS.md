@@ -34,4 +34,4 @@
 - [x] 021 - Debug flag via globalThis string key
 - [x] 022 - Inconsistent error systems
 - [x] 023 - Role system complexity
-- [ ] 024 - `console.warn` for unknown error types
+- [x] 024 - `console.warn` for unknown error types
