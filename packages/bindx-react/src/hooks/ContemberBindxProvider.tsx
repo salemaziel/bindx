@@ -28,6 +28,8 @@ export interface ContemberBindxProviderProps {
 	 * - 'pessimistic': Wait for server confirmation before updating UI
 	 */
 	defaultUpdateMode?: UpdateMode
+	/** Enable debug logging (e.g., selection collection output) */
+	debug?: boolean
 }
 
 /**
@@ -70,6 +72,7 @@ export const ContemberBindxProvider = memo(function ContemberBindxProvider({
 	undoManager: undoManagerProp,
 	undoConfig,
 	defaultUpdateMode,
+	debug = false,
 }: ContemberBindxProviderProps) {
 
 	// Create GraphQL client and adapter
@@ -110,8 +113,9 @@ export const ContemberBindxProvider = memo(function ContemberBindxProvider({
 			batchPersister,
 			schema: null,
 			undoManager,
+			debug,
 		}
-	}, [schema, customStore, undoManagerProp, undoConfig, defaultUpdateMode])
+	}, [schema, customStore, undoManagerProp, undoConfig, defaultUpdateMode, debug])
 
 	return (
 		<BindxContext.Provider value={bindxValue}>

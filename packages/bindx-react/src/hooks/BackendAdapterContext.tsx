@@ -26,6 +26,8 @@ export interface BindxContextValue {
 	schema: SchemaRegistry | null
 	/** Undo manager (if enabled) */
 	undoManager: UndoManager | null
+	/** Whether debug logging is enabled */
+	debug: boolean
 }
 
 export const BindxContext = createContext<BindxContextValue | null>(null)
@@ -52,6 +54,8 @@ export interface BindxProviderProps {
 	 * - 'pessimistic': Wait for server confirmation before updating UI
 	 */
 	defaultUpdateMode?: UpdateMode
+	/** Enable debug logging (e.g., selection collection output) */
+	debug?: boolean
 	children: ReactNode
 }
 
@@ -80,6 +84,7 @@ export function BindxProvider({
 	enableUndo = false,
 	undoConfig,
 	defaultUpdateMode,
+	debug = false,
 	children,
 }: BindxProviderProps) {
 	// Create services - memoized to maintain stable references
@@ -117,8 +122,9 @@ export function BindxProvider({
 			batchPersister,
 			schema: schemaRegistry,
 			undoManager,
+			debug,
 		}
-	}, [adapter, customStore, schemaDefinition, customMutationCollector, enableUndo, undoConfig, defaultUpdateMode])
+	}, [adapter, customStore, schemaDefinition, customMutationCollector, enableUndo, undoConfig, defaultUpdateMode, debug])
 
 	return <BindxContext.Provider value={services}>{children}</BindxContext.Provider>
 }

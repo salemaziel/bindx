@@ -1,10 +1,11 @@
-import { useMemo, useRef, type ReactNode } from 'react'
+import { useContext, useMemo, useRef, type ReactNode } from 'react'
 import { createCollectorProxy } from '../jsx/proxy.js'
 import { collectSelection } from '../jsx/analyzer.js'
 import { mergeSelections } from '../jsx/SelectionMeta.js'
 import { buildQueryFromSelection, SelectionScope } from '@contember/bindx'
 import type { SelectionMeta } from '@contember/bindx'
 import type { EntityAccessor } from '../jsx/types.js'
+import { BindxContext } from './BackendAdapterContext.js'
 
 /**
  * Options for useSelectionCollectionForList hook.
@@ -55,6 +56,7 @@ export function useSelectionCollectionForList<T>(
 	options: UseSelectionCollectionForListOptions<T>,
 ): SelectionCollectionForListResult {
 	const { entityType, filter, orderBy, limit, offset, children } = options
+	const bindxContext = useContext(BindxContext)
 
 	// Stable children ref - we use a ref to avoid re-running useMemo on every render
 	const childrenRef = useRef(children)
@@ -87,8 +89,8 @@ export function useSelectionCollectionForList<T>(
 		const selection = scope.toSelectionMeta()
 		mergeSelections(selection, jsxSel)
 
-		// Debug output can be enabled via global flag
-		if (typeof globalThis !== 'undefined' && (globalThis as Record<string, unknown>)['__BINDX_DEBUG__']) {
+		// Debug output can be enabled via the debug prop on BindxProvider
+		if (bindxContext?.debug) {
 			console.log('[EntityList] Collected selection for', entityType, ':')
 		}
 
