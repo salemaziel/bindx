@@ -44,6 +44,15 @@ interface SelectionCache {
  * 3. Analyzes returned JSX for component-level selections
  * 4. Merges both sources of selection
  *
+ * **Limitation:** Selection is collected once per entity identity
+ * (`[entityType, entityId]`). Fields accessed conditionally in the
+ * children render function are only captured if they are accessed during
+ * the initial collection phase. If a condition changes on a later render
+ * (e.g., `isAdmin` becomes `true`), newly accessed fields will not be
+ * fetched. To work around this, ensure all possible fields are accessed
+ * unconditionally or use the `useEntity` hook with an explicit definer
+ * that includes all needed fields.
+ *
  * @internal This hook is for internal use only.
  */
 export function useSelectionCollection<T>(

@@ -36,3 +36,11 @@ Options:
 1. Document the limitation — always declare all possible fields in the selection definer
 2. Add a way to declare "possible" fields upfront
 3. Re-collect selection when accessed fields change (complex, may cause waterfalls)
+
+## Resolution
+
+Chose **option 1**: documented the limitation via JSDoc comments on:
+- `useEntity` / `useEntityList` hooks in `createBindx()` and `createRoleAwareBindx()` — advising users to include all conditionally accessed fields in the selection definer
+- `useSelectionCollection` — explaining the `[entityType, entityId]` memoization and its impact on conditional field access in the JSX pattern
+
+This is inherent to the selection-then-fetch design: the definer declares what to fetch, and only declared fields are available. Re-collecting on every render (option 3) risks query waterfalls and is disproportionate for a minor limitation.

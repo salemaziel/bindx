@@ -315,6 +315,20 @@ export function createBindx<TModels extends { [K in keyof TModels]: object }>(
 
 	/**
 	 * Hook to fetch and manage a single entity with full type inference.
+	 *
+	 * The `definer` declares which fields will be fetched from the backend.
+	 * Only fields included in the definer are available — fields accessed
+	 * conditionally in JSX must still be declared upfront in the definer:
+	 *
+	 * @example
+	 * ```tsx
+	 * // Wrong: internalNotes not in definer, will be undefined
+	 * const article = useEntity('Article', { by: { id } }, e => e.title())
+	 * return <>{isAdmin && article.internalNotes.value}</>
+	 *
+	 * // Correct: declare all fields you may access
+	 * const article = useEntity('Article', { by: { id } }, e => e.title().internalNotes())
+	 * ```
 	 */
 	function useEntity<TEntityName extends keyof TModels & string, TResult extends object>(
 		entityType: TEntityName,
@@ -333,6 +347,9 @@ export function createBindx<TModels extends { [K in keyof TModels]: object }>(
 
 	/**
 	 * Hook to fetch and manage a list of entities with full type inference.
+	 *
+	 * The `definer` declares which fields will be fetched. Include all fields
+	 * you may access, even conditionally — see {@link useEntity} for details.
 	 */
 	function useEntityList<TEntityName extends keyof TModels & string, TResult extends object>(
 		entityType: TEntityName,
@@ -434,6 +451,10 @@ export function createRoleAwareBindx<TRoleSchemas extends RoleSchemasBase<TRoleS
 
 	/**
 	 * Hook to fetch and manage a single entity with role-based typing.
+	 *
+	 * The `definer` declares which fields will be fetched from the backend.
+	 * Only fields included in the definer are available — fields accessed
+	 * conditionally in JSX must still be declared upfront in the definer.
 	 */
 	function useEntity<
 		TEntityName extends string,
@@ -456,6 +477,9 @@ export function createRoleAwareBindx<TRoleSchemas extends RoleSchemasBase<TRoleS
 
 	/**
 	 * Hook to fetch and manage a list of entities with role-based typing.
+	 *
+	 * The `definer` declares which fields will be fetched. Include all fields
+	 * you may access, even conditionally — see {@link useEntity} for details.
 	 */
 	function useEntityList<
 		TEntityName extends string,

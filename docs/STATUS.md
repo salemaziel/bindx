@@ -30,7 +30,7 @@
 ## Minor
 
 - [x] 019 - Memory leak — unremoved abort event listeners
-- [ ] 020 - Conditional selection limitation
+- [x] 020 - Conditional selection limitation
 - [ ] 021 - Debug flag via globalThis string key
 - [ ] 022 - Inconsistent error systems
 - [ ] 023 - Role system complexity
