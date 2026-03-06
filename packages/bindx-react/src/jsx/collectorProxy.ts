@@ -186,6 +186,7 @@ function createCollectorFieldRef(
 		items: [],
 		map: mapFn,
 		add: () => '',
+		getById: () => ({} as any),
 		remove: () => {},
 		move: () => {},
 		connect: () => {},

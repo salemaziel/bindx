@@ -11,11 +11,15 @@
 	},
 	"dependencies": {
 		"@contember/bindx": "workspace:*",
+		"@contember/bindx-editor": "workspace:*",
 		"@contember/client-content": "^2.1.0-alpha.30",
 		"@contember/graphql-client": "^2.1.0-alpha.30",
 		"@contember/bindx-react": "workspace:*",
 		"react": "^19.0.0",
-		"react-dom": "^19.0.0"
+		"react-dom": "^19.0.0",
+		"slate": "^0.103.0",
+		"slate-history": "^0.109.0",
+		"slate-react": "^0.110.1"
 	},
 	"devDependencies": {
 		"@types/react": "^19",

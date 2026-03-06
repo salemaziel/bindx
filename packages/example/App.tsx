@@ -8,6 +8,9 @@ import {
 	ArticleWithAuthorSelectExample,
 	LocationSelectExample,
 	UndoDemo,
+	RichTextEditorExample,
+	BlockEditorExample,
+	SimpleBlockEditorExample,
 } from './components/index.js'
 
 // Create mock adapter with sample data
@@ -31,6 +34,27 @@ export function App() {
 						<h2>🔄 Undo/Redo Demo</h2>
 						<p>Edit fields and use Undo/Redo. Changes are auto-grouped when typing rapidly.</p>
 						<UndoDemo id="article-1" />
+					</section>
+
+					<hr />
+
+					{/* Editor examples */}
+					<section>
+						<h2>Rich Text Editor</h2>
+						<p>Inline rich text editing with bold, italic, and underline formatting.</p>
+						<RichTextEditorExample id="article-1" />
+					</section>
+
+					<section>
+						<h2>Block Editor (with references)</h2>
+						<p>Structured block editor with embedded image references. Click "Insert Image" to add a block.</p>
+						<BlockEditorExample id="article-1" />
+					</section>
+
+					<section>
+						<h2>Block Editor (simple)</h2>
+						<p>Simple block editor without references — just rich text paragraphs.</p>
+						<SimpleBlockEditorExample id="article-2" />
 					</section>
 
 					<hr />

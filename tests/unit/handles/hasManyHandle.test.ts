@@ -430,6 +430,56 @@ describe('HasManyListHandle', () => {
 		})
 	})
 
+	// ==================== getById ====================
+
+	describe('getById', () => {
+		test('should return entity accessor by ID', () => {
+			store.setEntityData('Article', 'a-1', {
+				id: 'a-1',
+				title: 'Test',
+				tags: [
+					{ id: 't-1', name: 'Tag 1' },
+					{ id: 't-2', name: 'Tag 2' },
+				],
+			}, true)
+
+			const handle = createHasManyHandle()
+			// Initialize items first
+			expect(handle.items.length).toBe(2)
+
+			const item = handle.getById('t-1')
+			expect(item.id as string).toBe('t-1')
+		})
+
+		test('should work for newly created entities via add()', () => {
+			store.setEntityData('Article', 'a-1', {
+				id: 'a-1',
+				title: 'Test',
+				tags: [],
+			}, true)
+
+			const handle = createHasManyHandle()
+			const tempId = handle.add({ name: 'New Tag' })
+
+			const item = handle.getById(tempId)
+			expect(item.id as string).toBe(tempId)
+		})
+
+		test('should return cached handle (same instance)', () => {
+			store.setEntityData('Article', 'a-1', {
+				id: 'a-1',
+				title: 'Test',
+				tags: [{ id: 't-1', name: 'Tag 1' }],
+			}, true)
+
+			const handle = createHasManyHandle()
+			const item1 = handle.getById('t-1')
+			const item2 = handle.getById('t-1')
+
+			expect(item1).toBe(item2)
+		})
+	})
+
 	// ==================== Errors ====================
 
 	describe('Errors', () => {

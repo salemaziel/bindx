@@ -192,7 +192,7 @@ export type {
 	DirtyEntity,
 	PersistScope,
 	AllScope,
-	EntityScope,
+	EntityScope as EntityPersistScope,
 	FieldsScope,
 	RelationScope,
 	CustomScope,
@@ -306,6 +306,14 @@ export {
 	setBrandValidation,
 	validateBrand,
 } from './jsx/index.js'
+
+// Entity Scope
+export {
+	EntityScope,
+	useEntityScope,
+	useOptionalEntityScope,
+	type EntityScopeProps,
+} from './components/EntityScope.js'
 
 // ============================================================================
 // Internal React API

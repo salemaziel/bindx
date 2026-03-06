@@ -9,7 +9,17 @@ export const mockData: MockDataStore = {
 			id: 'article-1',
 			title: 'Introduction to React',
 			content: 'React is a JavaScript library for building user interfaces...',
+			richContent: {
+				formatVersion: 2,
+				children: [
+					{ type: 'paragraph', children: [{ text: 'This is a block editor example with ' }, { text: 'bold text', bold: true }, { text: ' and ' }, { text: 'italic text', italic: true }, { text: '.' }] },
+					{ type: 'paragraph', children: [{ text: 'Try editing this content!' }] },
+				],
+			},
 			publishedAt: '2024-01-15',
+			contentReferences: [
+				{ id: 'ref-1', type: 'image', imageUrl: 'https://picsum.photos/400/200', caption: 'A sample image' },
+			],
 			author: {
 				id: 'author-1',
 				name: 'John Doe',
@@ -31,7 +41,9 @@ export const mockData: MockDataStore = {
 			id: 'article-2',
 			title: 'TypeScript Best Practices',
 			content: 'TypeScript adds static typing to JavaScript...',
+			richContent: null,
 			publishedAt: '2024-02-20',
+			contentReferences: [],
 			author: {
 				id: 'author-2',
 				name: 'Jane Smith',
@@ -89,6 +101,9 @@ export const mockData: MockDataStore = {
 		'tag-4': { id: 'tag-4', name: 'CSS', color: '#264de4' },
 		'tag-5': { id: 'tag-5', name: 'Node.js', color: '#339933' },
 		'tag-6': { id: 'tag-6', name: 'GraphQL', color: '#e10098' },
+	},
+	ContentReference: {
+		'ref-1': { id: 'ref-1', type: 'image', imageUrl: 'https://picsum.photos/400/200', caption: 'A sample image' },
 	},
 	Location: {
 		'location-1': { id: 'location-1', lat: 40.7128, lng: -74.006, label: 'New York' },

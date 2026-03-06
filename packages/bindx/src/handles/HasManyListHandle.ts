@@ -202,6 +202,15 @@ export class HasManyListHandle<TEntity extends object = object, TSelected = TEnt
 	}
 
 	/**
+	 * Gets an item handle by entity ID.
+	 * Works for both server entities and newly created entities (via add()).
+	 * Returns an EntityAccessor with direct field access.
+	 */
+	getById(id: string): EntityAccessor<TEntity, TSelected> {
+		return this.getItemHandle(id)
+	}
+
+	/**
 	 * Checks if the list is dirty (items added/removed/moved/connected/disconnected).
 	 */
 	get isDirty(): boolean {

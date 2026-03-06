@@ -178,6 +178,7 @@ function createInlineFieldRef(
 		get items() { return getItems() },
 		map: mapFn,
 		add: () => '',
+		getById: () => ({} as any),
 		remove: () => {},
 		move: () => {},
 		connect: () => {},

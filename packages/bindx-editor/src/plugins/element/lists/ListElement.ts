@@ -1,0 +1,26 @@
+import { Editor, Element, Element as SlateElement, Node, Path as SlatePath } from 'slate'
+import { isUnorderedListElement, UnorderedListElement } from './UnorderedListElement.js'
+import { isOrderedListElement, OrderedListElement } from './OrderedListElement.js'
+import { BindxEditor } from '../../../editor/index.js'
+import { isListItemElement } from './ListItemElement.js'
+
+export const isListElement = <T extends UnorderedListElement | OrderedListElement>(
+	element: Node,
+	suchThat?: Partial<T>,
+): element is T => isOrderedListElement(element, suchThat as Partial<OrderedListElement>) || isUnorderedListElement(element, suchThat as Partial<UnorderedListElement>)
+
+export const getParentListElement = (editor: Editor): Element | undefined => {
+	const closestNonDefaultEntry = BindxEditor.closest(editor, {
+		match: node => SlateElement.isElement(node) && Editor.isBlock(editor, node) && !editor.isDefaultElement(node),
+	})
+	if (!closestNonDefaultEntry) {
+		return undefined
+	}
+	const [closestNonDefaultElement, closestNonDefaultPath] = closestNonDefaultEntry
+	if (isListItemElement(closestNonDefaultElement)) {
+		return Editor.node(editor, SlatePath.parent(closestNonDefaultPath))[0] as SlateElement
+	} else if (isListElement(closestNonDefaultElement)) {
+		return closestNonDefaultElement
+	}
+	return undefined
+}

@@ -173,6 +173,43 @@
 			margin: 0;
 			color: #666;
 		}
+		/* Editor styles */
+		.editor-toolbar {
+			display: flex;
+			gap: 4px;
+			padding: 8px;
+			border: 1px solid #ddd;
+			border-bottom: none;
+			border-radius: 4px 4px 0 0;
+			background: #fafafa;
+		}
+		.editor-toolbar button {
+			padding: 4px 10px;
+			background: white;
+			border: 1px solid #ccc;
+			border-radius: 3px;
+			cursor: pointer;
+			font-size: 13px;
+			min-width: 32px;
+		}
+		.editor-toolbar button:hover {
+			background: #e8e8e8;
+		}
+		.editor-content {
+			border: 1px solid #ddd;
+			border-radius: 0 0 4px 4px;
+			padding: 12px 16px;
+			min-height: 120px;
+		}
+		.editor-content [data-slate-editor] {
+			outline: none;
+		}
+		.editor-content p {
+			margin: 0 0 8px;
+		}
+		.editor-example {
+			margin-bottom: 16px;
+		}
 	</style>
 </head>
 <body>

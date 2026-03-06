@@ -1,0 +1,31 @@
+{
+	"name": "@contember/bindx-editor",
+	"version": "0.1.0",
+	"description": "Slate-based rich text and block editor for Contember Bindx",
+	"type": "module",
+	"main": "./src/index.ts",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"build": "tsc --build",
+		"typecheck": "tsc --build"
+	},
+	"peerDependencies": {
+		"react": ">=18.0.0",
+		"react-dom": ">=18.0.0",
+		"slate": "^0.103.0",
+		"slate-history": "^0.109.0",
+		"slate-react": "^0.110.1"
+	},
+	"dependencies": {
+		"@contember/bindx": "workspace:*",
+		"@contember/bindx-react": "workspace:*",
+		"@radix-ui/react-slot": "^1.1.0"
+	},
+	"files": [
+		"dist",
+		"src"
+	],
+	"license": "MIT"
+}

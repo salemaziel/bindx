@@ -13,6 +13,9 @@ export {
 	TagListExample,
 	ArticleWithAuthorSelectExample,
 	LocationSelectExample,
+	RichTextEditorExample,
+	BlockEditorExample,
+	SimpleBlockEditorExample,
 } from './examples/index.js'
 
 // Undo/Redo demo

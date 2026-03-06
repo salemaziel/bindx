@@ -398,6 +398,9 @@ function createRuntimeFieldRef(
 		},
 		map: mapFn,
 		add: addFn,
+		getById: (_id: string) => {
+			throw new Error('getById is not available on runtime proxy')
+		},
 		remove: removeFn,
 		move: moveFn,
 		connect: connectFn,

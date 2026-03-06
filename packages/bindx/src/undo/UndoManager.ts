@@ -44,6 +44,7 @@ export class UndoManager {
 	private manualGroupId: string | null = null
 	private manualGroupLabel: string | undefined = undefined
 	private subscribers = new Set<Subscriber>()
+	private cachedState: UndoState | null = null
 
 	private readonly maxHistorySize: number
 	private readonly debounceMs: number
@@ -155,6 +156,7 @@ export class UndoManager {
 				timestamp: Date.now(),
 			}
 			this.startDebounceTimer()
+			this.notifySubscribers()
 		}
 	}
 
@@ -389,21 +391,26 @@ export class UndoManager {
 
 	/**
 	 * Gets current state for React integration.
+	 * Returns a cached object to satisfy useSyncExternalStore's referential equality requirement.
 	 */
 	getState(): UndoState {
-		return {
-			canUndo: this.undoStack.length > 0 || this.pendingEntry !== null,
-			canRedo: this.redoStack.length > 0,
-			isBlocked: this.isBlocked,
-			undoCount: this.undoStack.length + (this.pendingEntry ? 1 : 0),
-			redoCount: this.redoStack.length,
+		if (!this.cachedState) {
+			this.cachedState = {
+				canUndo: this.undoStack.length > 0 || this.pendingEntry !== null,
+				canRedo: this.redoStack.length > 0,
+				isBlocked: this.isBlocked,
+				undoCount: this.undoStack.length + (this.pendingEntry ? 1 : 0),
+				redoCount: this.redoStack.length,
+			}
 		}
+		return this.cachedState
 	}
 
 	/**
 	 * Notifies all subscribers of state change.
 	 */
 	private notifySubscribers(): void {
+		this.cachedState = null
 		for (const sub of this.subscribers) {
 			sub()
 		}

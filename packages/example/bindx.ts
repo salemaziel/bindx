@@ -1,5 +1,5 @@
 import { createBindx, defineSchema, scalar, hasOne, hasMany } from '@contember/bindx-react'
-import type { Article, Author, Tag, Location } from './types.js'
+import type { Article, Author, Tag, Location, ContentReference } from './types.js'
 
 /**
  * Schema mapping entity names to their types.
@@ -10,6 +10,7 @@ export interface Schema {
 	Author: Author
 	Tag: Tag
 	Location: Location
+	ContentReference: ContentReference
 }
 
 /**
@@ -22,10 +23,12 @@ const schema = defineSchema<Schema>({
 				id: scalar(),
 				title: scalar(),
 				content: scalar(),
+				richContent: scalar(),
 				publishedAt: scalar(),
 				author: hasOne('Author'),
 				location: hasOne('Location'),
 				tags: hasMany('Tag'),
+				contentReferences: hasMany('ContentReference'),
 			},
 		},
 		Author: {
@@ -53,38 +56,18 @@ const schema = defineSchema<Schema>({
 				label: scalar(),
 			},
 		},
+		ContentReference: {
+			fields: {
+				id: scalar(),
+				type: scalar(),
+				imageUrl: scalar(),
+				caption: scalar(),
+			},
+		},
 	},
 })
 
 /**
  * Type-safe bindx hooks and components for this project's schema.
- *
- * Usage with hooks:
- * ```ts
- * const article = useEntity('Article', { id }, e => ({
- *   title: e.title,
- *   author: { name: e.author.name },
- * }))
- *
- * const authors = useEntityList('Author', {}, e => ({
- *   id: e.id,
- *   name: e.name,
- * }))
- * ```
- *
- * Usage with JSX component:
- * ```tsx
- * <Entity name="Article" id={articleId}>
- *   {article => (
- *     <div>
- *       <Field field={article.fields.title} />
- *     </div>
- *   )}
- * </Entity>
- * ```
- *
- * - Entity name ('Article') is autocompleted
- * - `e` is automatically typed as ModelProxy<Article>
- * - Result fields are fully typed
  */
 export const { useEntity, useEntityList, Entity, createComponent } = createBindx(schema)

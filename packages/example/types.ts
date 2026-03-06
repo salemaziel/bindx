@@ -24,12 +24,21 @@ export interface Location {
 	label: string
 }
 
+export interface ContentReference {
+	id: string
+	type: string
+	imageUrl: string
+	caption: string
+}
+
 export interface Article {
 	id: string
 	title: string
 	content: string
+	richContent: string | null
 	publishedAt: string | null
 	author: Author
 	location: Location
 	tags: Tag[]
+	contentReferences: ContentReference[]
 }

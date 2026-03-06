@@ -334,6 +334,9 @@ export interface HasManyRef<
 
 	/** Iterate over items */
 	map<R>(fn: (item: EntityAccessor<TEntity, TSelected, TBrand, TEntityName, TSchema>, index: number) => R): R[]
+
+	/** Get an item handle by entity ID */
+	getById(id: string): EntityAccessor<TEntity, TSelected, TBrand, TEntityName, TSchema>
 }
 
 // ============================================================================
