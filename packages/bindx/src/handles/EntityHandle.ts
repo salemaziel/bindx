@@ -198,8 +198,12 @@ export class EntityHandle<T extends object = object, TSelected = T> extends Enti
 
 			if (relationType === 'hasOne') {
 				const handle = this.hasOne(fieldName)
-				// Use $isDirty since isDirty is not in HAS_ONE_HANDLE_PROPERTIES
+				// Check if the relation itself is dirty (connect/disconnect)
 				if (handle.$isDirty) {
+					return true
+				}
+				// Check if the target entity has dirty fields
+				if (handle.$entity.$isDirty) {
 					return true
 				}
 			} else if (relationType === 'hasMany') {

@@ -330,6 +330,66 @@ describe('HasOne Relations - Dirty State Tracking', () => {
 		expect(getByTestId(container, 'relation-dirty').textContent).toBe('clean')
 	})
 
+	test('17a. Entity isDirty should reflect nested entity field changes', async () => {
+		const adapter = new MockAdapter(createMockData(), { delay: 0 })
+
+		function TestComponent(): React.ReactElement {
+			const article = useEntity('Article', { by: { id: 'article-1' } }, e =>
+				e.id().title().author(a => a.id().name().email()),
+			)
+
+			if (article.isLoading) {
+				return <div data-testid="loading">Loading...</div>
+			}
+			if (article.isError || article.isNotFound) {
+				return <div>Error</div>
+			}
+
+			return (
+				<div>
+					<span data-testid="author-name">{article.author.$fields.name.value}</span>
+					<span data-testid="author-field-dirty">{article.author.$fields.name.isDirty ? 'dirty' : 'clean'}</span>
+					<span data-testid="relation-dirty">{article.author.$isDirty ? 'dirty' : 'clean'}</span>
+					<span data-testid="entity-dirty">{article.isDirty ? 'dirty' : 'clean'}</span>
+					<button
+						data-testid="change-name"
+						onClick={() => article.author.$fields.name.setValue('Updated Name')}
+					>
+						Change Name
+					</button>
+				</div>
+			)
+		}
+
+		const { container } = render(
+			<BindxProvider adapter={adapter}>
+				<TestComponent />
+			</BindxProvider>,
+		)
+
+		await waitFor(() => {
+			expect(queryByTestId(container, 'author-name')).not.toBeNull()
+		})
+
+		// Initially clean
+		expect(getByTestId(container, 'author-name').textContent).toBe('John Doe')
+		expect(getByTestId(container, 'author-field-dirty').textContent).toBe('clean')
+		expect(getByTestId(container, 'entity-dirty').textContent).toBe('clean')
+
+		// Change author name
+		act(() => {
+			;(getByTestId(container, 'change-name') as HTMLButtonElement).click()
+		})
+
+		// Author field should be dirty
+		expect(getByTestId(container, 'author-name').textContent).toBe('Updated Name')
+		expect(getByTestId(container, 'author-field-dirty').textContent).toBe('dirty')
+		// Relation isDirty tracks connect/disconnect, not nested field changes
+		expect(getByTestId(container, 'relation-dirty').textContent).toBe('clean')
+		// But entity isDirty SHOULD be true because there are persistable changes
+		expect(getByTestId(container, 'entity-dirty').textContent).toBe('dirty')
+	})
+
 	test('17. Entity isDirty should reflect hasOne relation changes', async () => {
 		const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
