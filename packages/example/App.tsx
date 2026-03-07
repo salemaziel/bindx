@@ -1,5 +1,8 @@
-import { BindxProvider, MockAdapter } from '@contember/bindx-react'
+import { type ReactNode } from 'react'
+import { BindxProvider, ContemberBindxProvider, MockAdapter } from '@contember/bindx-react'
+import { GraphQlClient } from '@contember/graphql-client'
 import { mockData } from './mockData.js'
+import { schemaNames } from './generated/names.js'
 import {
 	ArticleEditor,
 	ArticleView,
@@ -13,75 +16,95 @@ import {
 	SimpleBlockEditorExample,
 } from './components/index.js'
 
-// Create mock adapter with sample data
-const adapter = new MockAdapter(mockData, { debug: true, delay: 200 })
+const useMock = !import.meta.env.VITE_CONTEMBER_API_URL
+
+function AppProvider({ children }: { children: ReactNode }) {
+	if (useMock) {
+		const adapter = new MockAdapter(mockData, { debug: true, delay: 200 })
+		return (
+			<BindxProvider adapter={adapter} enableUndo={true}>
+				{children}
+			</BindxProvider>
+		)
+	}
+
+	const client = new GraphQlClient({
+		url: `${import.meta.env.VITE_CONTEMBER_API_URL}/content/example/live`,
+		apiToken: import.meta.env.VITE_CONTEMBER_API_TOKEN,
+	})
+
+	return (
+		<ContemberBindxProvider client={client} schema={schemaNames} undoManager={true} debug={true}>
+			{children}
+		</ContemberBindxProvider>
+	)
+}
 
 /**
  * Example application demonstrating bindx usage
  */
 export function App() {
 	return (
-		<BindxProvider adapter={adapter} enableUndo={true}>
-			<div className="app">
+		<AppProvider>
+			<div className="app" data-testid="app">
 				<header>
 					<h1>Bindx Demo</h1>
-					<p>Examples of data binding patterns with fragments and entity lists</p>
+					<p>
+						Examples of data binding patterns with fragments and entity lists
+						{useMock && <span> (mock mode)</span>}
+					</p>
 				</header>
 
 				<main>
-					{/* Undo/Redo Demo */}
-					<section>
-						<h2>🔄 Undo/Redo Demo</h2>
+					<section data-testid="section-undo">
+						<h2>Undo/Redo Demo</h2>
 						<p>Edit fields and use Undo/Redo. Changes are auto-grouped when typing rapidly.</p>
-						<UndoDemo id="article-1" />
+						<UndoDemo id="00000000-0000-0000-0000-000000000e01" />
 					</section>
 
 					<hr />
 
-					{/* Editor examples */}
-					<section>
+					<section data-testid="section-rich-text">
 						<h2>Rich Text Editor</h2>
 						<p>Inline rich text editing with bold, italic, and underline formatting.</p>
-						<RichTextEditorExample id="article-1" />
+						<RichTextEditorExample id="00000000-0000-0000-0000-000000000e01" />
 					</section>
 
-					<section>
+					<section data-testid="section-block-editor">
 						<h2>Block Editor (with references)</h2>
 						<p>Structured block editor with embedded image references. Click "Insert Image" to add a block.</p>
-						<BlockEditorExample id="article-1" />
+						<BlockEditorExample id="00000000-0000-0000-0000-000000000e01" />
 					</section>
 
-					<section>
+					<section data-testid="section-simple-block">
 						<h2>Block Editor (simple)</h2>
 						<p>Simple block editor without references — just rich text paragraphs.</p>
-						<SimpleBlockEditorExample id="article-2" />
+						<SimpleBlockEditorExample id="00000000-0000-0000-0000-000000000e02" />
 					</section>
 
 					<hr />
 
-					{/* Basic useEntity examples */}
-					<section>
+					<section data-testid="section-article-editor">
 						<h2>1. Article Editor (useEntity with Fragment Composition)</h2>
 						<p>Full article editor using reusable fragments for author, location, and tags.</p>
-						<ArticleEditor id="article-1" />
+						<ArticleEditor id="00000000-0000-0000-0000-000000000e01" />
 					</section>
 
-					<section>
+					<section data-testid="section-article-view">
 						<h2>2. Article View (useEntity with Inline Fragment)</h2>
 						<p>Simple read-only view using inline fragment definition.</p>
-						<ArticleView id="article-2" />
+						<ArticleView id="00000000-0000-0000-0000-000000000e02" />
 					</section>
 
 					<hr />
 
-					{/* useEntityList examples */}
-					<section>
+					<section data-testid="section-author-list">
 						<h2>3. Author List (useEntityList)</h2>
 						<p>Display all authors from the database using useEntityList.</p>
 						<AuthorListExample />
 					</section>
 
-					<section>
+					<section data-testid="section-tag-list">
 						<h2>4. Tag List (useEntityList with Custom Rendering)</h2>
 						<p>Tags displayed as colored badges.</p>
 						<TagListExample />
@@ -89,14 +112,13 @@ export function App() {
 
 					<hr />
 
-					{/* Combined examples */}
-					<section>
+					<section data-testid="section-author-select">
 						<h2>5. Article with Author Select</h2>
 						<p>Combining useEntity for form data with useEntityList for select options.</p>
-						<ArticleWithAuthorSelectExample id="article-1" />
+						<ArticleWithAuthorSelectExample id="00000000-0000-0000-0000-000000000e01" />
 					</section>
 
-					<section>
+					<section data-testid="section-location">
 						<h2>6. Location Picker</h2>
 						<p>Standalone location select using useEntityList.</p>
 						<LocationSelectExample />
@@ -104,9 +126,9 @@ export function App() {
 				</main>
 
 				<footer>
-					<p>Open browser console to see MockAdapter debug logs.</p>
+					<p>{useMock ? 'Mock mode — open browser console to see MockAdapter debug logs.' : 'Connected to Contember API.'}</p>
 				</footer>
 			</div>
-		</BindxProvider>
+		</AppProvider>
 	)
 }
