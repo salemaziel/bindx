@@ -332,7 +332,6 @@ export {
 	mergeSelections,
 	createEmptySelection,
 	createCollectorProxy,
-	createRuntimeAccessor,
 	analyzeJsx,
 	collectSelection,
 	convertToQuerySelection,

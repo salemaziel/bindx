@@ -1,10 +1,9 @@
 import React, { memo, useCallback, useEffect, useMemo, useRef, useSyncExternalStore, type ReactElement } from 'react'
-import { useBindxContext } from '../../hooks/BackendAdapterContext.js'
+import { useBindxContext, useSchemaRegistry } from '../../hooks/BackendAdapterContext.js'
 import { useEntity } from '../../hooks/useEntity.js'
 import { useSelectionCollection } from '../../hooks/useSelectionCollection.js'
-import { createRuntimeAccessor } from '../proxy.js'
-import type { EntityAccessor } from '../types.js'
-import { type EntityDef, type EntityUniqueWhere, type AnyBrand, type FieldError } from '@contember/bindx'
+import type { EntityAccessor, SelectionMeta } from '../types.js'
+import { type EntityDef, type EntityUniqueWhere, type AnyBrand, type FieldError, EntityHandle, type SnapshotStore, type ActionDispatcher, type SchemaRegistry } from '@contember/bindx'
 
 // ==================== Props Types ====================
 
@@ -85,7 +84,8 @@ function EntityByMode({
 	error: errorFallback,
 	notFound,
 }: EntityByModeProps): ReactElement | null {
-	const { store } = useBindxContext()
+	const { store, dispatcher } = useBindxContext()
+	const schemaRegistry = useSchemaRegistry()
 
 	// Stable key for the 'by' clause
 	const byKey = useMemo(() => JSON.stringify(by), [by])
@@ -120,19 +120,18 @@ function EntityByMode({
 		return <>{notFound ?? <DefaultNotFound entityType={entityType} by={by} />}</>
 	}
 
-	// Phase 3: Runtime render with JSX proxy accessor
-	// createRuntimeAccessor is needed because JSX components (Field, HasMany, etc.)
-	// expect the selection-aware runtime proxy
-	const accessor = createRuntimeAccessor<unknown>(
-		entityType,
-		result.id,
-		store,
-		() => {},
-		[],
-		selection,
+	// Phase 3: Runtime render with EntityHandle (selection-aware)
+	return (
+		<EntityHandleRenderer
+			entityId={result.id}
+			entityType={entityType}
+			store={store}
+			dispatcher={dispatcher}
+			schemaRegistry={schemaRegistry}
+			selection={selection}
+			children={children}
+		/>
 	)
-
-	return <>{children(accessor)}</>
 }
 
 // ==================== EntityCreateMode Component ====================
@@ -154,7 +153,8 @@ function EntityCreateMode({
 	error: errorFallback,
 	onPersisted,
 }: EntityCreateModeProps): ReactElement {
-	const { store } = useBindxContext()
+	const { store, dispatcher } = useBindxContext()
+	const schemaRegistry = useSchemaRegistry()
 	const tempIdRef = useRef<string | null>(null)
 
 	// Create entity once on mount (using ref to ensure only one creation)
@@ -216,15 +216,52 @@ function EntityCreateMode({
 		collect: collector => children(collector as EntityAccessor<unknown>),
 	})
 
-	// Create runtime accessor
-	const accessor = createRuntimeAccessor<unknown>(
-		entityType,
-		tempId,
-		store,
-		() => {}, // Changes are automatically handled by useSyncExternalStore
+	// Create EntityHandle (no selection for create mode - all fields accessible)
+	return (
+		<EntityHandleRenderer
+			entityId={tempId}
+			entityType={entityType}
+			store={store}
+			dispatcher={dispatcher}
+			schemaRegistry={schemaRegistry}
+			children={children}
+		/>
+	)
+}
+
+// ==================== EntityHandle Renderer ====================
+
+interface EntityHandleRendererProps {
+	entityId: string
+	entityType: string
+	store: SnapshotStore
+	dispatcher: ActionDispatcher
+	schemaRegistry: SchemaRegistry
+	selection?: SelectionMeta
+	children: (entity: EntityAccessor<unknown>) => React.ReactNode
+}
+
+/**
+ * Shared component that creates an EntityHandle and renders children with it.
+ * Used by both EntityByMode and EntityCreateMode.
+ */
+function EntityHandleRenderer({
+	entityId,
+	entityType,
+	store,
+	dispatcher,
+	schemaRegistry,
+	selection,
+	children,
+}: EntityHandleRendererProps): ReactElement {
+	const handle = useMemo(
+		() => EntityHandle.create(entityId, entityType, store, dispatcher, schemaRegistry, undefined, selection),
+		[entityId, entityType, store, dispatcher, schemaRegistry, selection],
 	)
 
-	return <>{children(accessor)}</>
+	useEffect(() => () => { handle.dispose() }, [handle])
+
+	return <>{children(handle as unknown as EntityAccessor<unknown>)}</>
 }
 
 // ==================== Main Entity Component ====================

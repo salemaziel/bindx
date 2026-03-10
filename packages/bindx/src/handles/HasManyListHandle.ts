@@ -3,6 +3,7 @@ import { EntityHandle } from './EntityHandle.js'
 import type { ActionDispatcher } from '../core/ActionDispatcher.js'
 import type { SnapshotStore } from '../store/SnapshotStore.js'
 import type { SchemaRegistry } from '../schema/SchemaRegistry.js'
+import type { SelectionMeta } from '../selection/types.js'
 import {
 	addRelationError,
 	clearRelationErrors,
@@ -65,6 +66,7 @@ export class HasManyListHandle<TEntity extends object = object, TSelected = TEnt
 		private readonly schema: SchemaRegistry,
 		brands?: Set<symbol>,
 		alias?: string,
+		private readonly selection?: SelectionMeta,
 	) {
 		super(parentEntityType, parentEntityId, store, dispatcher)
 		this.__brands = brands
@@ -81,8 +83,9 @@ export class HasManyListHandle<TEntity extends object = object, TSelected = TEnt
 		schema: SchemaRegistry,
 		brands?: Set<symbol>,
 		alias?: string,
+		selection?: SelectionMeta,
 	): HasManyListHandle<TEntity, TSelected> {
-		return createAliasProxy(new HasManyListHandle<TEntity, TSelected>(parentEntityType, parentEntityId, fieldName, itemType, store, dispatcher, schema, brands, alias))
+		return createAliasProxy(new HasManyListHandle<TEntity, TSelected>(parentEntityType, parentEntityId, fieldName, itemType, store, dispatcher, schema, brands, alias, selection))
 	}
 
 	/**
@@ -193,6 +196,7 @@ export class HasManyListHandle<TEntity extends object = object, TSelected = TEnt
 				this.dispatcher,
 				this.schema,
 				this.__brands,
+				this.selection,
 			)
 			this.itemHandleCache.set(itemId, handle)
 		}

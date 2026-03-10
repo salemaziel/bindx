@@ -26,6 +26,8 @@ import type {
 import { HasOneHandle } from './HasOneHandle.js'
 import { HasManyListHandle } from './HasManyListHandle.js'
 import { createHandleProxy, ENTITY_HANDLE_PROPERTIES } from './proxyFactory.js'
+import type { SelectionMeta } from '../selection/types.js'
+import { UnfetchedFieldError } from '../errors/UnfetchedFieldError.js'
 
 // Type for relation handle cache
 type RelationHandle = HasOneHandle<object> | HasManyListHandle<object>
@@ -83,6 +85,7 @@ export class EntityHandle<T extends object = object, TSelected = T> extends Enti
 		dispatcher: ActionDispatcher,
 		private readonly schema: SchemaRegistry,
 		brands?: Set<symbol>,
+		private readonly selection?: SelectionMeta,
 	) {
 		super(entityType, id, store, dispatcher)
 		this.__brands = brands
@@ -95,8 +98,9 @@ export class EntityHandle<T extends object = object, TSelected = T> extends Enti
 		dispatcher: ActionDispatcher,
 		schema: SchemaRegistry,
 		brands?: Set<symbol>,
+		selection?: SelectionMeta,
 	): EntityHandle<T, TSelected> {
-		return createHandleProxy(new EntityHandle<T, TSelected>(id, entityType, store, dispatcher, schema, brands), {
+		return createHandleProxy(new EntityHandle<T, TSelected>(id, entityType, store, dispatcher, schema, brands, selection), {
 			knownProperties: ENTITY_HANDLE_PROPERTIES,
 			getFields: (target) => target.fields,
 		})
@@ -259,7 +263,7 @@ export class EntityHandle<T extends object = object, TSelected = T> extends Enti
 	/**
 	 * Gets a has-one relation handle.
 	 */
-	hasOne<TRelated extends object>(fieldName: string): HasOneHandle<TRelated> {
+	hasOne<TRelated extends object>(fieldName: string, nestedSelection?: SelectionMeta): HasOneHandle<TRelated> {
 		const cacheKey = `hasOne:${fieldName}`
 		const cached = this.relationHandleCache.get(cacheKey)
 
@@ -282,6 +286,8 @@ export class EntityHandle<T extends object = object, TSelected = T> extends Enti
 			this.store,
 			this.dispatcher,
 			this.schema,
+			undefined,
+			nestedSelection,
 		)
 		this.relationHandleCache.set(cacheKey, handle as RelationHandle)
 
@@ -294,7 +300,7 @@ export class EntityHandle<T extends object = object, TSelected = T> extends Enti
 	 * @param alias - Optional alias for the relation. When the same field is used multiple times
 	 *                with different parameters (filter, orderBy, limit), each needs a unique alias.
 	 */
-	hasMany<TItem extends object>(fieldName: string, alias?: string): HasManyListHandle<TItem> {
+	hasMany<TItem extends object>(fieldName: string, alias?: string, nestedSelection?: SelectionMeta): HasManyListHandle<TItem> {
 		const effectiveAlias = alias ?? fieldName
 		const cacheKey = `hasMany:${effectiveAlias}`
 		const cached = this.relationHandleCache.get(cacheKey)
@@ -320,6 +326,7 @@ export class EntityHandle<T extends object = object, TSelected = T> extends Enti
 			this.schema,
 			this.__brands,
 			effectiveAlias,
+			nestedSelection,
 		)
 		this.relationHandleCache.set(cacheKey, handle as RelationHandle)
 
@@ -377,6 +384,13 @@ export class EntityHandle<T extends object = object, TSelected = T> extends Enti
 	get fields(): SelectedEntityFields<T, TSelected> {
 		return new Proxy({} as SelectedEntityFields<T, TSelected>, {
 			get: (_, fieldName: string) => {
+				// Selection validation
+				if (this.selection && !this.selection.fields.has(fieldName)) {
+					throw new UnfetchedFieldError(this.entityType, this.entityId, [fieldName])
+				}
+
+				const nestedSelection = this.selection?.fields.get(fieldName)?.nested
+
 				// Use schema to determine field type
 				const fieldDef = this.schema.getFieldDef(this.entityType, fieldName)
 
@@ -387,12 +401,12 @@ export class EntityHandle<T extends object = object, TSelected = T> extends Enti
 
 				if (fieldDef.type === 'hasOne') {
 					// Has-one relation - return HasOneHandle
-					return this.hasOne(fieldName)
+					return this.hasOne(fieldName, nestedSelection)
 				}
 
 				if (fieldDef.type === 'hasMany') {
 					// Has-many relation - return HasManyListHandle
-					return this.hasMany(fieldName)
+					return this.hasMany(fieldName, undefined, nestedSelection)
 				}
 
 				// Unknown field type - fallback to FieldHandle

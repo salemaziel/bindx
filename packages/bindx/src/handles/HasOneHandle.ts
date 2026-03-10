@@ -2,6 +2,7 @@ import { EntityRelatedHandle } from './BaseHandle.js'
 import type { ActionDispatcher } from '../core/ActionDispatcher.js'
 import type { SnapshotStore } from '../store/SnapshotStore.js'
 import type { SchemaRegistry } from '../schema/SchemaRegistry.js'
+import type { SelectionMeta } from '../selection/types.js'
 import {
 	connectRelation,
 	disconnectRelation,
@@ -81,6 +82,7 @@ export class HasOneHandle<TEntity extends object = object, TSelected = TEntity> 
 		dispatcher: ActionDispatcher,
 		private readonly schema: SchemaRegistry,
 		brands?: Set<symbol>,
+		private readonly selection?: SelectionMeta,
 	) {
 		super(parentEntityType, parentEntityId, store, dispatcher)
 		this.__brands = brands
@@ -95,8 +97,9 @@ export class HasOneHandle<TEntity extends object = object, TSelected = TEntity> 
 		dispatcher: ActionDispatcher,
 		schema: SchemaRegistry,
 		brands?: Set<symbol>,
+		selection?: SelectionMeta,
 	): HasOneHandle<TEntity, TSelected> {
-		return createHandleProxy(new HasOneHandle<TEntity, TSelected>(parentEntityType, parentEntityId, fieldName, targetType, store, dispatcher, schema, brands), {
+		return createHandleProxy(new HasOneHandle<TEntity, TSelected>(parentEntityType, parentEntityId, fieldName, targetType, store, dispatcher, schema, brands, selection), {
 			knownProperties: HAS_ONE_HANDLE_PROPERTIES,
 			getFields: (target) => target.entity.$fields,
 		})
@@ -215,6 +218,7 @@ export class HasOneHandle<TEntity extends object = object, TSelected = TEntity> 
 					this.dispatcher,
 					this.schema,
 					this.__brands,
+					this.selection,
 				)
 			}
 			// EntityHandle constructor returns a Proxy that implements EntityAccessor

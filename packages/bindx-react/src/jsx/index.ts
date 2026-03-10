@@ -44,7 +44,6 @@ export {
 // Proxy creation
 export {
 	createCollectorProxy,
-	createRuntimeAccessor,
 } from './proxy.js'
 
 // JSX Analyzer
