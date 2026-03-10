@@ -12,8 +12,8 @@ import {
 import {
 	type NotifyChange,
 	type RuntimeRef,
-	NON_FIELD_PROPERTIES,
 	wrapEntityRefWithFieldAccessProxy,
+	wrapRefWithFieldAccessProxy,
 	createNullFieldRef,
 	createPlaceholderAccessor,
 } from './proxyShared.js'
@@ -229,36 +229,8 @@ function createInlineFieldRef(
 	const isHasOneRelation = typeof value === 'object' && value !== null && 'id' in value && !Array.isArray(value)
 
 	if (isHasOneRelation) {
-		return wrapInlineRefWithFieldAccessProxy(refObject, getFieldsProxy)
+		return wrapRefWithFieldAccessProxy(refObject, getFieldsProxy)
 	}
 
 	return refObject as RuntimeRef
-}
-
-/**
- * Wraps an inline field ref with direct field access proxy.
- */
-function wrapInlineRefWithFieldAccessProxy(
-	ref: RuntimeRef,
-	getFieldsProxy: () => EntityFields<unknown>,
-): RuntimeRef {
-	let cachedFieldsProxy: EntityFields<unknown> | null = null
-
-	return new Proxy(ref, {
-		get(target, prop) {
-			if (typeof prop !== 'string') {
-				return Reflect.get(target, prop)
-			}
-			if (prop in target) {
-				return Reflect.get(target, prop)
-			}
-			if (NON_FIELD_PROPERTIES.has(prop) || prop.startsWith('@@') || prop.startsWith('_')) {
-				return undefined
-			}
-			if (!cachedFieldsProxy) {
-				cachedFieldsProxy = getFieldsProxy()
-			}
-			return cachedFieldsProxy[prop as keyof EntityFields<unknown>]
-		},
-	}) as RuntimeRef
 }

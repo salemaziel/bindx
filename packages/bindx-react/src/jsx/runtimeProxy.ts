@@ -13,8 +13,8 @@ import { deepEqual } from '@contember/bindx'
 import {
 	type NotifyChange,
 	type RuntimeRef,
-	NON_FIELD_PROPERTIES,
 	wrapEntityRefWithFieldAccessProxy,
+	wrapRefWithFieldAccessProxy,
 	getNestedValue,
 	createNullFieldRef,
 	createPlaceholderAccessor,
@@ -473,45 +473,5 @@ function createRuntimeFieldRef(
 	// - Has-one connected: Accessing ref.fieldName proxies to ref.$fields.fieldName
 	// - Has-one disconnected: Accessing ref.fieldName proxies to ref.$fields.fieldName (returns null field ref)
 	// The getFieldsProxy handles null values gracefully by returning null field refs.
-	return wrapRuntimeRefWithFieldAccessProxy(refObject, getFieldsProxy)
-}
-
-/**
- * Wraps a runtime ref in a Proxy that supports direct field access for hasOne relations.
- * - `ref.fieldName` is equivalent to `ref.$fields.fieldName`
- * - Known ref properties pass through to the target
- */
-function wrapRuntimeRefWithFieldAccessProxy(
-	ref: RuntimeRef,
-	getFieldsProxy: () => EntityFields<unknown>,
-): RuntimeRef {
-	// Cache the fields proxy to avoid creating new objects on each access
-	let cachedFieldsProxy: EntityFields<unknown> | null = null
-
-	return new Proxy(ref, {
-		get(target, prop) {
-			// Symbols - pass through
-			if (typeof prop !== 'string') {
-				return Reflect.get(target, prop)
-			}
-
-			// Check if property exists on target - if so, pass through
-			if (prop in target) {
-				return Reflect.get(target, prop)
-			}
-
-			// Skip known non-field properties (React internals, Promise checks, etc.)
-			if (NON_FIELD_PROPERTIES.has(prop) || prop.startsWith('@@') || prop.startsWith('_')) {
-				return undefined
-			}
-
-			// Cache and reuse the fields proxy
-			if (!cachedFieldsProxy) {
-				cachedFieldsProxy = getFieldsProxy()
-			}
-
-			// Treat as field access on the related entity
-			return cachedFieldsProxy[prop as keyof EntityFields<unknown>]
-		},
-	}) as RuntimeRef
+	return wrapRefWithFieldAccessProxy(refObject, getFieldsProxy)
 }

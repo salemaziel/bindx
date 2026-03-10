@@ -93,8 +93,8 @@ function EntityByMode({
 	// Phase 1: Collect JSX selection
 	const { selection, queryKey } = useSelectionCollection({
 		entityType,
-		entityId: byKey,
-		children,
+		depsKey: byKey,
+		collect: collector => children(collector as EntityAccessor<unknown>),
 	})
 
 	// Phase 2: Load data using unified hook
@@ -212,8 +212,8 @@ function EntityCreateMode({
 	// Selection collection still works for building mutations
 	useSelectionCollection({
 		entityType,
-		entityId: tempId,
-		children,
+		depsKey: tempId,
+		collect: collector => children(collector as EntityAccessor<unknown>),
 	})
 
 	// Create runtime accessor

@@ -186,7 +186,6 @@ export function useEntityList(
 	const { store, dispatcher, batcher } = useBindxContext()
 
 	// --- Selection resolution ---
-	// Inline useStableSelectionMeta logic to avoid conditional hook call.
 	// resolveSelectionMeta is a pure function; useRef is called unconditionally.
 	const resolvedMeta = definer ? resolveSelectionMeta(definer) : null
 	const definerQueryKey = resolvedMeta ? JSON.stringify(buildQueryFromSelection(resolvedMeta)) : null

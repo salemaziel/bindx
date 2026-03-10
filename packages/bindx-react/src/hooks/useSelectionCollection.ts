@@ -10,13 +10,15 @@ import { BindxContext } from './BackendAdapterContext.js'
 /**
  * Options for useSelectionCollection hook.
  */
-export interface UseSelectionCollectionOptions<T> {
+export interface UseSelectionCollectionOptions {
 	/** Entity type name (for debugging) */
 	entityType: string
-	/** Entity ID (for dependency tracking) */
-	entityId: string
-	/** Children render function */
-	children: (entity: EntityAccessor<T>) => ReactNode
+	/** Stable key for useMemo dependencies (e.g., entityId or JSON-serialized options) */
+	depsKey: string
+	/** Collector function — receives a collector proxy, returns JSX for analysis */
+	collect: (collector: EntityAccessor<unknown>) => ReactNode
+	/** Extra data to include in the query key (e.g., filter/orderBy for lists) */
+	queryKeyExtra?: Record<string, unknown>
 }
 
 /**
@@ -41,32 +43,25 @@ interface SelectionCache {
  * Hook for collecting field selection from JSX children.
  * Implements the two-phase rendering approach:
  * 1. Creates a collector proxy
- * 2. Calls children with the proxy to gather field accesses
+ * 2. Calls the collect function with the proxy to gather field accesses
  * 3. Analyzes returned JSX for component-level selections
  * 4. Merges both sources of selection
  *
- * **Limitation:** Selection is collected once per entity identity
- * (`[entityType, entityId]`). Fields accessed conditionally in the
- * children render function are only captured if they are accessed during
- * the initial collection phase. If a condition changes on a later render
- * (e.g., `isAdmin` becomes `true`), newly accessed fields will not be
- * fetched. To work around this, ensure all possible fields are accessed
- * unconditionally or use the `useEntity` hook with an explicit definer
- * that includes all needed fields.
+ * **Limitation:** Selection is collected once per `depsKey`.
+ * Fields accessed conditionally in the collect function are only captured
+ * if they are accessed during the initial collection phase.
  *
  * @internal This hook is for internal use only.
  */
-export function useSelectionCollection<T>(
-	options: UseSelectionCollectionOptions<T>,
+export function useSelectionCollection(
+	options: UseSelectionCollectionOptions,
 ): SelectionCollectionResult {
-	const { entityType, entityId, children } = options
+	const { entityType, depsKey, collect, queryKeyExtra } = options
 	const bindxContext = useContext(BindxContext)
 
-	// Stable children ref - we use a ref to avoid re-running useMemo on every render
-	// The children function might be recreated on every render, but if the selection
-	// content is the same, we don't need to refetch
-	const childrenRef = useRef(children)
-	childrenRef.current = children
+	// Stable collect ref - we use a ref to avoid re-running useMemo on every render
+	const collectRef = useRef(collect)
+	collectRef.current = collect
 
 	// Cache for selection to avoid unnecessary refetches
 	const selectionCacheRef = useRef<SelectionCache | null>(null)
@@ -75,10 +70,10 @@ export function useSelectionCollection<T>(
 	const result = useMemo((): SelectionCollectionResult => {
 		// Create collector proxy using SelectionScope tree
 		const scope = new SelectionScope()
-		const collector = createCollectorProxy<T>(scope)
+		const collector = createCollectorProxy<unknown>(scope)
 
-		// Call children with collector to gather field access
-		const jsx = childrenRef.current(collector)
+		// Call collect function with the proxy to gather field access
+		const jsx = collectRef.current(collector)
 
 		// Analyze the returned JSX for component-level selections
 		const jsxSel = collectSelection(jsx)
@@ -89,13 +84,15 @@ export function useSelectionCollection<T>(
 
 		// Debug output can be enabled via the debug prop on BindxProvider
 		if (bindxContext?.debug) {
-			console.log('[Entity] Collected selection for', entityType, ':')
+			console.log('[Selection] Collected selection for', entityType, ':')
 			console.log(debugSelection(selection))
 		}
 
 		// Create a stable key from the selection to detect actual changes
 		const query = buildQueryFromSelection(selection)
-		const newQueryKey = JSON.stringify(query)
+		const newQueryKey = queryKeyExtra
+			? JSON.stringify({ query, ...queryKeyExtra })
+			: JSON.stringify(query)
 
 		// If the selection hasn't actually changed, return cached values
 		const cache = selectionCacheRef.current
@@ -111,7 +108,7 @@ export function useSelectionCollection<T>(
 		selectionCacheRef.current = newCache
 
 		return newCache
-	}, [entityType, entityId]) // Only depend on entity identity, not children
+	}, [entityType, depsKey]) // Only depend on entity identity and deps key
 
 	return result
 }

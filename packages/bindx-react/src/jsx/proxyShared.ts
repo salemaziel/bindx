@@ -126,6 +126,38 @@ export function createNullFieldRef(path: string[], fieldName: string): FieldRef<
 }
 
 /**
+ * Wraps a RuntimeRef in a Proxy that supports direct field access for hasOne relations.
+ * - `ref.fieldName` is equivalent to `ref.$fields.fieldName`
+ * - Known ref properties pass through to the target
+ *
+ * Used by both runtimeProxy.ts and inlineProxy.ts.
+ */
+export function wrapRefWithFieldAccessProxy(
+	ref: RuntimeRef,
+	getFieldsProxy: () => EntityFields<unknown>,
+): RuntimeRef {
+	let cachedFieldsProxy: EntityFields<unknown> | null = null
+
+	return new Proxy(ref, {
+		get(target, prop) {
+			if (typeof prop !== 'string') {
+				return Reflect.get(target, prop)
+			}
+			if (prop in target) {
+				return Reflect.get(target, prop)
+			}
+			if (NON_FIELD_PROPERTIES.has(prop) || prop.startsWith('@@') || prop.startsWith('_')) {
+				return undefined
+			}
+			if (!cachedFieldsProxy) {
+				cachedFieldsProxy = getFieldsProxy()
+			}
+			return cachedFieldsProxy[prop as keyof EntityFields<unknown>]
+		},
+	}) as RuntimeRef
+}
+
+/**
  * Creates a placeholder accessor for disconnected hasOne relations.
  * Returns an EntityAccessor with placeholder ID and empty fields.
  * Supports direct field access: entity.fieldName -> entity.$fields.fieldName

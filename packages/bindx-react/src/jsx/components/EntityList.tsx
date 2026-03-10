@@ -1,7 +1,7 @@
 import React, { memo, type ReactElement } from 'react'
 import { type EntityDef, type EntityWhere, type EntityOrderBy, type FieldError } from '@contember/bindx'
 import { useEntityList } from '../../hooks/useEntityList.js'
-import { useSelectionCollectionForList } from '../../hooks/useSelectionCollectionForList.js'
+import { useSelectionCollection } from '../../hooks/useSelectionCollection.js'
 import type { EntityAccessor } from '../types.js'
 
 /**
@@ -59,14 +59,20 @@ function EntityListComponent<TEntity extends object>({
 }: EntityListProps<TEntity>): ReactElement | null {
 	const entityType = entity.$name
 
-	// Phase 1: Collect JSX selection
-	const { selection, queryKey } = useSelectionCollectionForList({
-		entityType,
-		filter,
-		orderBy,
+	// Stable options key for dependency tracking
+	const optionsKey = JSON.stringify({
+		filter: filter ?? {},
+		orderBy: orderBy ?? [],
 		limit,
 		offset,
-		children,
+	})
+
+	// Phase 1: Collect JSX selection
+	const { selection, queryKey } = useSelectionCollection({
+		entityType,
+		depsKey: optionsKey,
+		collect: collector => children(collector as unknown as EntityAccessor<TEntity>, 0),
+		queryKeyExtra: { filter, orderBy, limit, offset },
 	})
 
 	// Phase 2: Load data using unified hook
