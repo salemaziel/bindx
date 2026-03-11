@@ -3,7 +3,7 @@
  *
  * Layer 2 in the column architecture: wraps a headless `ColumnTypeDef` with
  * rendering configuration (cell renderer, optional filter renderer) to produce
- * a React component usable inside `<DataGrid columns={...}>`.
+ * a React component usable inside a DataGrid children render function.
  */
 
 import React from 'react'
@@ -32,8 +32,8 @@ export interface FilterRenderProps<TFilterArtifact> {
 // Config
 // ============================================================================
 
-export interface CreateColumnConfig<TValue, TFilterArtifact extends FilterArtifact, TExtraProps = object> {
-	readonly renderCell: (props: ColumnRenderProps<TValue> & TExtraProps) => React.ReactNode
+export interface CreateColumnConfig<TValue, TFilterArtifact extends FilterArtifact> {
+	readonly renderCell: (props: ColumnRenderProps<TValue>) => React.ReactNode
 	readonly renderFilter?: (props: FilterRenderProps<TFilterArtifact>) => React.ReactNode
 }
 
@@ -53,22 +53,23 @@ export interface ColumnComponentProps<TValue = unknown> {
 // Factory
 // ============================================================================
 
-interface ColumnComponent<TValue, TExtraProps> extends React.FC<ColumnComponentProps<TValue> & TExtraProps> {
+export interface ColumnComponent<TExtraProps = object> {
+	<T>(props: ColumnComponentProps<T> & TExtraProps): null
 	staticRender: (props: Record<string, unknown>) => React.ReactNode
 }
 
 export function createColumn<TValue, TFilterArtifact extends FilterArtifact, TExtraProps = object>(
 	columnType: ColumnTypeDef<TValue, TFilterArtifact>,
-	config: CreateColumnConfig<TValue, TFilterArtifact, TExtraProps>,
-): ColumnComponent<TValue, TExtraProps> {
-	function Column(_props: ColumnComponentProps<TValue> & TExtraProps): null {
+	config: CreateColumnConfig<TValue, TFilterArtifact>,
+): ColumnComponent<TExtraProps> {
+	function Column(_props: ColumnComponentProps<unknown> & TExtraProps): null {
 		return null
 	}
 
 	Column.staticRender = (props: Record<string, unknown>): React.ReactNode => {
 		const fieldRef = props['field'] as FieldRefBase<unknown> | undefined
 		const fieldName = fieldRef ? extractFieldName(fieldRef) : null
-		const header = (props['header'] as React.ReactNode) ?? fieldName ?? ''
+		const header = props['header'] as React.ReactNode | undefined
 		const sortable = (props['sortable'] as boolean | undefined) ?? columnType.defaultSortable
 		const filterEnabled = (props['filter'] as boolean | undefined) ?? false
 		const children = props['children'] as ((value: TValue | null) => React.ReactNode) | undefined
@@ -90,7 +91,6 @@ export function createColumn<TValue, TFilterArtifact extends FilterArtifact, TEx
 					accessor,
 					fieldRef: fieldRef ?? null,
 					fieldName,
-					...props as unknown as TExtraProps,
 				})
 			}
 
@@ -119,5 +119,5 @@ export function createColumn<TValue, TFilterArtifact extends FilterArtifact, TEx
 		return React.createElement(ColumnLeaf, leafProps as ColumnLeafProps)
 	}
 
-	return Column as ColumnComponent<TValue, TExtraProps>
+	return Column as ColumnComponent<TExtraProps>
 }

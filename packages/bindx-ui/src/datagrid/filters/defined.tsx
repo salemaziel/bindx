@@ -7,7 +7,7 @@ import {
 	type DataViewIsDefinedFilterProps,
 	DataViewNullFilterTrigger,
 } from '@contember/bindx-dataview'
-import { FIELD_REF_META } from '@contember/bindx'
+import { useDefaultFieldLabel } from '../labels.js'
 import { CheckIcon, XIcon } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '../../ui/popover.js'
 import { Button } from '../../ui/button.js'
@@ -21,15 +21,16 @@ import { dict } from '../../dict.js'
 export type DataGridIsDefinedFilterUIProps<T> =
 	& Omit<DataViewIsDefinedFilterProps<T>, 'children'>
 	& {
-		label: ReactNode
+		label?: ReactNode
 	}
 
 export function DataGridIsDefinedFilterUI<T>({ label, ...props }: DataGridIsDefinedFilterUIProps<T>): ReactElement {
+	const defaultLabel = useDefaultFieldLabel(props.field)
 	return (
 		<DataViewIsDefinedFilter {...props}>
 			<DataGridFilterMobileHiding>
 				<DataGridSingleFilterUI>
-					<DataGridIsDefinedFilterSelect label={label ?? props.field[FIELD_REF_META].fieldName} />
+					<DataGridIsDefinedFilterSelect label={label ?? defaultLabel} />
 					<DataGridIsDefinedFilterList />
 				</DataGridSingleFilterUI>
 			</DataGridFilterMobileHiding>

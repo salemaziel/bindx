@@ -27,6 +27,8 @@ export interface DataViewContextValue {
 	readonly setHighlightIndex: (index: number | null) => void
 	readonly selectionMeta: SelectionMeta
 	readonly toolbarContent?: React.ReactNode
+	/** Named layout render callbacks — analyzed during collection, called per item at runtime */
+	readonly layoutRenders: ReadonlyMap<string, (item: DataViewItem) => React.ReactNode>
 }
 
 const DataViewContext = createContext<DataViewContextValue | null>(null)

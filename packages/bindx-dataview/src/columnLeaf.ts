@@ -2,8 +2,9 @@
  * ColumnLeaf — the data carrier for extracted column metadata.
  *
  * `ColumnLeaf` is a marker React component (returns null) whose props carry
- * all column metadata. `extractColumnLeaves()` walks a JSX element tree,
- * resolving components with `staticRender` until it finds `ColumnLeaf` markers.
+ * all column metadata. `analyzeChildren()` walks a JSX element tree,
+ * resolving components with `staticRender` and collecting props from registered
+ * marker types — a lightweight equivalent of contember-oss's ChildrenAnalyzer.
  */
 
 import React from 'react'
@@ -28,21 +29,21 @@ export interface ColumnLeafProps {
 	readonly collectSelection?: (collectorProxy: unknown) => void
 
 	// ── UI ──
-	readonly header: React.ReactNode
+	readonly header?: React.ReactNode
 	readonly renderCell: (accessor: EntityAccessor<object>) => React.ReactNode
 	readonly renderFilter?: (props: { artifact: unknown; setArtifact: (artifact: FilterArtifact) => void }) => React.ReactNode
 }
 
 /**
  * Marker component — returns null at runtime.
- * Its props are the column metadata extracted by `extractColumnLeaves()`.
+ * Its props are the column metadata extracted by `analyzeChildren()`.
  */
 export function ColumnLeaf(_props: ColumnLeafProps): null {
 	return null
 }
 
 // ============================================================================
-// Extraction
+// Generalized Children Analyzer
 // ============================================================================
 
 interface ComponentWithStaticRender {
@@ -54,28 +55,72 @@ function hasStaticRender(type: unknown): type is ComponentWithStaticRender {
 }
 
 /**
- * Extract `ColumnLeafProps` from a JSX element tree.
- *
- * Walks children recursively:
- * - `ColumnLeaf` elements → extract props directly
- * - `React.Fragment` → recurse into children
- * - Components with `staticRender` → call staticRender, recurse into result
+ * Result of analyzing a JSX element tree for marker components.
  */
-export function extractColumnLeaves(elements: React.ReactNode): ColumnLeafProps[] {
-	const leaves: ColumnLeafProps[] = []
+export interface ChildrenAnalysisResult {
+	/** Get all collected props for a given marker type */
+	getAll<TProps>(marker: React.ComponentType<TProps>): TProps[]
+	/** Get the first collected props for a given marker type, or undefined */
+	getFirst<TProps>(marker: React.ComponentType<TProps>): TProps | undefined
+}
 
+/**
+ * Walk a JSX element tree and collect props from registered marker types.
+ *
+ * For each element:
+ * 1. If its type is in `markerTypes` → collect its props
+ * 2. If it's a `React.Fragment` → recurse into children
+ * 3. If it has a `staticRender` static method → call it and recurse into result
+ * 4. Otherwise → skip (renders normally at runtime)
+ */
+export function analyzeChildren(
+	elements: React.ReactNode,
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	markerTypes: ReadonlySet<React.ComponentType<any>>,
+): ChildrenAnalysisResult {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const collected = new Map<React.ComponentType<any>, unknown[]>()
+	for (const type of markerTypes) {
+		collected.set(type, [])
+	}
+
+	walkTree(elements, markerTypes, collected)
+
+	return {
+		getAll<TProps>(marker: React.ComponentType<TProps>): TProps[] {
+			return (collected.get(marker) ?? []) as TProps[]
+		},
+		getFirst<TProps>(marker: React.ComponentType<TProps>): TProps | undefined {
+			const items = collected.get(marker)
+			return items?.[0] as TProps | undefined
+		},
+	}
+}
+
+function walkTree(
+	elements: React.ReactNode,
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	markerTypes: ReadonlySet<React.ComponentType<any>>,
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	collected: Map<React.ComponentType<any>, unknown[]>,
+): void {
 	React.Children.forEach(elements, (child) => {
 		if (!React.isValidElement(child)) return
 
-		if (child.type === ColumnLeaf) {
-			leaves.push(child.props as unknown as ColumnLeafProps)
+		if (markerTypes.has(child.type as React.ComponentType)) {
+			collected.get(child.type as React.ComponentType)!.push(child.props)
 		} else if (child.type === React.Fragment) {
-			leaves.push(...extractColumnLeaves((child.props as { children?: React.ReactNode }).children))
+			walkTree((child.props as { children?: React.ReactNode }).children, markerTypes, collected)
 		} else if (hasStaticRender(child.type)) {
 			const rendered = child.type.staticRender(child.props as Record<string, unknown>)
-			leaves.push(...extractColumnLeaves(rendered))
+			walkTree(rendered, markerTypes, collected)
 		}
 	})
+}
 
-	return leaves
+/**
+ * Convenience wrapper: extract `ColumnLeafProps` from a JSX element tree.
+ */
+export function extractColumnLeaves(elements: React.ReactNode): ColumnLeafProps[] {
+	return analyzeChildren(elements, new Set([ColumnLeaf])).getAll(ColumnLeaf)
 }

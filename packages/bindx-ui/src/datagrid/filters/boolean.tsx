@@ -8,7 +8,7 @@ import {
 	DataViewBooleanFilterTrigger,
 	DataViewNullFilterTrigger,
 } from '@contember/bindx-dataview'
-import { FIELD_REF_META } from '@contember/bindx'
+import { useDefaultFieldLabel } from '../labels.js'
 import { Popover, PopoverContent, PopoverTrigger } from '../../ui/popover.js'
 import { Button } from '../../ui/button.js'
 import {
@@ -23,15 +23,16 @@ import { dict } from '../../dict.js'
 export type DataGridBooleanFilterUIProps<T> =
 	& Omit<DataViewBooleanFilterProps<T>, 'children'>
 	& {
-		label: ReactNode
+		label?: ReactNode
 	}
 
 export function DataGridBooleanFilterUI<T>({ label, ...props }: DataGridBooleanFilterUIProps<T>): ReactElement {
+	const defaultLabel = useDefaultFieldLabel(props.field)
 	return (
 		<DataViewBooleanFilter {...props}>
 			<DataGridFilterMobileHiding>
 				<DataGridSingleFilterUI>
-					<DataGridBooleanFilterSelect label={label ?? props.field[FIELD_REF_META].fieldName} />
+					<DataGridBooleanFilterSelect label={label ?? defaultLabel} />
 					<DataGridBooleanFilterList />
 				</DataGridSingleFilterUI>
 			</DataGridFilterMobileHiding>

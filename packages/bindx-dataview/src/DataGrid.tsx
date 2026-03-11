@@ -1,16 +1,17 @@
 /**
- * DataGrid component — headless data grid context provider with two-pass rendering,
- * integrated filtering, sorting, and pagination state management.
+ * DataGrid component — headless data grid context provider with children-based
+ * marker analysis, integrated filtering, sorting, and pagination state management.
  *
- * The DataGrid extracts column metadata from the `columns` render callback,
- * manages all state (filtering, sorting, paging, selection), loads data,
- * and provides everything via DataViewContext. It does NOT render any UI —
- * use composable components or the bindx-ui package for rendering.
+ * The DataGrid receives a single `children` render function that returns a JSX tree
+ * containing column markers, optional toolbar/tile markers, and layout components.
+ * It analyzes the tree to extract metadata, manages all state (filtering, sorting,
+ * paging, selection), loads data, and provides everything via DataViewContext.
  */
 
-import React, { memo, type ReactElement, useEffect, useMemo, useCallback, useRef, useState } from 'react'
+import React, { memo, type ReactElement, type ReactNode, useEffect, useMemo, useCallback, useRef, useState } from 'react'
 import type {
 	EntityDef,
+	EntityAccessor,
 	OrderDirection,
 	FilterHandler,
 	FilterArtifact,
@@ -28,28 +29,32 @@ import {
 	mergeSelections,
 	collectSelection,
 } from '@contember/bindx-react'
-import { extractColumnLeaves } from './columnLeaf.js'
+import { ColumnLeaf, type ColumnLeafProps, analyzeChildren } from './columnLeaf.js'
+import { DataGridToolbarContent, type DataGridToolbarContentProps } from './markers.js'
+import { DataGridLayout, type DataGridLayoutProps } from './markers.js'
 import { useFilteringState, useSortingState, usePagingState, useSelectionState } from './useDataViewState.js'
 import { DataViewProvider, type DataViewContextValue, type DataViewLoaderState } from './DataViewContext.js'
 
 /** Well-known filter name for the universal query filter */
 export const QUERY_FILTER_NAME = '__query'
 
+/** Set of marker types recognized by the DataGrid's children analysis */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const MARKER_TYPES: ReadonlySet<React.ComponentType<any>> = new Set([
+	ColumnLeaf,
+	DataGridToolbarContent,
+	DataGridLayout,
+])
+
 // ============================================================================
 // DataGrid Props
 // ============================================================================
 
-export interface DataGridProps {
+export interface DataGridProps<TEntity extends object = object> {
 	/** Entity definition */
-	entity: EntityDef
-	/** Column definitions: receives entity proxy `it`, returns column components */
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	columns: (it: any) => React.ReactNode
-	/** Toolbar definition: receives entity proxy `it`, returns toolbar content */
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	toolbar?: (it: any) => React.ReactNode
-	/** Rendered content within the DataViewProvider context */
-	children?: React.ReactNode
+	entity: EntityDef<TEntity>
+	/** Children render function: receives entity proxy `it`, returns column markers + layout */
+	children: (it: EntityAccessor<TEntity>) => ReactNode
 	/** Initial sorting (supports multi-column: { title: 'asc', date: 'desc' }) */
 	initialSorting?: Partial<Record<string, OrderDirection>>
 	/** Items per page. null = show all. Default: 50 */
@@ -74,10 +79,8 @@ export interface DataGridProps {
 // Implementation
 // ============================================================================
 
-function DataGridImpl({
+function DataGridImpl<TEntity extends object>({
 	entity,
-	columns: columnDefiner,
-	toolbar: toolbarDefiner,
 	children,
 	initialSorting,
 	itemsPerPage = 50,
@@ -88,7 +91,7 @@ function DataGridImpl({
 	currentPageStateStorage,
 	pagingSettingsStorage,
 	storageKey,
-}: DataGridProps): ReactElement | null {
+}: DataGridProps<TEntity>): ReactElement | null {
 	const { schema: schemaRegistry } = useBindxContext()
 	const entityType = entity.$name
 
@@ -97,30 +100,55 @@ function DataGridImpl({
 	const [loaderState, setLoaderState] = useState<DataViewLoaderState>('initial')
 
 	// ---- Phase 1: Collection ----
-	const { columns, selection, queryKey, toolbarContent } = useMemo(() => {
+	const { childrenJsx, columns, selection, queryKey, toolbarContent, layoutRenders, effectiveLayouts } = useMemo(() => {
 		const scope = new SelectionScope()
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const collector = createCollectorProxy<any>(scope, entityType, schemaRegistry ?? undefined)
+		const collector = createCollectorProxy<TEntity>(scope, entityType, schemaRegistry ?? undefined) as unknown as EntityAccessor<TEntity>
 
-		const columnJsx = columnDefiner(collector)
-		const cols = extractColumnLeaves(columnJsx)
+		const jsx = children(collector)
+		const analysis = analyzeChildren(jsx, MARKER_TYPES)
+
+		const cols = analysis.getAll(ColumnLeaf) as unknown as ColumnLeafProps[]
+		const toolbarMarker = analysis.getFirst(DataGridToolbarContent) as DataGridToolbarContentProps | undefined
+		const layoutMarkers = analysis.getAll(DataGridLayout) as unknown as DataGridLayoutProps[]
 
 		// Call collectSelection on each column (for relation columns to capture nested field accesses)
 		for (const col of cols) {
 			col.collectSelection?.(collector)
 		}
 
-		const toolbar = toolbarDefiner ? toolbarDefiner(collector) : undefined
+		// Analyze layout callbacks — call with collector proxy for selection discovery
+		const renders = new Map<string, (item: DataViewContextValue['items'][number]) => ReactNode>()
+		for (const marker of layoutMarkers) {
+			const layoutCallback = marker.children as (item: EntityAccessor<object>) => ReactNode
+			const layoutJsx = layoutCallback(collector as unknown as EntityAccessor<object>)
+			const layoutSel = collectSelection(layoutJsx)
+			mergeSelections(scope.toSelectionMeta(), layoutSel)
+			renders.set(marker.name, layoutCallback)
+		}
 
-		const jsxSel = collectSelection(columnJsx)
+		const jsxSel = collectSelection(jsx)
 		const sel = scope.toSelectionMeta()
 		mergeSelections(sel, jsxSel)
 
 		const query = buildQueryFromSelection(sel)
 		const key = JSON.stringify({ entityType, query })
 
-		return { columns: cols, selection: sel, queryKey: key, toolbarContent: toolbar }
-	}, [entityType, schemaRegistry, columnDefiner, toolbarDefiner])
+		// Auto-configure layouts when layout markers are detected but layouts prop is not provided
+		const autoLayouts = layouts ?? (layoutMarkers.length > 0
+			? [{ name: 'table', label: 'Table' }, ...layoutMarkers.map(m => ({ name: m.name, label: m.label }))]
+			: undefined
+		)
+
+		return {
+			childrenJsx: jsx,
+			columns: cols,
+			selection: sel,
+			queryKey: key,
+			toolbarContent: toolbarMarker?.children,
+			layoutRenders: renders,
+			effectiveLayouts: autoLayouts,
+		}
+	}, [entityType, schemaRegistry, children, layouts])
 
 	// ---- Phase 2: State management ----
 	const filterDefs = useMemo((): ReadonlyMap<string, { handler: FilterHandler<FilterArtifact> }> => {
@@ -168,7 +196,7 @@ function DataGridImpl({
 		pagingSettingsStorage,
 		storageKey,
 	})
-	const selectionState = useSelectionState({ layouts, initialSelection, stateStorage, storageKey })
+	const selectionState = useSelectionState({ layouts: effectiveLayouts, initialSelection, stateStorage, storageKey })
 
 	// ---- Phase 3: Build combined filter ----
 	const combinedFilter = useMemo((): Record<string, unknown> | undefined => {
@@ -241,11 +269,12 @@ function DataGridImpl({
 		setHighlightIndex,
 		selectionMeta: selection,
 		toolbarContent,
-	}), [filtering, sorting, paging, selectionState, columns, entityType, items, itemCount, loaderState, reload, highlightIndex, selection, toolbarContent])
+		layoutRenders,
+	}), [filtering, sorting, paging, selectionState, columns, entityType, items, itemCount, loaderState, reload, highlightIndex, selection, toolbarContent, layoutRenders])
 
 	return (
 		<DataViewProvider value={contextValue}>
-			{children}
+			{childrenJsx}
 		</DataViewProvider>
 	)
 }
@@ -254,4 +283,4 @@ function DataGridImpl({
 // Export
 // ============================================================================
 
-export const DataGrid = memo(DataGridImpl) as typeof DataGridImpl
+export const DataGrid = memo(DataGridImpl) as unknown as typeof DataGridImpl

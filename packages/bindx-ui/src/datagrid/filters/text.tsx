@@ -16,7 +16,7 @@ import {
 	type DataViewUnionTextFilterProps,
 	QUERY_FILTER_NAME,
 } from '@contember/bindx-dataview'
-import { FIELD_REF_META } from '@contember/bindx'
+import { useDefaultFieldLabel } from '../labels.js'
 import { XIcon, MoreHorizontalIcon } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '../../ui/popover.js'
 import { Button } from '../../ui/button.js'
@@ -33,10 +33,11 @@ export type DataGridTextFilterProps<T> =
 	}
 
 export function DataGridTextFilter<T>({ label, ...props }: DataGridTextFilterProps<T>): ReactElement {
+	const defaultLabel = useDefaultFieldLabel(props.field)
 	return (
 		<DataViewTextFilter {...props}>
 			<DataGridFilterMobileHiding>
-				<DataGridTextFilterInner label={label ?? props.field[FIELD_REF_META].fieldName} />
+				<DataGridTextFilterInner label={label ?? defaultLabel} />
 			</DataGridFilterMobileHiding>
 		</DataViewTextFilter>
 	)

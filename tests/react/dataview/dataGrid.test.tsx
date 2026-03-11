@@ -138,16 +138,14 @@ describe('DataGrid', () => {
 
 			const { container } = render(
 				<BindxProvider adapter={adapter} schema={localSchema}>
-					<ArticleDataGrid
-						entity={schema.Article}
-						columns={it => (
+					<ArticleDataGrid entity={schema.Article}>
+						{it => (
 							<>
 								<DataGridTextColumn field={it.title} header="Title" />
 								<DataGridTextColumn field={it.content} header="Content" />
+								<TestTable />
 							</>
 						)}
-					>
-						<TestTable />
 					</ArticleDataGrid>
 				</BindxProvider>,
 			)
@@ -175,18 +173,16 @@ describe('DataGrid', () => {
 
 			const { container } = render(
 				<BindxProvider adapter={adapter} schema={localSchema}>
-					<ArticleDataGrid
-						entity={schema.Article}
-						columns={it => (
+					<ArticleDataGrid entity={schema.Article}>
+						{it => (
 							<>
 								<DataGridTextColumn field={it.title} header="Title" />
 								<DataGridHasOneColumn field={it.author} header="Author">
 									{(author: any) => author.name}
 								</DataGridHasOneColumn>
+								<TestTable />
 							</>
 						)}
-					>
-						<TestTable />
 					</ArticleDataGrid>
 				</BindxProvider>,
 			)
@@ -207,18 +203,16 @@ describe('DataGrid', () => {
 
 			const { container } = render(
 				<BindxProvider adapter={adapter} schema={localSchema}>
-					<ArticleDataGrid
-						entity={schema.Article}
-						columns={it => (
+					<ArticleDataGrid entity={schema.Article}>
+						{it => (
 							<>
 								<DataGridTextColumn field={it.title} header="Title" />
 								<DataGridHasManyColumn field={it.tags} header="Tags">
 									{(tag: any) => tag.name}
 								</DataGridHasManyColumn>
+								<TestTable />
 							</>
 						)}
-					>
-						<TestTable />
 					</ArticleDataGrid>
 				</BindxProvider>,
 			)
@@ -239,14 +233,14 @@ describe('DataGrid', () => {
 
 			const { container } = render(
 				<BindxProvider adapter={adapter} schema={localSchema}>
-					<ArticleDataGrid
-						entity={schema.Article}
-						columns={it => (
-							<DataGridTextColumn field={it.title} header="Title" />
+					<ArticleDataGrid entity={schema.Article}>
+						{it => (
+							<>
+								<DataGridTextColumn field={it.title} header="Title" />
+								<TestTable />
+								<div data-testid="empty">No articles</div>
+							</>
 						)}
-					>
-						<TestTable />
-						<div data-testid="empty">No articles</div>
 					</ArticleDataGrid>
 				</BindxProvider>,
 			)

@@ -75,13 +75,14 @@ describe('DataGrid E2E: static filter', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid entity={schema.Article} filter={{ status: { eq: 'published' } }} columns={it => (
-					<>
-						<DataGridTextColumn field={it.title} header="Title" />
-						<DataGridTextColumn field={it.status} header="Status" />
-					</>
-				)}>
-					<TestTable />
+				<DataGrid entity={schema.Article} filter={{ status: { eq: 'published' } }}>
+					{it => (
+						<>
+							<DataGridTextColumn field={it.title} header="Title" />
+							<DataGridTextColumn field={it.status} header="Status" />
+							<TestTable />
+						</>
+					)}
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -101,10 +102,13 @@ describe('DataGrid E2E: static filter', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid entity={schema.Article} filter={{ status: { in: ['draft', 'archived'] } }} columns={it => (
-					<DataGridTextColumn field={it.title} header="Title" />
-				)}>
-					<TestTable />
+				<DataGrid entity={schema.Article} filter={{ status: { in: ['draft', 'archived'] } }}>
+					{it => (
+						<>
+							<DataGridTextColumn field={it.title} header="Title" />
+							<TestTable />
+						</>
+					)}
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -128,10 +132,13 @@ describe('DataGrid E2E: sorting', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid entity={schema.Article} initialSorting={{ title: 'asc' }} columns={it => (
-					<DataGridTextColumn field={it.title} header="Title" sortable />
-				)}>
-					<TestTable />
+				<DataGrid entity={schema.Article} initialSorting={{ title: 'asc' }}>
+					{it => (
+						<>
+							<DataGridTextColumn field={it.title} header="Title" sortable />
+							<TestTable />
+						</>
+					)}
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -153,10 +160,13 @@ describe('DataGrid E2E: sorting', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid entity={schema.Article} initialSorting={{ title: 'desc' }} columns={it => (
-					<DataGridTextColumn field={it.title} header="Title" sortable />
-				)}>
-					<TestTable />
+				<DataGrid entity={schema.Article} initialSorting={{ title: 'desc' }}>
+					{it => (
+						<>
+							<DataGridTextColumn field={it.title} header="Title" sortable />
+							<TestTable />
+						</>
+					)}
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -174,10 +184,13 @@ describe('DataGrid E2E: sorting', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid entity={schema.Article} columns={it => (
-					<DataGridTextColumn field={it.title} header="Title" sortable />
-				)}>
-					<TestTable />
+				<DataGrid entity={schema.Article}>
+					{it => (
+						<>
+							<DataGridTextColumn field={it.title} header="Title" sortable />
+							<TestTable />
+						</>
+					)}
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -220,11 +233,14 @@ describe('DataGrid E2E: dynamic filtering', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid entity={schema.Article} columns={it => (
-					<DataGridTextColumn field={it.title} header="Title" filter />
-				)}>
-					<TestToolbar />
-					<TestTable />
+				<DataGrid entity={schema.Article}>
+					{it => (
+						<>
+							<DataGridTextColumn field={it.title} header="Title" filter />
+							<TestToolbar />
+							<TestTable />
+						</>
+					)}
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -260,19 +276,20 @@ describe('DataGrid E2E: dynamic filtering', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid entity={schema.Article} columns={it => (
-					<>
-						<DataGridTextColumn field={it.title} header="Title" />
-						<DataGridEnumColumn
-							field={it.status}
-							header="Status"
-							options={['published', 'draft', 'archived']}
-							filter
-						/>
-					</>
-				)}>
-					<TestToolbar />
-					<TestTable />
+				<DataGrid entity={schema.Article}>
+					{it => (
+						<>
+							<DataGridTextColumn field={it.title} header="Title" />
+							<DataGridEnumColumn
+								field={it.status}
+								header="Status"
+								options={['published', 'draft', 'archived']}
+								filter
+							/>
+							<TestToolbar />
+							<TestTable />
+						</>
+					)}
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -304,14 +321,15 @@ describe('DataGrid E2E: dynamic filtering', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid entity={schema.Article} columns={it => (
-					<>
-						<DataGridTextColumn field={it.title} header="Title" />
-						<DataGridBooleanColumn field={it.published} header="Published" filter />
-					</>
-				)}>
-					<TestToolbar />
-					<TestTable />
+				<DataGrid entity={schema.Article}>
+					{it => (
+						<>
+							<DataGridTextColumn field={it.title} header="Title" />
+							<DataGridBooleanColumn field={it.published} header="Published" filter />
+							<TestToolbar />
+							<TestTable />
+						</>
+					)}
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -339,11 +357,14 @@ describe('DataGrid E2E: dynamic filtering', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid entity={schema.Article} columns={it => (
-					<DataGridTextColumn field={it.title} header="Title" filter />
-				)}>
-					<TestToolbar />
-					<TestTable />
+				<DataGrid entity={schema.Article}>
+					{it => (
+						<>
+							<DataGridTextColumn field={it.title} header="Title" filter />
+							<TestToolbar />
+							<TestTable />
+						</>
+					)}
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -383,7 +404,8 @@ describe('DataGrid E2E: dynamic filtering', () => {
 				<DataGrid
 					entity={schema.Article}
 					filter={{ published: { eq: true } }}
-					columns={it => (
+				>
+					{it => (
 						<>
 							<DataGridTextColumn field={it.title} header="Title" />
 							<DataGridEnumColumn
@@ -392,11 +414,10 @@ describe('DataGrid E2E: dynamic filtering', () => {
 								options={['published', 'draft', 'archived']}
 								filter
 							/>
+							<TestToolbar />
+							<TestTable />
 						</>
 					)}
-				>
-					<TestToolbar />
-					<TestTable />
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -433,11 +454,14 @@ describe('DataGrid E2E: pagination', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid entity={schema.Article} itemsPerPage={2} columns={it => (
-					<DataGridTextColumn field={it.title} header="Title" />
-				)}>
-					<TestTable />
-					<TestPagination />
+				<DataGrid entity={schema.Article} itemsPerPage={2}>
+					{it => (
+						<>
+							<DataGridTextColumn field={it.title} header="Title" />
+							<TestTable />
+							<TestPagination />
+						</>
+					)}
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -458,11 +482,14 @@ describe('DataGrid E2E: pagination', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid entity={schema.Article} itemsPerPage={2} initialSorting={{ title: 'asc' }} columns={it => (
-					<DataGridTextColumn field={it.title} header="Title" sortable />
-				)}>
-					<TestTable />
-					<TestPagination />
+				<DataGrid entity={schema.Article} itemsPerPage={2} initialSorting={{ title: 'asc' }}>
+					{it => (
+						<>
+							<DataGridTextColumn field={it.title} header="Title" sortable />
+							<TestTable />
+							<TestPagination />
+						</>
+					)}
 				</DataGrid>
 			</BindxProvider>,
 		)

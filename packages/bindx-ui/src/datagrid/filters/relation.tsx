@@ -10,7 +10,8 @@ import {
 	useDataViewRelationFilterFactory,
 	type UseDataViewRelationFilterResult,
 } from '@contember/bindx-dataview'
-import { type FieldRefBase, FIELD_REF_META } from '@contember/bindx'
+import type { FieldRefBase } from '@contember/bindx'
+import { useDefaultFieldLabel } from '../labels.js'
 import { Popover, PopoverContent, PopoverTrigger } from '../../ui/popover.js'
 import {
 	DataGridActiveFilterUI,
@@ -48,10 +49,11 @@ export interface DataGridHasOneFilterUIProps<T> {
  * Has-one relation filter for DataGrid toolbar with default UI.
  */
 export function DataGridHasOneFilterUI<T>({ label, items, ...props }: DataGridHasOneFilterUIProps<T>): ReactElement {
+	const defaultLabel = useDefaultFieldLabel(props.field)
 	return (
 		<DataViewHasOneFilter {...props}>
 			<DataGridFilterMobileHiding>
-				<DataGridRelationFilterInner label={label ?? props.field[FIELD_REF_META].fieldName} items={items} />
+				<DataGridRelationFilterInner label={label ?? defaultLabel} items={items} />
 			</DataGridFilterMobileHiding>
 		</DataViewHasOneFilter>
 	)
@@ -72,10 +74,11 @@ export interface DataGridHasManyFilterUIProps<T> {
  * Has-many relation filter for DataGrid toolbar with default UI.
  */
 export function DataGridHasManyFilterUI<T>({ label, items, ...props }: DataGridHasManyFilterUIProps<T>): ReactElement {
+	const defaultLabel = useDefaultFieldLabel(props.field)
 	return (
 		<DataViewHasManyFilter {...props}>
 			<DataGridFilterMobileHiding>
-				<DataGridRelationFilterInner label={label ?? props.field[FIELD_REF_META].fieldName} items={items} />
+				<DataGridRelationFilterInner label={label ?? defaultLabel} items={items} />
 			</DataGridFilterMobileHiding>
 		</DataViewHasManyFilter>
 	)

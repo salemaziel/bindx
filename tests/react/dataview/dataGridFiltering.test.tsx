@@ -10,7 +10,7 @@ import {
 	hasOne,
 	hasMany,
 } from '@contember/bindx-react'
-import { schema } from '../../shared/index.js'
+import { entityDef } from '@contember/bindx'
 import {
 	DataGrid,
 	DataGridTextColumn,
@@ -73,6 +73,11 @@ const localSchema = defineSchema<TestSchema>({
 	},
 })
 
+const localEntityDefs = {
+	Article: entityDef<Article>('Article'),
+	Author: entityDef<Author>('Author'),
+} as const
+
 function createMockData(): Record<string, Record<string, Record<string, unknown>>> {
 	return {
 		Article: {
@@ -89,29 +94,6 @@ function createMockData(): Record<string, Record<string, Record<string, unknown>
 }
 
 // ============================================================================
-// Helper: Filter Controls Component
-// ============================================================================
-
-/**
- * A test component that exposes filter controls via DataView context.
- */
-function FilterControls(): React.ReactElement {
-	const { filtering, sorting } = useDataViewContext()
-
-	return (
-		<div data-testid="filter-controls">
-			<span data-testid="has-active-filters">{String(filtering.hasActiveFilters)}</span>
-			<button
-				data-testid="reset-all-filters"
-				onClick={() => filtering.resetAll()}
-			>
-				Reset All
-			</button>
-		</div>
-	)
-}
-
-// ============================================================================
 // Tests: Sorting
 // ============================================================================
 
@@ -121,16 +103,14 @@ describe('DataGrid sorting', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid
-					entity={schema.Article}
-					columns={it => (
+				<DataGrid entity={localEntityDefs.Article}>
+					{it => (
 						<>
 							<DataGridTextColumn field={it.title} header="Title" sortable />
 							<DataGridTextColumn field={it.status} header="Status" sortable={false} />
+							<TestTable />
 						</>
 					)}
-				>
-					<TestTable />
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -156,13 +136,13 @@ describe('DataGrid sorting', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid
-					entity={schema.Article}
-					columns={it => (
-						<DataGridTextColumn field={it.title} header="Title" sortable />
+				<DataGrid entity={localEntityDefs.Article}>
+					{it => (
+						<>
+							<DataGridTextColumn field={it.title} header="Title" sortable />
+							<TestTable />
+						</>
 					)}
-				>
-					<TestTable />
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -204,13 +184,15 @@ describe('DataGrid sorting', () => {
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
 				<DataGrid
-					entity={schema.Article}
+					entity={localEntityDefs.Article}
 					initialSorting={{ title: 'asc' }}
-					columns={it => (
-						<DataGridTextColumn field={it.title} header="Title" sortable />
-					)}
 				>
-					<TestTable />
+					{it => (
+						<>
+							<DataGridTextColumn field={it.title} header="Title" sortable />
+							<TestTable />
+						</>
+					)}
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -236,13 +218,13 @@ describe('DataGrid column types', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid
-					entity={schema.Article}
-					columns={it => (
-						<DataGridNumberColumn field={it.views} header="Views" />
+				<DataGrid entity={localEntityDefs.Article}>
+					{it => (
+						<>
+							<DataGridNumberColumn field={it.views} header="Views" />
+							<TestTable />
+						</>
 					)}
-				>
-					<TestTable />
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -260,13 +242,13 @@ describe('DataGrid column types', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid
-					entity={schema.Article}
-					columns={it => (
-						<DataGridBooleanColumn field={it.published} header="Published" />
+				<DataGrid entity={localEntityDefs.Article}>
+					{it => (
+						<>
+							<DataGridBooleanColumn field={it.published} header="Published" />
+							<TestTable />
+						</>
 					)}
-				>
-					<TestTable />
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -284,13 +266,13 @@ describe('DataGrid column types', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid
-					entity={schema.Article}
-					columns={it => (
-						<DataGridDateColumn field={it.publishedAt} header="Published At" />
+				<DataGrid entity={localEntityDefs.Article}>
+					{it => (
+						<>
+							<DataGridDateColumn field={it.publishedAt} header="Published At" />
+							<TestTable />
+						</>
 					)}
-				>
-					<TestTable />
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -309,17 +291,17 @@ describe('DataGrid column types', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid
-					entity={schema.Article}
-					columns={it => (
-						<DataGridEnumColumn
-							field={it.status}
-							header="Status"
-							options={['draft', 'published', 'archived']}
-						/>
+				<DataGrid entity={localEntityDefs.Article}>
+					{it => (
+						<>
+							<DataGridEnumColumn
+								field={it.status}
+								header="Status"
+								options={['draft', 'published', 'archived']}
+							/>
+							<TestTable />
+						</>
 					)}
-				>
-					<TestTable />
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -337,15 +319,15 @@ describe('DataGrid column types', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid
-					entity={schema.Article}
-					columns={it => (
-						<DataGridNumberColumn field={it.views} header="Views">
-							{(views: number | null) => <strong>{views} views</strong>}
-						</DataGridNumberColumn>
+				<DataGrid entity={localEntityDefs.Article}>
+					{it => (
+						<>
+							<DataGridNumberColumn field={it.views} header="Views">
+								{(views: number | null) => <strong>{views} views</strong>}
+							</DataGridNumberColumn>
+							<TestTable />
+						</>
 					)}
-				>
-					<TestTable />
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -378,13 +360,13 @@ describe('DataGrid context', () => {
 
 		render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid
-					entity={schema.Article}
-					columns={it => (
-						<DataGridTextColumn field={it.title} header="Title" />
+				<DataGrid entity={localEntityDefs.Article}>
+					{it => (
+						<>
+							<DataGridTextColumn field={it.title} header="Title" />
+							<ContextProbe />
+						</>
 					)}
-				>
-					<ContextProbe />
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -412,16 +394,14 @@ describe('DataGrid text filter', () => {
 
 		render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid
-					entity={schema.Article}
-					columns={it => (
+				<DataGrid entity={localEntityDefs.Article}>
+					{it => (
 						<>
 							<DataGridTextColumn field={it.title} header="Title" filter />
 							<DataGridTextColumn field={it.status} header="Status" />
+							<FilterProbe />
 						</>
 					)}
-				>
-					<FilterProbe />
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -448,13 +428,15 @@ describe('DataGrid static filter', () => {
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
 				<DataGrid
-					entity={schema.Article}
+					entity={localEntityDefs.Article}
 					filter={{ status: { eq: 'published' } }}
-					columns={it => (
-						<DataGridTextColumn field={it.title} header="Title" />
-					)}
 				>
-					<TestTable />
+					{it => (
+						<>
+							<DataGridTextColumn field={it.title} header="Title" />
+							<TestTable />
+						</>
+					)}
 				</DataGrid>
 			</BindxProvider>,
 		)

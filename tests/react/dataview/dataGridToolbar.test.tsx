@@ -77,9 +77,8 @@ describe('DataGridToolbar', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid
-					entity={schema.Article}
-					columns={it => (
+				<DataGrid entity={schema.Article}>
+					{it => (
 						<>
 							<DataGridTextColumn field={it.title} header="Title" filter />
 							<DataGridEnumColumn
@@ -89,10 +88,9 @@ describe('DataGridToolbar', () => {
 								filter
 							/>
 							<DataGridNumberColumn field={it.views} header="Views" />
+							<TestToolbar />
 						</>
 					)}
-				>
-					<TestToolbar />
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -117,13 +115,13 @@ describe('DataGridToolbar', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid
-					entity={schema.Article}
-					columns={it => (
-						<DataGridTextColumn field={it.title} header="Title" filter />
+				<DataGrid entity={schema.Article}>
+					{it => (
+						<>
+							<DataGridTextColumn field={it.title} header="Title" filter />
+							<TestToolbar />
+						</>
 					)}
-				>
-					<TestToolbar />
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -151,13 +149,13 @@ describe('DataGridToolbar', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid
-					entity={schema.Article}
-					columns={it => (
-						<DataGridTextColumn field={it.title} header="Title" filter />
+				<DataGrid entity={schema.Article}>
+					{it => (
+						<>
+							<DataGridTextColumn field={it.title} header="Title" filter />
+							<TestToolbar />
+						</>
 					)}
-				>
-					<TestToolbar />
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -181,18 +179,18 @@ describe('DataGridToolbar', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid
-					entity={schema.Article}
-					columns={it => (
-						<DataGridEnumColumn
-							field={it.status}
-							header="Status"
-							options={['published', 'draft', 'archived']}
-							filter
-						/>
+				<DataGrid entity={schema.Article}>
+					{it => (
+						<>
+							<DataGridEnumColumn
+								field={it.status}
+								header="Status"
+								options={['published', 'draft', 'archived']}
+								filter
+							/>
+							<TestToolbar />
+						</>
 					)}
-				>
-					<TestToolbar />
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -212,18 +210,18 @@ describe('DataGridToolbar', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid
-					entity={schema.Article}
-					columns={it => (
-						<DataGridEnumColumn
-							field={it.status}
-							header="Status"
-							options={['published', 'draft', 'archived']}
-							filter
-						/>
+				<DataGrid entity={schema.Article}>
+					{it => (
+						<>
+							<DataGridEnumColumn
+								field={it.status}
+								header="Status"
+								options={['published', 'draft', 'archived']}
+								filter
+							/>
+							<TestToolbar />
+						</>
 					)}
-				>
-					<TestToolbar />
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -250,13 +248,13 @@ describe('DataGridToolbar', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid
-					entity={schema.Article}
-					columns={it => (
-						<DataGridBooleanColumn field={it.published} header="Published" filter />
+				<DataGrid entity={schema.Article}>
+					{it => (
+						<>
+							<DataGridBooleanColumn field={it.published} header="Published" filter />
+							<TestToolbar />
+						</>
 					)}
-				>
-					<TestToolbar />
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -293,16 +291,14 @@ describe('DataGridToolbar', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid
-					entity={schema.Article}
-					columns={it => (
+				<DataGrid entity={schema.Article}>
+					{it => (
 						<>
 							<DataGridTextColumn field={it.title} header="Title" filter />
 							<DataGridBooleanColumn field={it.published} header="Published" filter />
+							<TestToolbar />
 						</>
 					)}
-				>
-					<TestToolbar />
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -347,11 +343,13 @@ describe('DataGridPagination', () => {
 				<DataGrid
 					entity={schema.Article}
 					itemsPerPage={10}
-					columns={it => (
-						<DataGridTextColumn field={it.title} header="Title" />
-					)}
 				>
-					<TestPagination />
+					{it => (
+						<>
+							<DataGridTextColumn field={it.title} header="Title" />
+							<TestPagination />
+						</>
+					)}
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -378,13 +376,13 @@ describe('DataGridPagination', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid
-					entity={schema.Article}
-					columns={it => (
-						<DataGridTextColumn field={it.title} header="Title" />
+				<DataGrid entity={schema.Article}>
+					{it => (
+						<>
+							<DataGridTextColumn field={it.title} header="Title" />
+							<TestPagination />
+						</>
 					)}
-				>
-					<TestPagination />
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -408,11 +406,13 @@ describe('DataGridPagination', () => {
 				<DataGrid
 					entity={schema.Article}
 					itemsPerPage={10}
-					columns={it => (
-						<DataGridTextColumn field={it.title} header="Title" />
-					)}
 				>
-					<TestPagination />
+					{it => (
+						<>
+							<DataGridTextColumn field={it.title} header="Title" />
+							<TestPagination />
+						</>
+					)}
 				</DataGrid>
 			</BindxProvider>,
 		)

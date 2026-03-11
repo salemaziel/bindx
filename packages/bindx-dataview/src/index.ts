@@ -18,12 +18,22 @@ export {
 	hasManyColumnDef,
 } from './columnTypes.js'
 
-// ColumnLeaf and extraction
+// ColumnLeaf, extraction, and children analysis
 export {
 	ColumnLeaf,
 	type ColumnLeafProps,
 	extractColumnLeaves,
+	analyzeChildren,
+	type ChildrenAnalysisResult,
 } from './columnLeaf.js'
+
+// Marker components (toolbar content, layout)
+export {
+	DataGridToolbarContent,
+	type DataGridToolbarContentProps,
+	DataGridLayout,
+	type DataGridLayoutProps,
+} from './markers.js'
 
 // createColumn factory (Layer 2: UI wrapping)
 export {
@@ -32,6 +42,7 @@ export {
 	type FilterRenderProps,
 	type CreateColumnConfig,
 	type ColumnComponentProps,
+	type ColumnComponent,
 } from './createColumn.js'
 
 // Column components

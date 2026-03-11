@@ -5,6 +5,7 @@
  * filter handlers, sorting state, and paging state.
  */
 
+import type { ReactNode } from 'react'
 import type { EntityWhere, EntityOrderBy, OrderDirection } from '../selection/queryTypes.js'
 
 // ============================================================================
@@ -179,7 +180,7 @@ export interface SortingState {
  */
 export interface DataViewLayout {
 	readonly name: string
-	readonly label?: string
+	readonly label?: ReactNode
 }
 
 /**

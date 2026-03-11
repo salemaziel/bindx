@@ -1,24 +1,18 @@
 import {
-	DataGrid,
 	DataGridTextColumn,
 	DataGridDateColumn,
 	DataGridHasOneColumn,
 	DataGridHasManyColumn,
-	DataViewLayout,
-	DataViewEmpty,
-	DataViewNonEmpty,
-	type DataViewItem,
+	DataGridToolbarContent,
+	DataGridLayout,
 } from '@contember/bindx-dataview'
 import {
 	DefaultDataGrid,
-	DataGridAutoTable,
-	DataGridNoResults,
-	DataGridTiles,
 	DataGridTextFilter,
 	DataGridDateFilterUI,
-	DataViewFieldLabel,
 	FieldLabelFormatterProvider,
 } from '@contember/bindx-ui'
+import { Field, HasOne } from '@contember/bindx-react'
 import { schema } from '../../generated/index.js'
 import type { ReactElement, ReactNode } from 'react'
 
@@ -47,73 +41,75 @@ function labelFormatter(entityName: string, fieldName: string): ReactNode | null
 /**
  * Example: Styled DataGrid with filtering, sorting, and pagination.
  *
- * - Table layout uses DataGridAutoTable (auto-renders from column metadata)
- * - Tiles layout uses direct field access on items (no column context)
+ * - Table layout auto-renders from column metadata (DataGridAutoTable)
+ * - Grid layout uses the DataGridLayout marker with JSX components (Field, HasOne)
+ * - Rows layout demonstrates a second custom layout
+ * - Toolbar content uses the DataGridToolbarContent marker
+ * - No extra children needed — DefaultDataGrid handles everything
  */
 export function DataGridExample(): ReactElement {
 	return (
 		<div data-testid="datagrid-example">
 			<FieldLabelFormatterProvider formatter={labelFormatter}>
-				<DataGrid
+				<DefaultDataGrid
 					entity={schema.Article}
 					itemsPerPage={5}
 					initialSorting={{ title: 'asc' }}
-					layouts={[
-						{ name: 'table', label: 'Table' },
-						{ name: 'grid', label: 'Grid' },
-					]}
-					columns={it => (
-						<>
-							<DataGridTextColumn field={it.title} header="Title" sortable filter />
-							<DataGridTextColumn field={it.content} header="Content" />
-							<DataGridDateColumn field={it.publishedAt} header="Published" sortable filter />
-							<DataGridHasOneColumn field={it.author} header="Author">
-								{(author: any) => author?.name?.value ?? '\u2014'}
-							</DataGridHasOneColumn>
-							<DataGridHasManyColumn field={it.tags} header="Tags">
-								{(tag: any) => tag?.name?.value ?? ''}
-							</DataGridHasManyColumn>
-						</>
-					)}
-					toolbar={it => (
-						<>
-							<DataGridTextFilter field={it.title} label={<DataViewFieldLabel field="title" />} />
-							<DataGridDateFilterUI field={it.publishedAt} label={<DataViewFieldLabel field="publishedAt" />} />
-						</>
-					)}
 				>
-					<DefaultDataGrid>
-						<DataViewEmpty>
-							<DataGridNoResults />
-						</DataViewEmpty>
+					{it => (
+						<>
+							<DataGridTextColumn field={it.title} sortable filter />
+							<DataGridTextColumn field={it.content} />
+							<DataGridDateColumn field={it.publishedAt} sortable filter />
+							<DataGridHasOneColumn field={it.author}>
+								{author => author.name.value ?? '\u2014'}
+							</DataGridHasOneColumn>
+							<DataGridHasManyColumn field={it.tags}>
+								{tag => tag.name.value ?? ''}
+							</DataGridHasManyColumn>
 
-						<DataViewNonEmpty>
-							<DataViewLayout name="table">
-								<DataGridAutoTable />
-							</DataViewLayout>
-
-							<DataGridTiles>
-								{(item: DataViewItem) => (
-									<DataGridTileCard key={item.id} item={item} />
+							<DataGridLayout name="grid" label="Grid" item={it}>
+								{item => (
+									<div
+										className="rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow"
+										data-testid={`datagrid-tile-${item.id}`}
+									>
+										<div className="font-medium text-sm" data-testid="tile-title">
+											<Field field={item.title} />
+										</div>
+										<div className="text-xs text-gray-500 mt-1" data-testid="tile-author">
+											<HasOne field={item.author}>
+												{(author: any) => <Field field={author.name} />}
+											</HasOne>
+										</div>
+									</div>
 								)}
-							</DataGridTiles>
-						</DataViewNonEmpty>
-					</DefaultDataGrid>
-				</DataGrid>
+							</DataGridLayout>
+
+							<DataGridLayout name="rows" label="Rows" item={it}>
+								{item => (
+									<div
+										className="flex items-center gap-4 border-b border-gray-100 py-2"
+										data-testid={`datagrid-row-item-${item.id}`}
+									>
+										<span className="font-medium"><Field field={item.title} /></span>
+										<span className="text-sm text-gray-500">
+											<HasOne field={item.author}>
+												{(author: any) => <Field field={author.name} />}
+											</HasOne>
+										</span>
+									</div>
+								)}
+							</DataGridLayout>
+
+							<DataGridToolbarContent>
+								<DataGridTextFilter field={it.title} />
+								<DataGridDateFilterUI field={it.publishedAt} />
+							</DataGridToolbarContent>
+						</>
+					)}
+				</DefaultDataGrid>
 			</FieldLabelFormatterProvider>
-		</div>
-	)
-}
-
-function DataGridTileCard({ item }: { item: DataViewItem }): ReactElement {
-	const accessor = item as unknown as Record<string, any>
-	const title = accessor['title']?.value ?? item.id
-	const author = accessor['author']?.name?.value ?? null
-
-	return (
-		<div className="rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow" data-testid={`datagrid-tile-${item.id}`}>
-			<div className="font-medium text-sm" data-testid="tile-title">{title}</div>
-			{author && <div className="text-xs text-gray-500 mt-1" data-testid="tile-author">{author}</div>}
 		</div>
 	)
 }

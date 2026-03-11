@@ -12,7 +12,7 @@ import {
 	useDataViewFilterName,
 	type UseDataViewEnumFilterResult,
 } from '@contember/bindx-dataview'
-import { FIELD_REF_META } from '@contember/bindx'
+import { useDefaultFieldLabel } from '../labels.js'
 import { Popover, PopoverContent, PopoverTrigger } from '../../ui/popover.js'
 import { Button } from '../../ui/button.js'
 import {
@@ -33,11 +33,12 @@ export type DataGridEnumFilterUIProps<T> =
 	}
 
 export function DataGridEnumFilterUI<T>({ options, label, ...props }: DataGridEnumFilterUIProps<T>): ReactElement {
+	const defaultLabel = useDefaultFieldLabel(props.field)
 	return (
 		<DataViewEnumFilter {...props}>
 			<DataGridFilterMobileHiding>
 				<DataGridSingleFilterUI>
-					<DataGridEnumFilterSelect options={options} label={label ?? props.field[FIELD_REF_META].fieldName} />
+					<DataGridEnumFilterSelect options={options} label={label ?? defaultLabel} />
 					<DataGridEnumFilterList options={options} />
 				</DataGridSingleFilterUI>
 			</DataGridFilterMobileHiding>
@@ -53,11 +54,12 @@ export type DataGridEnumListFilterUIProps<T> =
 	}
 
 export function DataGridEnumListFilterUI<T>({ options, label, ...props }: DataGridEnumListFilterUIProps<T>): ReactElement {
+	const defaultLabel = useDefaultFieldLabel(props.field)
 	return (
 		<DataViewEnumListFilter {...props}>
 			<DataGridFilterMobileHiding>
 				<DataGridSingleFilterUI>
-					<DataGridEnumFilterSelect options={options} label={label ?? props.field[FIELD_REF_META].fieldName} />
+					<DataGridEnumFilterSelect options={options} label={label ?? defaultLabel} />
 					<DataGridEnumFilterList options={options} />
 				</DataGridSingleFilterUI>
 			</DataGridFilterMobileHiding>

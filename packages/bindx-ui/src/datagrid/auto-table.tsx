@@ -7,7 +7,8 @@
  *
  * Usage:
  * ```tsx
- * <DataGrid entity={schema.Article} columns={it => (...)}>
+ * <DataGrid entity={schema.Article}>
+ *   {it => (<...columns...>
  *   <DefaultDataGrid>
  *     <DataViewLayout name="table">
  *       <DataGridAutoTable />
@@ -16,7 +17,7 @@
  * </DataGrid>
  * ```
  */
-import type { ReactElement } from 'react'
+import type { ReactElement, ReactNode } from 'react'
 import {
 	useDataViewContext,
 	DataViewEachRow,
@@ -26,7 +27,9 @@ import {
 	DataViewEmpty,
 	DataViewNonEmpty,
 	type DataViewItem,
+	type ColumnLeafProps,
 } from '@contember/bindx-dataview'
+import { useFieldLabelFormatter } from '../labels/index.js'
 import {
 	DataGridTableWrapper,
 	DataGridTable,
@@ -39,6 +42,14 @@ import {
 	DataGridEmptyState,
 } from './table.js'
 import { DataGridColumnHeaderUI } from './column-header.js'
+
+function ResolvedColumnHeader({ col }: { col: ColumnLeafProps }): ReactNode {
+	const { entityType } = useDataViewContext()
+	const formatter = useFieldLabelFormatter()
+	if (col.header != null) return col.header
+	if (!col.fieldName) return ''
+	return formatter(entityType, col.fieldName) ?? col.fieldName
+}
 
 export interface DataGridAutoTableProps {
 	onSelectHighlighted?: (item: DataViewItem) => void
@@ -64,7 +75,7 @@ export function DataGridAutoTable({ onSelectHighlighted }: DataGridAutoTableProp
 												? col.renderFilter({ artifact: undefined, setArtifact: () => {} })
 												: undefined}
 										>
-											{col.header}
+											<ResolvedColumnHeader col={col} />
 										</DataGridColumnHeaderUI>
 									</DataGridHeaderCell>
 								</DataViewElement>

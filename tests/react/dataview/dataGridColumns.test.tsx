@@ -4,6 +4,8 @@
  * - Custom column via manual staticRender
  * - extractColumnLeaves() with nested custom components
  * - Filter artifact type flows through to renderFilter
+ * - analyzeChildren() with multiple marker types
+ * - DataGridToolbarContent and DataGridLayout markers
  */
 import '../../setup'
 import { describe, test, expect, afterEach } from 'bun:test'
@@ -15,18 +17,22 @@ import {
 	defineSchema,
 	scalar,
 } from '@contember/bindx-react'
-import { schema } from '../../shared/index.js'
+import { schema, testSchema } from '../../shared/index.js'
 import { FIELD_REF_META, type TextFilterArtifact } from '@contember/bindx'
 import {
 	DataGrid,
 	DataGridTextColumn,
+	DataGridToolbarContent,
+	DataGridLayout,
 	defineColumnType,
 	createColumn,
 	ColumnLeaf,
 	extractColumnLeaves,
+	analyzeChildren,
 	type ColumnLeafProps,
 } from '@contember/bindx-dataview'
 import { createTextFilterHandler } from '@contember/bindx'
+import { Field, HasOne } from '@contember/bindx-react'
 import { TestTable, getByTestId, queryByTestId, getRowCount, getCellText } from './helpers.js'
 
 afterEach(() => {
@@ -75,16 +81,16 @@ function createMockData(): Record<string, Record<string, Record<string, unknown>
 // Custom column type: uppercase text
 // ============================================================================
 
-const uppercaseColumnDef = defineColumnType<string | null, TextFilterArtifact>({
+const uppercaseColumnDef = defineColumnType<string, TextFilterArtifact>({
 	name: 'uppercase',
 	defaultSortable: true,
 	isTextSearchable: true,
 	createFilterHandler: createTextFilterHandler,
 	extractValue: (accessor, fieldName) => {
 		const fieldRef = accessor[fieldName]
-		if (!fieldRef || typeof fieldRef !== 'object') return null
+		if (!fieldRef || typeof fieldRef !== 'object') return ''
 		const value = (fieldRef as { value?: unknown }).value
-		return typeof value === 'string' ? value.toUpperCase() : null
+		return typeof value === 'string' ? value.toUpperCase() : ''
 	},
 })
 
@@ -96,15 +102,15 @@ const UppercaseColumn = createColumn(uppercaseColumnDef, {
 // Custom column type with renderFilter
 // ============================================================================
 
-const filteredColumnDef = defineColumnType<string | null, TextFilterArtifact>({
+const filteredColumnDef = defineColumnType<string, TextFilterArtifact>({
 	name: 'filteredText',
 	defaultSortable: false,
 	isTextSearchable: false,
 	createFilterHandler: createTextFilterHandler,
 	extractValue: (accessor, fieldName) => {
 		const fieldRef = accessor[fieldName]
-		if (!fieldRef || typeof fieldRef !== 'object') return null
-		return ((fieldRef as { value?: unknown }).value as string) ?? null
+		if (!fieldRef || typeof fieldRef !== 'object') return ''
+		return ((fieldRef as { value?: unknown }).value as string) ?? ''
 	},
 })
 
@@ -182,12 +188,13 @@ describe('Custom column via defineColumnType + createColumn', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid entity={schema.Article} columns={it => (
-					<>
-						<UppercaseColumn field={it.title} header="Title (Upper)" />
-					</>
-				)}>
-					<TestTable />
+				<DataGrid entity={schema.Article}>
+					{it => (
+						<>
+							<UppercaseColumn field={it.title} header="Title (Upper)" />
+							<TestTable />
+						</>
+					)}
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -207,10 +214,13 @@ describe('Custom column via defineColumnType + createColumn', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid entity={schema.Article} columns={it => (
-					<UppercaseColumn field={it.title} header="Title" />
-				)}>
-					<TestTable />
+				<DataGrid entity={schema.Article}>
+					{it => (
+						<>
+							<UppercaseColumn field={it.title} header="Title" />
+							<TestTable />
+						</>
+					)}
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -229,12 +239,15 @@ describe('Custom column via defineColumnType + createColumn', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid entity={schema.Article} columns={it => (
-					<UppercaseColumn field={it.title} header="Title">
-						{(value: string | null) => <em>{value}</em>}
-					</UppercaseColumn>
-				)}>
-					<TestTable />
+				<DataGrid entity={schema.Article}>
+					{it => (
+						<>
+							<UppercaseColumn field={it.title} header="Title">
+								{(value: string | null) => <em>{value}</em>}
+							</UppercaseColumn>
+							<TestTable />
+						</>
+					)}
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -256,13 +269,14 @@ describe('Custom column via manual staticRender', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid entity={schema.Article} columns={it => (
-					<>
-						<DataGridTextColumn field={it.title} header="Title" />
-						<BadgeColumn field={it.status} header="Status" />
-					</>
-				)}>
-					<TestTable />
+				<DataGrid entity={schema.Article}>
+					{it => (
+						<>
+							<DataGridTextColumn field={it.title} header="Title" />
+							<BadgeColumn field={it.status} header="Status" />
+							<TestTable />
+						</>
+					)}
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -290,10 +304,13 @@ describe('Custom column via manual staticRender', () => {
 
 		render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid entity={schema.Article} columns={it => (
-					<BadgeColumn field={it.status} header="Status" />
-				)}>
-					<Probe />
+				<DataGrid entity={schema.Article}>
+					{it => (
+						<>
+							<BadgeColumn field={it.status} header="Status" />
+							<Probe />
+						</>
+					)}
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -361,10 +378,13 @@ describe('Filter artifact type safety', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid entity={schema.Article} columns={it => (
-					<FilteredColumn field={it.title} header="Title" filter />
-				)}>
-					<TestTable />
+				<DataGrid entity={schema.Article}>
+					{it => (
+						<>
+							<FilteredColumn field={it.title} header="Title" filter />
+							<TestTable />
+						</>
+					)}
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -387,10 +407,13 @@ describe('Filter artifact type safety', () => {
 		cleanup()
 		render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid entity={schema.Article} columns={it => (
-					<FilteredColumn field={it.title} header="Title" filter />
-				)}>
-					<FilterProbe />
+				<DataGrid entity={schema.Article}>
+					{it => (
+						<>
+							<FilteredColumn field={it.title} header="Title" filter />
+							<FilterProbe />
+						</>
+					)}
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -412,10 +435,13 @@ describe('Filter artifact type safety', () => {
 
 		render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid entity={schema.Article} columns={it => (
-					<FilteredColumn field={it.title} header="Title" />
-				)}>
-					<Probe />
+				<DataGrid entity={schema.Article}>
+					{it => (
+						<>
+							<FilteredColumn field={it.title} header="Title" />
+							<Probe />
+						</>
+					)}
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -427,5 +453,290 @@ describe('Filter artifact type safety', () => {
 		const col = columns.find(c => c.fieldName === 'title')
 		expect(col?.filterHandler).toBeUndefined()
 		expect(col?.filterName).toBeNull()
+	})
+})
+
+// ============================================================================
+// Layout marker — JSX analysis for selection (via DataGridLayout marker)
+// ============================================================================
+
+describe('DataGrid layout via DataGridLayout marker', () => {
+	test('layout with Field and HasOne renders per item', async () => {
+		const adapter = new MockAdapter({
+			Article: {
+				'a1': { id: 'a1', title: 'Alpha', author: { id: 'auth1', name: 'Alice' } },
+				'a2': { id: 'a2', title: 'Beta', author: { id: 'auth2', name: 'Bob' } },
+			},
+			Author: {
+				'auth1': { id: 'auth1', name: 'Alice' },
+				'auth2': { id: 'auth2', name: 'Bob' },
+			},
+		}, { delay: 0 })
+
+		const { useDataViewContext: useCtx } = await import('@contember/bindx-dataview')
+
+		function LayoutRenderer(): React.ReactElement | null {
+			const { layoutRenders, items, loaderState } = useCtx()
+			const gridRender = layoutRenders.get('grid')
+			if (loaderState !== 'loaded' || !gridRender) return <div data-testid="loading">loading</div>
+			return (
+				<div data-testid="tiles">
+					{items.map((item, i) => (
+						<div key={item.id} data-testid={`tile-${i}`}>
+							{gridRender(item)}
+						</div>
+					))}
+				</div>
+			)
+		}
+
+		const { container } = render(
+			<BindxProvider adapter={adapter} schema={testSchema}>
+				<DataGrid entity={schema.Article}>
+					{it => (
+						<>
+							<DataGridTextColumn field={it.title} header="Title" />
+							<DataGridLayout name="grid" item={it}>
+								{(item: typeof it) => (
+									<div>
+										<span data-testid="tile-title"><Field field={item.title} /></span>
+										<span data-testid="tile-author">
+											<HasOne field={item.author}>
+												{(author: any) => <Field field={author.name} />}
+											</HasOne>
+										</span>
+									</div>
+								)}
+							</DataGridLayout>
+							<LayoutRenderer />
+						</>
+					)}
+				</DataGrid>
+			</BindxProvider>,
+		)
+
+		await waitFor(() => {
+			expect(queryByTestId(container, 'loading')).toBeNull()
+		})
+
+		// Tiles should render with Field/HasOne data
+		const tile0 = getByTestId(container, 'tile-0')
+		expect(tile0.querySelector('[data-testid="tile-title"]')?.textContent).toBe('Alpha')
+		expect(tile0.querySelector('[data-testid="tile-author"]')?.textContent).toBe('Alice')
+
+		const tile1 = getByTestId(container, 'tile-1')
+		expect(tile1.querySelector('[data-testid="tile-title"]')?.textContent).toBe('Beta')
+		expect(tile1.querySelector('[data-testid="tile-author"]')?.textContent).toBe('Bob')
+	})
+
+	test('layoutRenders has entry when DataGridLayout is present', async () => {
+		const adapter = new MockAdapter(createMockData(), { delay: 0 })
+		const { useDataViewContext: useCtx } = await import('@contember/bindx-dataview')
+
+		let hasGridRender = false
+		function Probe(): React.ReactElement | null {
+			hasGridRender = useCtx().layoutRenders.has('grid')
+			return null
+		}
+
+		render(
+			<BindxProvider adapter={adapter} schema={localSchema}>
+				<DataGrid entity={schema.Article}>
+					{it => (
+						<>
+							<DataGridTextColumn field={it.title} header="Title" />
+							<DataGridLayout name="grid" item={it}>
+								{() => <Field field={it.title} />}
+							</DataGridLayout>
+							<Probe />
+						</>
+					)}
+				</DataGrid>
+			</BindxProvider>,
+		)
+
+		await waitFor(() => {
+			expect(hasGridRender).toBe(true)
+		})
+	})
+
+	test('layoutRenders is empty when no DataGridLayout is present', async () => {
+		const adapter = new MockAdapter(createMockData(), { delay: 0 })
+		const { useDataViewContext: useCtx } = await import('@contember/bindx-dataview')
+
+		let layoutRendersSize: number = -1
+		function Probe(): React.ReactElement | null {
+			layoutRendersSize = useCtx().layoutRenders.size
+			return null
+		}
+
+		render(
+			<BindxProvider adapter={adapter} schema={localSchema}>
+				<DataGrid entity={schema.Article}>
+					{it => (
+						<>
+							<DataGridTextColumn field={it.title} header="Title" />
+							<Probe />
+						</>
+					)}
+				</DataGrid>
+			</BindxProvider>,
+		)
+
+		await waitFor(() => {
+			expect(layoutRendersSize).toBe(0)
+		})
+	})
+
+	test('multiple DataGridLayout markers are collected', async () => {
+		const adapter = new MockAdapter(createMockData(), { delay: 0 })
+		const { useDataViewContext: useCtx } = await import('@contember/bindx-dataview')
+
+		let layoutNames: string[] = []
+		function Probe(): React.ReactElement | null {
+			layoutNames = Array.from(useCtx().layoutRenders.keys())
+			return null
+		}
+
+		render(
+			<BindxProvider adapter={adapter} schema={localSchema}>
+				<DataGrid entity={schema.Article}>
+					{it => (
+						<>
+							<DataGridTextColumn field={it.title} header="Title" />
+							<DataGridLayout name="grid" label="Grid" item={it}>
+								{() => <Field field={it.title} />}
+							</DataGridLayout>
+							<DataGridLayout name="rows" label="Rows" item={it}>
+								{() => <Field field={it.title} />}
+							</DataGridLayout>
+							<Probe />
+						</>
+					)}
+				</DataGrid>
+			</BindxProvider>,
+		)
+
+		await waitFor(() => {
+			expect(layoutNames.length).toBe(2)
+		})
+
+		expect(layoutNames).toContain('grid')
+		expect(layoutNames).toContain('rows')
+	})
+})
+
+// ============================================================================
+// analyzeChildren with multiple marker types
+// ============================================================================
+
+describe('analyzeChildren with multiple marker types', () => {
+	test('collects ColumnLeaf and DataGridToolbarContent markers', () => {
+		const toolbarJsx = <div>Filter UI</div>
+		const elements = (
+			<>
+				<DataGridTextColumn field={{ [FIELD_REF_META]: { fieldName: 'title' } } as any} header="Title" />
+				<DataGridToolbarContent>{toolbarJsx}</DataGridToolbarContent>
+			</>
+		)
+
+		const MARKERS = new Set([
+			ColumnLeaf as React.ComponentType,
+			DataGridToolbarContent as React.ComponentType,
+		])
+		const result = analyzeChildren(elements, MARKERS)
+
+		expect(result.getAll(ColumnLeaf).length).toBe(1)
+		expect(result.getFirst(DataGridToolbarContent)).toBeDefined()
+		expect(result.getFirst(DataGridToolbarContent)?.children).toBeDefined()
+	})
+
+	test('collects DataGridLayout marker', () => {
+		const layoutCallback = () => <div>Grid Item</div>
+		const elements = (
+			<>
+				<DataGridTextColumn field={{ [FIELD_REF_META]: { fieldName: 'title' } } as any} header="Title" />
+				<DataGridLayout name="grid">{layoutCallback}</DataGridLayout>
+			</>
+		)
+
+		const MARKERS = new Set([
+			ColumnLeaf as React.ComponentType,
+			DataGridLayout as React.ComponentType,
+		])
+		const result = analyzeChildren(elements, MARKERS)
+
+		expect(result.getAll(ColumnLeaf).length).toBe(1)
+		const layouts = result.getAll(DataGridLayout)
+		expect(layouts.length).toBe(1)
+		expect((layouts[0] as any).name).toBe('grid')
+		expect(typeof (layouts[0] as any).children).toBe('function')
+	})
+
+	test('collects multiple DataGridLayout markers', () => {
+		const elements = (
+			<>
+				<DataGridTextColumn field={{ [FIELD_REF_META]: { fieldName: 'title' } } as any} header="Title" />
+				<DataGridLayout name="grid">{() => <div>Grid</div>}</DataGridLayout>
+				<DataGridLayout name="rows">{() => <div>Row</div>}</DataGridLayout>
+			</>
+		)
+
+		const MARKERS = new Set([
+			ColumnLeaf as React.ComponentType,
+			DataGridLayout as React.ComponentType,
+		])
+		const result = analyzeChildren(elements, MARKERS)
+
+		const layouts = result.getAll(DataGridLayout)
+		expect(layouts.length).toBe(2)
+		expect((layouts[0] as any).name).toBe('grid')
+		expect((layouts[1] as any).name).toBe('rows')
+	})
+
+	test('returns undefined for missing marker types', () => {
+		const elements = (
+			<DataGridTextColumn field={{ [FIELD_REF_META]: { fieldName: 'title' } } as any} header="Title" />
+		)
+
+		const MARKERS = new Set([
+			ColumnLeaf as React.ComponentType,
+			DataGridToolbarContent as React.ComponentType,
+		])
+		const result = analyzeChildren(elements, MARKERS)
+
+		expect(result.getAll(ColumnLeaf).length).toBe(1)
+		expect(result.getFirst(DataGridToolbarContent)).toBeUndefined()
+	})
+
+	test('DataGridToolbarContent available in context via children render', async () => {
+		const adapter = new MockAdapter(createMockData(), { delay: 0 })
+		const { useDataViewContext: useCtx } = await import('@contember/bindx-dataview')
+
+		let toolbarContent: React.ReactNode = undefined
+		function Probe(): React.ReactElement | null {
+			toolbarContent = useCtx().toolbarContent
+			return null
+		}
+
+		render(
+			<BindxProvider adapter={adapter} schema={localSchema}>
+				<DataGrid entity={schema.Article}>
+					{it => (
+						<>
+							<DataGridTextColumn field={it.title} header="Title" />
+							<DataGridToolbarContent>
+								<div data-testid="my-toolbar">Custom Toolbar</div>
+							</DataGridToolbarContent>
+							<Probe />
+						</>
+					)}
+				</DataGrid>
+			</BindxProvider>,
+		)
+
+		await waitFor(() => {
+			expect(toolbarContent).toBeDefined()
+		})
 	})
 })

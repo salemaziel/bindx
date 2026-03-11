@@ -74,20 +74,21 @@ describe('DataGrid with toolbar and pagination', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid entity={schema.Article} columns={it => (
-					<>
-						<DataGridTextColumn field={it.title} header="Title" filter />
-						<DataGridEnumColumn
-							field={it.status}
-							header="Status"
-							options={['published', 'draft', 'archived']}
-							filter
-						/>
-						<DataGridNumberColumn field={it.views} header="Views" />
-					</>
-				)}>
-					<TestToolbar />
-					<TestTable />
+				<DataGrid entity={schema.Article}>
+					{it => (
+						<>
+							<DataGridTextColumn field={it.title} header="Title" filter />
+							<DataGridEnumColumn
+								field={it.status}
+								header="Status"
+								options={['published', 'draft', 'archived']}
+								filter
+							/>
+							<DataGridNumberColumn field={it.views} header="Views" />
+							<TestToolbar />
+							<TestTable />
+						</>
+					)}
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -116,11 +117,14 @@ describe('DataGrid with toolbar and pagination', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid entity={schema.Article} itemsPerPage={10} columns={it => (
-					<DataGridTextColumn field={it.title} header="Title" />
-				)}>
-					<TestTable />
-					<TestPagination />
+				<DataGrid entity={schema.Article} itemsPerPage={10}>
+					{it => (
+						<>
+							<DataGridTextColumn field={it.title} header="Title" />
+							<TestTable />
+							<TestPagination />
+						</>
+					)}
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -139,20 +143,21 @@ describe('DataGrid with toolbar and pagination', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid entity={schema.Article} itemsPerPage={10} columns={it => (
-					<>
-						<DataGridTextColumn field={it.title} header="Title" filter sortable />
-						<DataGridEnumColumn
-							field={it.status}
-							header="Status"
-							options={['published', 'draft', 'archived']}
-							filter
-						/>
-					</>
-				)}>
-					<TestToolbar />
-					<TestTable />
-					<TestPagination />
+				<DataGrid entity={schema.Article} itemsPerPage={10}>
+					{it => (
+						<>
+							<DataGridTextColumn field={it.title} header="Title" filter sortable />
+							<DataGridEnumColumn
+								field={it.status}
+								header="Status"
+								options={['published', 'draft', 'archived']}
+								filter
+							/>
+							<TestToolbar />
+							<TestTable />
+							<TestPagination />
+						</>
+					)}
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -174,15 +179,18 @@ describe('DataGrid with toolbar and pagination', () => {
 		expect(titleHeader.querySelector('[data-testid="sort-indicator"]')).not.toBeNull()
 	})
 
-	test('no toolbar/pagination when not included as children', async () => {
+	test('no toolbar/pagination when not included in children', async () => {
 		const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid entity={schema.Article} columns={it => (
-					<DataGridTextColumn field={it.title} header="Title" filter />
-				)}>
-					<TestTable />
+				<DataGrid entity={schema.Article}>
+					{it => (
+						<>
+							<DataGridTextColumn field={it.title} header="Title" filter />
+							<TestTable />
+						</>
+					)}
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -201,10 +209,13 @@ describe('DataGrid with toolbar and pagination', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid entity={schema.Article} columns={it => (
-					<DataGridTextColumn field={it.title} header="Title" sortable />
-				)}>
-					<TestTable />
+				<DataGrid entity={schema.Article}>
+					{it => (
+						<>
+							<DataGridTextColumn field={it.title} header="Title" sortable />
+							<TestTable />
+						</>
+					)}
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -236,11 +247,14 @@ describe('DataGrid with toolbar and pagination', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid entity={schema.Article} columns={it => (
-					<DataGridTextColumn field={it.title} header="Title" filter />
-				)}>
-					<TestToolbar />
-					<TestTable />
+				<DataGrid entity={schema.Article}>
+					{it => (
+						<>
+							<DataGridTextColumn field={it.title} header="Title" filter />
+							<TestToolbar />
+							<TestTable />
+						</>
+					)}
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -271,16 +285,19 @@ describe('DataGrid with toolbar and pagination', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid entity={schema.Article} columns={it => (
-					<DataGridEnumColumn
-						field={it.status}
-						header="Status"
-						options={['published', 'draft', 'archived']}
-						filter
-					/>
-				)}>
-					<TestToolbar />
-					<TestTable />
+				<DataGrid entity={schema.Article}>
+					{it => (
+						<>
+							<DataGridEnumColumn
+								field={it.status}
+								header="Status"
+								options={['published', 'draft', 'archived']}
+								filter
+							/>
+							<TestToolbar />
+							<TestTable />
+						</>
+					)}
 				</DataGrid>
 			</BindxProvider>,
 		)
@@ -308,14 +325,15 @@ describe('DataGrid with toolbar and pagination', () => {
 
 		const { container } = render(
 			<BindxProvider adapter={adapter} schema={localSchema}>
-				<DataGrid entity={schema.Article} columns={it => (
-					<>
-						<DataGridTextColumn field={it.title} header="Title" filter />
-						<DataGridBooleanColumn field={it.published} header="Published" filter />
-					</>
-				)}>
-					<TestToolbar />
-					<TestTable />
+				<DataGrid entity={schema.Article}>
+					{it => (
+						<>
+							<DataGridTextColumn field={it.title} header="Title" filter />
+							<DataGridBooleanColumn field={it.published} header="Published" filter />
+							<TestToolbar />
+							<TestTable />
+						</>
+					)}
 				</DataGrid>
 			</BindxProvider>,
 		)

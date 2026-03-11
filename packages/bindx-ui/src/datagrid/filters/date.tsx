@@ -12,7 +12,7 @@ import {
 	useDataViewFilter,
 	useDataViewFilterName,
 } from '@contember/bindx-dataview'
-import { FIELD_REF_META } from '@contember/bindx'
+import { useDefaultFieldLabel } from '../labels.js'
 import type { DateFilterArtifact } from '@contember/bindx'
 import { XIcon } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '../../ui/popover.js'
@@ -47,16 +47,17 @@ export const createDataGridDateRange = (label: ReactNode, dayDeltaStart: number,
 export type DataGridDateFilterUIProps<T> =
 	& Omit<DataViewDateFilterProps<T>, 'children'>
 	& {
-		label: ReactNode
+		label?: ReactNode
 		ranges?: DataGridPredefinedDateRange[]
 	}
 
 export function DataGridDateFilterUI<T>({ label, ranges, ...props }: DataGridDateFilterUIProps<T>): ReactElement {
+	const defaultLabel = useDefaultFieldLabel(props.field)
 	return (
 		<DataViewDateFilter {...props}>
 			<DataGridFilterMobileHiding>
 				<DataGridSingleFilterUI>
-					<DataGridDateFilterSelect label={label ?? props.field[FIELD_REF_META].fieldName} ranges={ranges} />
+					<DataGridDateFilterSelect label={label ?? defaultLabel} ranges={ranges} />
 					<DataGridDateFilterList />
 				</DataGridSingleFilterUI>
 			</DataGridFilterMobileHiding>

@@ -11,7 +11,7 @@ import {
 	useDataViewFilter,
 	useDataViewFilterName,
 } from '@contember/bindx-dataview'
-import { FIELD_REF_META } from '@contember/bindx'
+import { useDefaultFieldLabel } from '../labels.js'
 import type { NumberRangeFilterArtifact } from '@contember/bindx'
 import { Popover, PopoverContent, PopoverTrigger } from '../../ui/popover.js'
 import { Input } from '../../ui/input.js'
@@ -27,15 +27,16 @@ import { dict } from '../../dict.js'
 export type DataGridNumberFilterUIProps<T> =
 	& Omit<DataViewNumberFilterProps<T>, 'children'>
 	& {
-		label: ReactNode
+		label?: ReactNode
 	}
 
 export function DataGridNumberFilterUI<T>({ label, ...props }: DataGridNumberFilterUIProps<T>): ReactElement {
+	const defaultLabel = useDefaultFieldLabel(props.field)
 	return (
 		<DataViewNumberFilter {...props}>
 			<DataGridFilterMobileHiding>
 				<DataGridSingleFilterUI>
-					<DataGridNumberFilterSelect label={label ?? props.field[FIELD_REF_META].fieldName} />
+					<DataGridNumberFilterSelect label={label ?? defaultLabel} />
 					<DataGridNumberFilterList />
 				</DataGridSingleFilterUI>
 			</DataGridFilterMobileHiding>
