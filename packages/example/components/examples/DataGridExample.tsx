@@ -1,13 +1,13 @@
 import {
-	DataGridTextColumn,
-	DataGridDateColumn,
-	DataGridHasOneColumn,
-	DataGridHasManyColumn,
 	DataGridToolbarContent,
 	DataGridLayout,
 } from '@contember/bindx-dataview'
 import {
 	DefaultDataGrid,
+	DataGridTextColumn,
+	DataGridDateColumn,
+	DataGridHasOneColumn,
+	DataGridHasManyColumn,
 	DataGridTextFilter,
 	DataGridDateFilterUI,
 	FieldLabelFormatterProvider,
@@ -79,7 +79,7 @@ export function DataGridExample(): ReactElement {
 										</div>
 										<div className="text-xs text-gray-500 mt-1" data-testid="tile-author">
 											<HasOne field={item.author}>
-												{(author: any) => <Field field={author.name} />}
+												{(author) => <Field field={author.name} />}
 											</HasOne>
 										</div>
 									</div>
@@ -95,7 +95,7 @@ export function DataGridExample(): ReactElement {
 										<span className="font-medium"><Field field={item.title} /></span>
 										<span className="text-sm text-gray-500">
 											<HasOne field={item.author}>
-												{(author: any) => <Field field={author.name} />}
+												{(author) => <Field field={author.name} />}
 											</HasOne>
 										</span>
 									</div>

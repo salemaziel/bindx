@@ -18,6 +18,7 @@
  * ```
  */
 import type { ReactElement, ReactNode } from 'react'
+import type { FilterArtifact } from '@contember/bindx'
 import {
 	useDataViewContext,
 	DataViewEachRow,
@@ -26,6 +27,8 @@ import {
 	DataViewElement,
 	DataViewEmpty,
 	DataViewNonEmpty,
+	DataViewFilterScope,
+	useDataViewFilter,
 	type DataViewItem,
 	type ColumnLeafProps,
 } from '@contember/bindx-dataview'
@@ -42,6 +45,18 @@ import {
 	DataGridEmptyState,
 } from './table.js'
 import { DataGridColumnHeaderUI } from './column-header.js'
+
+function ColumnFilterRenderer({ filterName, renderFilter }: {
+	filterName: string
+	renderFilter: (props: { artifact: unknown; setArtifact: (artifact: FilterArtifact) => void }) => ReactNode
+}): ReactElement {
+	const [artifact, setArtifact] = useDataViewFilter(filterName)
+	return (
+		<DataViewFilterScope name={filterName}>
+			{renderFilter({ artifact, setArtifact })}
+		</DataViewFilterScope>
+	)
+}
 
 function ResolvedColumnHeader({ col }: { col: ColumnLeafProps }): ReactNode {
 	const { entityType } = useDataViewContext()
@@ -71,8 +86,8 @@ export function DataGridAutoTable({ onSelectHighlighted }: DataGridAutoTableProp
 											sortingField={col.sortingField && col.fieldRef ? col.fieldRef : undefined}
 											hidingName={col.fieldName ?? undefined}
 											filterName={col.filterName ?? undefined}
-											filter={col.renderFilter
-												? col.renderFilter({ artifact: undefined, setArtifact: () => {} })
+											filter={col.filterName && col.renderFilter
+												? <ColumnFilterRenderer filterName={col.filterName} renderFilter={col.renderFilter} />
 												: undefined}
 										>
 											<ResolvedColumnHeader col={col} />

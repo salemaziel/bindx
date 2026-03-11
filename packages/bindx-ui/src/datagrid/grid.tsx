@@ -106,3 +106,33 @@ export {
 	type DataGridRelationFilteredItemsListProps,
 	type RelationFilterItem,
 } from './filters/index.js'
+
+// Styled columns (with inline filter UI)
+export {
+	DataGridTextColumn,
+	DataGridNumberColumn,
+	DataGridDateColumn,
+	DataGridDateTimeColumn,
+	DataGridBooleanColumn,
+	DataGridEnumColumn,
+	DataGridEnumListColumn,
+	DataGridUuidColumn,
+	DataGridIsDefinedColumn,
+	DataGridHasOneColumn,
+	DataGridHasManyColumn,
+	DataGridActionColumn,
+	DataGridColumn,
+	type DataGridTextColumnProps,
+	type DataGridNumberColumnProps,
+	type DataGridDateColumnProps,
+	type DataGridDateTimeColumnProps,
+	type DataGridBooleanColumnProps,
+	type DataGridEnumColumnProps,
+	type DataGridEnumListColumnProps,
+	type DataGridUuidColumnProps,
+	type DataGridIsDefinedColumnProps,
+	type DataGridHasOneColumnProps,
+	type DataGridHasManyColumnProps,
+	type DataGridActionColumnProps,
+	type DataGridColumnProps,
+} from './columns.js'
