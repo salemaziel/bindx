@@ -29,6 +29,10 @@ export const dict = {
 		true: 'Yes',
 		false: 'No',
 	},
+	select: {
+		placeholder: 'Select…',
+		search: 'Search…',
+	},
 	datagrid: {
 		empty: 'No results.',
 		filter: 'Filter',

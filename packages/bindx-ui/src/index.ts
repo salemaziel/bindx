@@ -68,5 +68,8 @@ export * from './upload/index.js'
 // DataGrid
 export * from './datagrid/index.js'
 
+// Select
+export * from './select/index.js'
+
 // Dict
 export { dict, dictFormat } from './dict.js'
