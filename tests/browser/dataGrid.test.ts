@@ -28,7 +28,7 @@ browserTest('DataGrid', () => {
 
 	describe('cell content', () => {
 		test.each(['title', 'author', 'tags'])('%s cell shows content', (key) => {
-			expect(el(`datagrid-cell-${key}`).text).toBeTruthy()
+			expect(el(`${tid('datagrid-row-0')} ${tid(`datagrid-cell-${key}`)}`).text).toBeTruthy()
 		})
 	})
 
@@ -59,11 +59,11 @@ browserTest('DataGrid', () => {
 
 	describe('has-one and has-many cells', () => {
 		test('author cell shows content', () => {
-			expect(el('datagrid-cell-author').text).toBeTruthy()
+			expect(el(`${tid('datagrid-row-0')} ${tid('datagrid-cell-author')}`).text).toBeTruthy()
 		})
 
 		test('tags cell shows content', () => {
-			expect(el('datagrid-cell-tags').text).toBeTruthy()
+			expect(el(`${tid('datagrid-row-0')} ${tid('datagrid-cell-tags')}`).text).toBeTruthy()
 		})
 	})
 
@@ -71,13 +71,13 @@ browserTest('DataGrid', () => {
 		test('clicking a row highlights it', () => {
 			el('datagrid-row-0').click()
 
-			expect(el('datagrid-row-0').attr('data-highlighted')).toBe('')
+			expect(el(`${tid('datagrid-row-0')}[data-highlighted]`).exists).toBe(true)
 		})
 
 		test('clicking another row moves highlight', () => {
 			el('datagrid-row-1').click()
 
-			expect(el('datagrid-row-1').attr('data-highlighted')).toBe('')
+			expect(el(`${tid('datagrid-row-1')}[data-highlighted]`).exists).toBe(true)
 			expect(el(`${tid('datagrid-row-0')}[data-highlighted]`).exists).toBe(false)
 		})
 	})

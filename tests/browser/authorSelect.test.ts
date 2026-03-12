@@ -17,7 +17,7 @@ browserTest('Article with Author Select', () => {
 	})
 
 	test('changing author enables save and updates display', () => {
-		el('author-select-dropdown').select('Bob Wilson')
+		el('author-select-dropdown').select('Bob Wilson (bob@example.com)')
 
 		expect(el('author-select-save-button').isDisabled).toBe(false)
 		expect(el('current-author-display').text).toContain('Bob Wilson')

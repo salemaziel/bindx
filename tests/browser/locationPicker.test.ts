@@ -29,7 +29,7 @@ browserTest('Location Picker', () => {
 	})
 
 	test('selecting empty option hides details', () => {
-		el('location-select').select('Choose a location')
+		el('location-select').select('Choose a location...')
 
 		expect(el('location-details').exists).toBe(false)
 	})
