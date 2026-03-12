@@ -26,17 +26,9 @@ export { UnfetchedFieldError } from './UnfetchedFieldError.js'
 
 export {
 	type PathElement,
-	type PathSegment,
-	type ParsedPath,
 	type ContemberMutationError,
 	type ContemberValidationError,
-	type MappedError,
 	type ContemberMutationResult,
-	mapMutationError,
-	mapValidationError,
-	extractMappedErrors,
-	isNestedError,
-	getErrorPathString,
 } from './pathMapper.js'
 
 export {
