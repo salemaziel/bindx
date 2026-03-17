@@ -127,7 +127,7 @@ function createCollectorFieldRef(
 	}
 
 	const meta = {
-		entityType: '', // Collection phase - no entity
+		entityType: targetEntityName ?? '', // Collection phase - entity type from schema
 		entityId: '', // Collection phase - no entity
 		path: [fieldName],
 		fieldName,

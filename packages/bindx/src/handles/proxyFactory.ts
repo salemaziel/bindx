@@ -13,22 +13,33 @@
 import { FIELD_REF_META } from './types.js'
 
 /**
- * Known properties on EntityHandle that should NOT be treated as field access.
- * Properties like `fields`, `data`, `errors` are NOT included - use $ prefix for those.
- * This allows direct field access for entity fields with these names.
+ * Shared base properties for entity-like handles (EntityHandle, HasOneHandle).
+ * Extracting a common set prevents bugs from inconsistent maintenance (e.g. missing `id`).
  */
-export const ENTITY_HANDLE_PROPERTIES = new Set<string | symbol>([
-	// Special case: id is always the entity ID, not a field handle
+const BASE_ENTITY_PROPERTIES: (string | symbol)[] = [
+	// Entity identity — id is always the entity ID, not a field handle
 	'id',
 	// Type brands (phantom types)
-	'__entityType', '__entityName', '__brands',
-	// Internal implementation details
-	'type', 'entityType', 'entityId', 'store', 'dispatcher', 'schema',
-	'fieldHandleCache', 'relationHandleCache', 'getEntityData', 'getServerData',
-	'assertNotDisposed', 'isDisposed',
+	'__entityType', '__entityName', '__brands', '__schema',
+	// Symbol
+	FIELD_REF_META,
+	// Core internals shared by all entity-like handles
+	'entityType', 'entityId', 'store', 'dispatcher', 'schema',
+	'getEntityData', 'getServerData', 'assertNotDisposed', 'isDisposed',
+	'dispose', 'subscribe',
+]
+
+/**
+ * Known properties on EntityHandle that should NOT be treated as field access.
+ * Properties like `fields`, `data`, `errors` are NOT included - use $ prefix for those.
+ */
+export const ENTITY_HANDLE_PROPERTIES = new Set<string | symbol>([
+	...BASE_ENTITY_PROPERTIES,
+	// Entity-specific internals
+	'type', 'fieldHandleCache', 'relationHandleCache',
 	// Internal methods (unlikely to be field names)
 	'field', 'hasOne', 'hasMany', 'getSnapshot',
-	'reset', 'commit', 'dispose', 'subscribe',
+	'reset', 'commit',
 	'getDirtyFields', 'getDirtyRelations',
 	// State properties (unlikely to be field names)
 	'serverData', 'isLoaded', 'isLoading', 'isError', 'error', 'isPersisting',
@@ -39,16 +50,12 @@ export const ENTITY_HANDLE_PROPERTIES = new Set<string | symbol>([
  * Properties like `fields`, `entity`, `errors`, `state` are NOT included - they require $ prefix.
  */
 export const HAS_ONE_HANDLE_PROPERTIES = new Set<string | symbol>([
-	// Type brands (phantom types)
-	'__entityType', '__entityName', '__brands', '__schema',
-	// Symbol
-	FIELD_REF_META,
-	// Internal implementation details
-	'entityType', 'entityId', 'fieldName', 'targetType', 'store', 'dispatcher', 'schema',
-	'entityHandleCache', 'placeholderCache', 'getEntityData', 'getServerData',
-	'assertNotDisposed', 'isDisposed', 'ensureRelatedEntitySnapshot', 'relatedId',
-	// Methods that are unlikely to be field names (kept for internal use)
-	'connect', 'disconnect', 'delete', 'reset', 'dispose', 'subscribe',
+	...BASE_ENTITY_PROPERTIES,
+	// HasOne-specific internals
+	'fieldName', 'targetType',
+	'entityHandleCache', 'placeholderCache', 'ensureRelatedEntitySnapshot', 'relatedId',
+	// Methods that are unlikely to be field names
+	'connect', 'disconnect', 'delete', 'reset',
 ])
 
 /**
