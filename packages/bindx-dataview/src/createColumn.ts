@@ -46,7 +46,7 @@ export interface ColumnComponentProps<TValue = unknown> {
 	header?: React.ReactNode
 	sortable?: boolean
 	filter?: boolean
-	children?: (value: TValue | null) => React.ReactNode
+	children?: (value: TValue | null, accessor: EntityAccessor<object>) => React.ReactNode
 }
 
 // ============================================================================
@@ -71,20 +71,20 @@ export function createColumn<TValue, TFilterArtifact extends FilterArtifact, TEx
 		const fieldName = fieldRef ? extractFieldName(fieldRef) : null
 		const header = props['header'] as React.ReactNode | undefined
 		const sortable = (props['sortable'] as boolean | undefined) ?? columnType.defaultSortable
-		const filterEnabled = (props['filter'] as boolean | undefined) ?? false
-		const children = props['children'] as ((value: TValue | null) => React.ReactNode) | undefined
+		const filterEnabled = (props['filter'] as boolean | undefined) ?? true
+		const children = props['children'] as ((value: TValue | null, accessor: EntityAccessor<object>) => React.ReactNode) | undefined
 		const enumOptions = props['options'] as readonly string[] | undefined
 
 		const renderCell = children
 			? (accessor: EntityAccessor<object>): React.ReactNode => {
 				const value = fieldName
-					? columnType.extractValue(accessor as unknown as Record<string, unknown>, fieldName)
+					? columnType.extractValue(accessor, fieldName)
 					: null as TValue
-				return children(value)
+				return children(value, accessor)
 			}
 			: (accessor: EntityAccessor<object>): React.ReactNode => {
 				const value = fieldName
-					? columnType.extractValue(accessor as unknown as Record<string, unknown>, fieldName)
+					? columnType.extractValue(accessor, fieldName)
 					: null as TValue
 				return config.renderCell({
 					value,
@@ -94,7 +94,7 @@ export function createColumn<TValue, TFilterArtifact extends FilterArtifact, TEx
 				})
 			}
 
-		const leafProps: ColumnLeafProps = {
+		const leafProps = {
 			name: fieldName ?? `col-${Math.random().toString(36).slice(2, 8)}`,
 			fieldName,
 			fieldRef: fieldRef ?? null,
@@ -104,12 +104,12 @@ export function createColumn<TValue, TFilterArtifact extends FilterArtifact, TEx
 				? columnType.createFilterHandler(fieldName) as FilterHandler<FilterArtifact>
 				: undefined,
 			isTextSearchable: columnType.isTextSearchable,
-			columnType: columnType.name,
+			columnType: columnType.name as ColumnLeafProps['columnType'],
 			enumOptions,
 			header,
 			renderCell,
 			renderFilter: config.renderFilter
-				? ({ artifact, setArtifact }) => config.renderFilter!({
+				? ({ artifact, setArtifact }: { artifact: unknown; setArtifact: (artifact: FilterArtifact) => void }) => config.renderFilter!({
 					artifact: artifact as TFilterArtifact,
 					setArtifact: setArtifact as (artifact: TFilterArtifact) => void,
 				})

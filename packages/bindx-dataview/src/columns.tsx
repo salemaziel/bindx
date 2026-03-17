@@ -10,9 +10,12 @@
  */
 
 import React from 'react'
-import type { FieldRefBase, HasOneRef, HasManyRef, FilterHandler, FilterArtifact, EntityAccessor, EnumFilterArtifact, EnumListFilterArtifact } from '@contember/bindx'
-import { FIELD_REF_META } from '@contember/bindx-react'
+import type { FieldRefBase, HasOneRef, HasManyRef, FilterHandler, FilterArtifact, EntityAccessor, EnumFilterArtifact, EnumListFilterArtifact, SelectionMeta } from '@contember/bindx'
+import { SelectionScope } from '@contember/bindx'
+import { FIELD_REF_META, createCollectorProxy } from '@contember/bindx-react'
 import { createColumn, type ColumnRenderProps } from './createColumn.js'
+import { accessField } from './columnTypes.js'
+import { createRelationColumn, hasOneCellConfig, hasManyCellConfig, type RelationColumnProps } from './createRelationColumn.jsx'
 import {
 	textColumnDef,
 	numberColumnDef,
@@ -23,6 +26,8 @@ import {
 	enumListColumnDef,
 	uuidColumnDef,
 	isDefinedColumnDef,
+	hasOneColumnDef,
+	hasManyColumnDef,
 } from './columnTypes.js'
 import { ColumnLeaf, type ColumnLeafProps } from './columnLeaf.js'
 
@@ -36,15 +41,38 @@ export type ColumnMeta = ColumnLeafProps
 // Extraction Helpers
 // ============================================================================
 
-/**
- * Extract field name from a field ref (works in both collector and runtime proxies)
- */
-export function extractFieldName(ref: unknown): string | null {
-	if (ref && typeof ref === 'object' && FIELD_REF_META in ref) {
-		const meta = (ref as Record<symbol, { fieldName: string }>)[FIELD_REF_META]
-		return meta?.fieldName ?? null
+interface FieldRefMetaCarrier {
+	readonly [FIELD_REF_META]: {
+		readonly entityType: string
+		readonly fieldName: string
+		readonly isArray: boolean
+		readonly isRelation: boolean
 	}
-	return null
+}
+
+/** Type guard: checks if a value carries FIELD_REF_META symbol. */
+export function hasFieldRefMeta(ref: unknown): ref is FieldRefMetaCarrier {
+	return ref != null && typeof ref === 'object' && FIELD_REF_META in ref
+}
+
+/** Extract field name from a field ref (works in both collector and runtime proxies). */
+export function extractFieldName(ref: unknown): string | null {
+	return hasFieldRefMeta(ref) ? ref[FIELD_REF_META].fieldName : null
+}
+
+/** Extract related entity type name from a relation field ref. */
+export function extractRelatedEntityName(ref: unknown): string | null {
+	if (!hasFieldRefMeta(ref)) return null
+	const meta = ref[FIELD_REF_META]
+	return meta.entityType || null
+}
+
+/**
+ * Access a related entity accessor from a parent row accessor by field name.
+ * EntityAccessor is a Proxy — bracket notation triggers the get trap.
+ */
+export function getRelatedAccessor(item: EntityAccessor<object>, fieldName: string): EntityAccessor<object> | null {
+	return accessField(item, fieldName) as EntityAccessor<object> | null
 }
 
 // ============================================================================
@@ -150,125 +178,33 @@ export const DataGridIsDefinedColumn = createColumn(isDefinedColumnDef, {
 // Relation Column Props & Components
 // ============================================================================
 
-export interface DataGridHasOneColumnProps<TEntity, TSelected> {
+export interface DataGridHasOneColumnProps<TEntity, TSelected> extends RelationColumnProps<TEntity, TSelected> {
 	field: HasOneRef<TEntity, TSelected>
-	header?: React.ReactNode
-	children: (entity: EntityAccessor<TEntity, TSelected>) => React.ReactNode
 }
 
-export const DataGridHasOneColumn = Object.assign(
-	function DataGridHasOneColumn<TEntity, TSelected>(
-		_props: DataGridHasOneColumnProps<TEntity, TSelected>,
-	): null {
-		return null
-	},
-	{
-		staticRender: (props: Record<string, unknown>): React.ReactNode => {
-			const fieldRef = props['field'] as FieldRefBase<unknown> | undefined
-			const fieldName = fieldRef ? extractFieldName(fieldRef) : null
-			const renderer = props['children'] as ((ref: unknown) => React.ReactNode) | undefined
-			const header = props['header'] as React.ReactNode | undefined
-
-			const leafProps: ColumnLeafProps = {
-				name: fieldName ?? `col-${Math.random().toString(36).slice(2, 8)}`,
-				fieldName,
-				fieldRef: fieldRef ?? null,
-				sortingField: null,
-				filterName: null,
-				filterHandler: undefined,
-				isTextSearchable: false,
-				columnType: 'hasOne',
-				header,
-				collectSelection: () => {
-					if (renderer && fieldRef) {
-						renderer(fieldRef)
-					}
-				},
-				renderCell: (accessor: EntityAccessor<object>) => {
-					if (!fieldName) return null
-					const ref = (accessor as unknown as Record<string, unknown>)[fieldName]
-					if (!renderer) return null
-					const result = renderer(ref)
-					if (result && typeof result === 'object' && 'value' in result) {
-						return (result as { value: unknown }).value != null
-							? String((result as { value: unknown }).value)
-							: ''
-					}
-					return result
-				},
-			}
-
-			return React.createElement(ColumnLeaf, leafProps as ColumnLeafProps)
-		},
-	},
-)
+/** Headless HasOne column — no filter UI or cell tooltip. Use @contember/bindx-ui for styled version. */
+const _DataGridHasOneColumn = createRelationColumn(hasOneColumnDef, hasOneCellConfig)
+export const DataGridHasOneColumn: {
+	<TEntity, TSelected>(props: DataGridHasOneColumnProps<TEntity, TSelected>): null
+	staticRender: typeof _DataGridHasOneColumn.staticRender
+	buildLeaf: typeof _DataGridHasOneColumn.buildLeaf
+} = _DataGridHasOneColumn
 
 // ============================================================================
 // HasMany Column
 // ============================================================================
 
-export interface DataGridHasManyColumnProps<TEntity, TSelected> {
+export interface DataGridHasManyColumnProps<TEntity, TSelected> extends RelationColumnProps<TEntity, TSelected> {
 	field: HasManyRef<TEntity, TSelected>
-	header?: React.ReactNode
-	children: (entity: EntityAccessor<TEntity, TSelected>) => React.ReactNode
 }
 
-export const DataGridHasManyColumn = Object.assign(
-	function DataGridHasManyColumn<TEntity, TSelected>(
-		_props: DataGridHasManyColumnProps<TEntity, TSelected>,
-	): null {
-		return null
-	},
-	{
-		staticRender: (props: Record<string, unknown>): React.ReactNode => {
-			const fieldRef = props['field'] as FieldRefBase<unknown> | undefined
-			const fieldName = fieldRef ? extractFieldName(fieldRef) : null
-			const renderer = props['children'] as ((ref: unknown) => React.ReactNode) | undefined
-			const header = props['header'] as React.ReactNode | undefined
-
-			const leafProps: ColumnLeafProps = {
-				name: fieldName ?? `col-${Math.random().toString(36).slice(2, 8)}`,
-				fieldName,
-				fieldRef: fieldRef ?? null,
-				sortingField: null,
-				filterName: null,
-				filterHandler: undefined,
-				isTextSearchable: false,
-				columnType: 'hasMany',
-				header,
-				collectSelection: () => {
-					if (renderer && fieldRef) {
-						const mapFn = (fieldRef as { map?: (fn: (item: unknown, index: number) => unknown) => unknown[] }).map
-						if (mapFn) {
-							mapFn((item: unknown) => {
-								renderer(item)
-								return null
-							})
-						}
-					}
-				},
-				renderCell: (accessor: EntityAccessor<object>) => {
-					if (!fieldName) return null
-					const ref = (accessor as unknown as Record<string, unknown>)[fieldName]
-					const items = (ref as { items?: unknown[] })?.items
-					if (!Array.isArray(items) || items.length === 0) return ''
-					if (!renderer) return null
-
-					return items.map((item, i) => {
-						const result = renderer(item)
-						if (result && typeof result === 'object' && 'value' in result) {
-							const val = (result as { value: unknown }).value
-							return <React.Fragment key={i}>{i > 0 ? ', ' : ''}{val != null ? String(val) : ''}</React.Fragment>
-						}
-						return <React.Fragment key={i}>{i > 0 ? ', ' : ''}{result}</React.Fragment>
-					})
-				},
-			}
-
-			return React.createElement(ColumnLeaf, leafProps as ColumnLeafProps)
-		},
-	},
-)
+/** Headless HasMany column — no filter UI or cell tooltip. Use @contember/bindx-ui for styled version. */
+const _DataGridHasManyColumn = createRelationColumn(hasManyColumnDef, hasManyCellConfig)
+export const DataGridHasManyColumn: {
+	<TEntity, TSelected>(props: DataGridHasManyColumnProps<TEntity, TSelected>): null
+	staticRender: typeof _DataGridHasManyColumn.staticRender
+	buildLeaf: typeof _DataGridHasManyColumn.buildLeaf
+} = _DataGridHasManyColumn
 
 // ============================================================================
 // Action Column
@@ -292,6 +228,7 @@ export const DataGridActionColumn = Object.assign(
 				: () => children as React.ReactNode
 
 			const leafProps: ColumnLeafProps = {
+				columnType: 'action',
 				name: `action-${Math.random().toString(36).slice(2, 8)}`,
 				fieldName: null,
 				fieldRef: null,
@@ -318,7 +255,7 @@ export interface DataGridColumnProps<T> {
 	sortable?: boolean
 	filter?: boolean
 	filterHandler?: FilterHandler<FilterArtifact>
-	children?: (value: T | null) => React.ReactNode
+	children?: (value: T | null, accessor: EntityAccessor<object>) => React.ReactNode
 }
 
 export const DataGridColumn = Object.assign(
@@ -331,9 +268,9 @@ export const DataGridColumn = Object.assign(
 			const fieldName = fieldRef ? extractFieldName(fieldRef) : null
 			const header = props['header'] as React.ReactNode | undefined
 			const sortable = (props['sortable'] as boolean | undefined) ?? false
-			const filterEnabled = (props['filter'] as boolean | undefined) ?? false
+			const filterEnabled = (props['filter'] as boolean | undefined) ?? true
 			const customHandler = props['filterHandler'] as FilterHandler<FilterArtifact> | undefined
-			const children = props['children'] as ((value: unknown) => React.ReactNode) | undefined
+			const children = props['children'] as ((value: unknown, accessor: EntityAccessor<object>) => React.ReactNode) | undefined
 
 			const leafProps: ColumnLeafProps = {
 				name: fieldName ?? `col-${Math.random().toString(36).slice(2, 8)}`,
@@ -352,7 +289,7 @@ export const DataGridColumn = Object.assign(
 					const value = ref && typeof ref === 'object' && 'value' in ref
 						? (ref as { value: unknown }).value ?? null
 						: null
-					if (children) return children(value)
+					if (children) return children(value, accessor)
 					return value != null ? String(value) : ''
 				},
 			}

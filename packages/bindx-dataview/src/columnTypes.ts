@@ -7,7 +7,7 @@
  * These are framework-agnostic — no React dependency.
  */
 
-import type { FilterHandler, FilterArtifact } from '@contember/bindx'
+import type { FilterHandler, FilterArtifact, EntityAccessor } from '@contember/bindx'
 import type {
 	TextFilterArtifact,
 	NumberRangeFilterArtifact,
@@ -38,7 +38,7 @@ export interface ColumnTypeDef<TValue = unknown, TFilterArtifact extends FilterA
 	readonly defaultSortable: boolean
 	readonly isTextSearchable: boolean
 	readonly createFilterHandler: (fieldName: string) => FilterHandler<TFilterArtifact>
-	readonly extractValue: (accessor: Record<string, unknown>, fieldName: string) => TValue
+	readonly extractValue: (accessor: EntityAccessor<object>, fieldName: string) => TValue
 }
 
 export function defineColumnType<TValue, TFilterArtifact extends FilterArtifact>(
@@ -51,10 +51,20 @@ export function defineColumnType<TValue, TFilterArtifact extends FilterArtifact>
 // Value Extractors
 // ============================================================================
 
-function extractScalarValue<T>(accessor: Record<string, unknown>, fieldName: string): T | null {
-	const fieldRef = accessor[fieldName]
+/**
+ * Access a field on an EntityAccessor by name.
+ * EntityAccessor is a Proxy — bracket notation triggers the proxy get trap.
+ */
+export function accessField(accessor: EntityAccessor<object>, fieldName: string): unknown {
+	// EntityAccessor is a Proxy — bracket access goes through the get trap
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	return (accessor as any)[fieldName]
+}
+
+function extractScalarValue<T>(accessor: EntityAccessor<object>, fieldName: string): T | null {
+	const fieldRef = accessField(accessor, fieldName) as { value?: unknown } | null
 	if (!fieldRef || typeof fieldRef !== 'object') return null
-	return ((fieldRef as { value?: unknown }).value ?? null) as T | null
+	return (fieldRef.value ?? null) as T | null
 }
 
 // ============================================================================
@@ -138,7 +148,7 @@ export const hasOneColumnDef: ColumnTypeDef<unknown, RelationFilterArtifact> = d
 	defaultSortable: false,
 	isTextSearchable: false,
 	createFilterHandler: createRelationFilterHandler,
-	extractValue: (accessor, fieldName) => accessor[fieldName] ?? null,
+	extractValue: (accessor, fieldName) => accessField(accessor, fieldName) ?? null,
 })
 
 export const hasManyColumnDef: ColumnTypeDef<unknown, RelationFilterArtifact> = defineColumnType({
@@ -146,5 +156,5 @@ export const hasManyColumnDef: ColumnTypeDef<unknown, RelationFilterArtifact> = 
 	defaultSortable: false,
 	isTextSearchable: false,
 	createFilterHandler: createRelationFilterHandler,
-	extractValue: (accessor, fieldName) => accessor[fieldName] ?? null,
+	extractValue: (accessor, fieldName) => accessField(accessor, fieldName) ?? null,
 })

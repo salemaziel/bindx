@@ -9,7 +9,7 @@ export const DataGridContainer = uic('div', {
 })
 
 export const DataGridTableWrapper = uic('div', {
-	baseClass: 'rounded-md border border-input overflow-auto',
+	baseClass: 'relative rounded-md border border-gray-200 overflow-auto',
 	displayName: 'DataGridTableWrapper',
 })
 
@@ -19,7 +19,7 @@ export const DataGridTable = uic('table', {
 })
 
 export const DataGridThead = uic('thead', {
-	baseClass: '[&_tr]:border-b',
+	baseClass: '[&_tr]:border-b [&_tr]:border-gray-200',
 	displayName: 'DataGridThead',
 })
 
@@ -29,22 +29,22 @@ export const DataGridTbody = uic('tbody', {
 })
 
 export const DataGridHeaderRow = uic('tr', {
-	baseClass: 'border-b transition-colors hover:bg-muted/50',
+	baseClass: 'border-b border-gray-200 transition-colors hover:bg-muted/50',
 	displayName: 'DataGridHeaderRow',
 })
 
 export const DataGridRow = uic('tr', {
-	baseClass: 'border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted',
+	baseClass: 'border-b border-gray-200 transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted',
 	displayName: 'DataGridRow',
 })
 
 export const DataGridHeaderCell = uic('th', {
-	baseClass: 'h-10 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0',
+	baseClass: 'px-4 py-3 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0',
 	displayName: 'DataGridHeaderCell',
 })
 
 export const DataGridCell = uic('td', {
-	baseClass: 'p-4 align-middle [&:has([role=checkbox])]:pr-0',
+	baseClass: 'px-4 py-3 align-middle [&:has([role=checkbox])]:pr-0',
 	displayName: 'DataGridCell',
 })
 

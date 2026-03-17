@@ -1,21 +1,8 @@
 /**
- * DataGridAutoTable — renders a full table (headers + rows) from DataView context columns.
+ * DataGridAutoTable — renders a full table from DataView context columns.
  *
- * This is the standard table layout for DataGrid. It reads columns from the
- * DataView context and renders them automatically with sorting indicators,
- * column visibility, filter controls, and row highlighting.
- *
- * Usage:
- * ```tsx
- * <DataGrid entity={schema.Article}>
- *   {it => (<...columns...>
- *   <DefaultDataGrid>
- *     <DataViewLayout name="table">
- *       <DataGridAutoTable />
- *     </DataViewLayout>
- *   </DefaultDataGrid>
- * </DataGrid>
- * ```
+ * Generic table renderer — no column-type-specific logic. Each column defines
+ * its own renderFilter, renderCellWrapper, and renderCell on ColumnLeafProps.
  */
 import type { ReactElement, ReactNode } from 'react'
 import type { FilterArtifact } from '@contember/bindx'
@@ -48,12 +35,12 @@ import { DataGridColumnHeaderUI } from './column-header.js'
 
 function ColumnFilterRenderer({ filterName, renderFilter }: {
 	filterName: string
-	renderFilter: (props: { artifact: unknown; setArtifact: (artifact: FilterArtifact) => void }) => ReactNode
+	renderFilter: (props: { artifact: FilterArtifact; setArtifact: (artifact: FilterArtifact) => void }) => ReactNode
 }): ReactElement {
 	const [artifact, setArtifact] = useDataViewFilter(filterName)
 	return (
 		<DataViewFilterScope name={filterName}>
-			{renderFilter({ artifact, setArtifact })}
+			{renderFilter({ artifact: artifact as FilterArtifact, setArtifact })}
 		</DataViewFilterScope>
 	)
 }
@@ -106,7 +93,9 @@ export function DataGridAutoTable({ onSelectHighlighted }: DataGridAutoTableProp
 											{columns.map(col => (
 												<DataViewElement key={col.name} name={col.name}>
 													<DataGridCell data-testid={`datagrid-cell-${col.name}`}>
-														{col.renderCell(item)}
+														{col.renderCellWrapper
+															? col.renderCellWrapper(col.renderCell(item), item)
+															: col.renderCell(item)}
 													</DataGridCell>
 												</DataViewElement>
 											))}

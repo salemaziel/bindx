@@ -1,19 +1,21 @@
 /**
- * Styled DataGrid column components with inline filter UI.
+ * Styled DataGrid column components.
  *
- * These wrap the headless columns from `@contember/bindx-dataview` with
- * `renderFilter` implementations that use the styled filter controls
- * from the `filters/` directory.
+ * Each column is self-contained — it defines its own cell rendering, filter UI,
+ * and cell wrapper (e.g. tooltip).
  *
- * The filter controls use hooks internally (via `useDataViewFilterName()`),
- * which requires the `DataViewFilterScope` wrapping provided by
- * `ColumnFilterRenderer` in `auto-table.tsx`.
+ * Scalar columns: `createColumn(typeDef, { renderCell, renderFilter })`
+ * Relation columns: `createRelationColumn(typeDef, cellConfig, { renderFilter, renderCellWrapper })`
  */
 
-import React, { type ReactElement } from 'react'
-import type { EnumFilterArtifact, EnumListFilterArtifact } from '@contember/bindx'
+import React, { type ReactElement, type ReactNode } from 'react'
+import type { EntityAccessor, EntityDef, EnumFilterArtifact, EnumListFilterArtifact } from '@contember/bindx'
 import {
 	createColumn,
+	createRelationColumn,
+	hasOneCellConfig,
+	hasManyCellConfig,
+	getRelatedAccessor,
 	textColumnDef,
 	numberColumnDef,
 	dateColumnDef,
@@ -23,21 +25,39 @@ import {
 	enumListColumnDef,
 	uuidColumnDef,
 	isDefinedColumnDef,
+	hasOneColumnDef,
+	hasManyColumnDef,
 	useDataViewFilterName,
 	useDataViewContext,
+	DataViewFilterScope,
+	DataViewEachRow,
+	DataViewInfiniteLoadProvider,
+	DataViewInfiniteLoadScrollObserver,
+	DataViewInfiniteLoadTrigger,
+	DataViewLoaderState,
+	SelectDataView,
+	SelectOptionsContext,
+	useDataViewRelationFilterFactory,
+	type UseDataViewRelationFilterResult,
 } from '@contember/bindx-dataview'
-import type { ColumnRenderProps } from '@contember/bindx-dataview'
+import type { ColumnRenderProps, RelationFilterContext, RelationCellWrapperContext, RelationColumnComponent, DataGridHasOneColumnProps, DataGridHasManyColumnProps } from '@contember/bindx-dataview'
 import { DataGridTextFilterInner } from './filters/text.js'
 import { DataGridBooleanFilterControls } from './filters/boolean.js'
 import { DataGridNumberFilterControls } from './filters/number.js'
 import { DataGridDateFilterControls } from './filters/date.js'
 import { DataGridEnumFilterControls } from './filters/enum.js'
 import { DataGridIsDefinedFilterControls } from './filters/defined.js'
+import { DataGridNullFilter } from './filters/common.js'
+import { DataGridHasOneTooltip } from './tooltips.js'
+import { DataGridFilterSelectItemUI, DataGridTooltipLabel } from './ui.js'
+import { SelectDefaultFilter } from '../select/filter.js'
+import { Loader } from '../ui/loader.js'
+import { Button } from '../ui/button.js'
+import { ArrowBigDownDash } from 'lucide-react'
+import { useCallback } from 'react'
 
-// Re-export relation/action/generic columns unchanged from dataview
+// Re-export action/generic columns from dataview
 export {
-	DataGridHasOneColumn,
-	DataGridHasManyColumn,
 	DataGridActionColumn,
 	DataGridColumn,
 	type DataGridTextColumnProps,
@@ -56,7 +76,7 @@ export {
 } from '@contember/bindx-dataview'
 
 // ============================================================================
-// Default Cell Renderers (same as headless columns)
+// Scalar Column Renderers
 // ============================================================================
 
 function renderScalarDefault({ value }: ColumnRenderProps<unknown>): React.ReactNode {
@@ -83,14 +103,6 @@ function renderEnumListDefault({ value }: ColumnRenderProps<readonly string[] | 
 	return value.join(', ')
 }
 
-// ============================================================================
-// Enum Filter Helper
-// ============================================================================
-
-/**
- * Reads `enumOptions` from the DataView context column matching the current
- * filter name, then renders `DataGridEnumFilterControls` with those options.
- */
 function ColumnEnumFilterControls(): ReactElement {
 	const filterName = useDataViewFilterName()
 	const { columns } = useDataViewContext()
@@ -101,7 +113,7 @@ function ColumnEnumFilterControls(): ReactElement {
 }
 
 // ============================================================================
-// Styled Scalar Columns with Filters
+// Styled Scalar Columns
 // ============================================================================
 
 interface EnumExtraProps {
@@ -151,3 +163,114 @@ export const DataGridIsDefinedColumn = createColumn(isDefinedColumnDef, {
 	renderCell: renderIsDefinedDefault,
 	renderFilter: () => <DataGridIsDefinedFilterControls />,
 })
+
+// ============================================================================
+// Styled Relation Columns
+// ============================================================================
+
+const relationUI = {
+	renderFilter: (ctx: RelationFilterContext) => (
+		<RelationFilterUI {...ctx} />
+	),
+	renderCellWrapper: ({ content, item, fieldName, filterName, fieldRef }: RelationCellWrapperContext) => {
+		const id = getRelatedAccessor(item, fieldName)?.id ?? null
+		if (!id) return content
+		return (
+			<DataGridHasOneTooltip field={fieldRef} name={filterName} id={id}>
+				<DataGridTooltipLabel>{content}</DataGridTooltipLabel>
+			</DataGridHasOneTooltip>
+		)
+	},
+}
+
+const _DataGridHasOneColumn: RelationColumnComponent = createRelationColumn(hasOneColumnDef, hasOneCellConfig, relationUI)
+export const DataGridHasOneColumn: {
+	<TEntity, TSelected>(props: DataGridHasOneColumnProps<TEntity, TSelected>): null
+	staticRender: typeof _DataGridHasOneColumn.staticRender
+} = _DataGridHasOneColumn
+
+const _DataGridHasManyColumn: RelationColumnComponent = createRelationColumn(hasManyColumnDef, hasManyCellConfig, relationUI)
+export const DataGridHasManyColumn: {
+	<TEntity, TSelected>(props: DataGridHasManyColumnProps<TEntity, TSelected>): null
+	staticRender: typeof _DataGridHasManyColumn.staticRender
+} = _DataGridHasManyColumn
+
+// ============================================================================
+// Relation Filter UI
+// ============================================================================
+
+function extractScalarFieldNames(selection: unknown): string[] {
+	if (!selection || typeof selection !== 'object') return []
+	const meta = selection as { fields?: Map<string, { nested?: unknown }> }
+	if (!meta.fields) return []
+	const names: string[] = []
+	for (const [name, field] of meta.fields) {
+		if (!field.nested) names.push(name)
+	}
+	return names
+}
+
+function RelationFilterUI({ filterName, entityName, selection, renderItem }: RelationFilterContext): ReactElement {
+	const entityDef: EntityDef = { $name: entityName }
+	const filterFactory = useDataViewRelationFilterFactory(filterName)
+	const queryFields = extractScalarFieldNames(selection)
+
+	return (
+		<DataViewFilterScope name={filterName}>
+			<SelectOptionsContext.Provider value={entityDef}>
+				<SelectDataView selection={renderItem} queryField={queryFields.length > 0 ? queryFields : undefined}>
+					<DataViewInfiniteLoadProvider>
+						<div className="flex flex-col gap-2">
+							<SelectDefaultFilter />
+							<div className="flex flex-col gap-1 max-h-60 overflow-y-auto">
+								<DataViewLoaderState refreshing>
+									<Loader position="absolute" />
+								</DataViewLoaderState>
+								<DataViewLoaderState refreshing loaded>
+									<DataViewEachRow>
+										{(item) => (
+											<RelationFilterItem key={item.id} item={item} filterFactory={filterFactory} renderItem={renderItem} />
+										)}
+									</DataViewEachRow>
+									<DataViewLoaderState loaded>
+										<DataViewInfiniteLoadScrollObserver />
+									</DataViewLoaderState>
+									<DataViewInfiniteLoadTrigger>
+										<Button size="sm" variant="ghost" className="disabled:hidden w-full">
+											<ArrowBigDownDash size={16} />
+										</Button>
+									</DataViewInfiniteLoadTrigger>
+								</DataViewLoaderState>
+								<DataViewLoaderState initial>
+									<Loader position="static" size="sm" />
+								</DataViewLoaderState>
+							</div>
+							<DataGridNullFilter />
+						</div>
+					</DataViewInfiniteLoadProvider>
+				</SelectDataView>
+			</SelectOptionsContext.Provider>
+		</DataViewFilterScope>
+	)
+}
+
+function RelationFilterItem({ item, filterFactory, renderItem }: {
+	item: EntityAccessor<object>
+	filterFactory: (id: string) => UseDataViewRelationFilterResult
+	renderItem: (accessor: EntityAccessor<object>) => ReactNode
+}): ReactElement {
+	const [current, setFilter] = filterFactory(item.id)
+	const include = useCallback(() => setFilter('toggleInclude'), [setFilter])
+	const exclude = useCallback(() => setFilter('toggleExclude'), [setFilter])
+
+	return (
+		<DataGridFilterSelectItemUI
+			onInclude={include}
+			onExclude={exclude}
+			isIncluded={current === 'include'}
+			isExcluded={current === 'exclude'}
+		>
+			{renderItem(item)}
+		</DataGridFilterSelectItemUI>
+	)
+}

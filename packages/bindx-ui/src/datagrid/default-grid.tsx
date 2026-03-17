@@ -107,25 +107,19 @@ function DefaultDataGridLayout({
 				</DataViewEmpty>
 
 				<DataViewNonEmpty>
-					{layoutRenders.size > 0 ? (
-						<>
-							<DataViewLayout name="table">
-								<DataGridAutoTable />
-							</DataViewLayout>
-
-							{Array.from(layoutRenders.entries()).map(([name, render]) => (
-								<DataViewLayout key={name} name={name}>
-									<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-										<DataViewEachRow>
-											{render}
-										</DataViewEachRow>
-									</div>
-								</DataViewLayout>
-							))}
-						</>
-					) : (
+					<DataViewLayout name="table">
 						<DataGridAutoTable />
-					)}
+					</DataViewLayout>
+
+					{Array.from(layoutRenders.entries()).map(([name, render]) => (
+						<DataViewLayout key={name} name={name}>
+							<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+								<DataViewEachRow>
+									{render}
+								</DataViewEachRow>
+							</div>
+						</DataViewLayout>
+					))}
 				</DataViewNonEmpty>
 			</DataGridLoader>
 

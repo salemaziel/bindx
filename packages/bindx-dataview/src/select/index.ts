@@ -10,6 +10,7 @@ export {
 	useSelectIsSelected,
 	useSelectHandleSelect,
 	useSelectOptions,
+	SelectOptionsContext,
 	type SelectHandler,
 	type SelectAction,
 	type SelectEvents,

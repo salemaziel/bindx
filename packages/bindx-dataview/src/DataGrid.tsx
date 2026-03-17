@@ -148,11 +148,11 @@ function DataGridImpl<TEntity extends object>({
 		const query = buildQueryFromSelection(sel)
 		const key = JSON.stringify({ entityType, query })
 
-		// Auto-configure layouts when layout markers are detected but layouts prop is not provided
-		const autoLayouts = layouts ?? (layoutMarkers.length > 0
-			? [{ name: 'table', label: 'Table' }, ...layoutMarkers.map(m => ({ name: m.name, label: m.label }))]
-			: undefined
-		)
+		// Auto-configure layouts — always include "table", plus any custom layout markers
+		const autoLayouts = layouts ?? [
+			{ name: 'table', label: 'Table' },
+			...layoutMarkers.map(m => ({ name: m.name, label: m.label })),
+		]
 
 		return {
 			childrenJsx: jsx,

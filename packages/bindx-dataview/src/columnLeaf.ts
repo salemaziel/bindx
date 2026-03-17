@@ -14,8 +14,15 @@ import type { FieldRefBase, FilterHandler, FilterArtifact, EntityAccessor } from
 // ColumnLeaf Props — the new ColumnMeta
 // ============================================================================
 
+// ============================================================================
+// Column Leaf Props
+// ============================================================================
+
+/** All known column type literals for type narrowing */
+export type ColumnType = 'text' | 'number' | 'date' | 'dateTime' | 'boolean' | 'uuid' | 'isDefined' | 'enum' | 'enumList' | 'hasOne' | 'hasMany' | 'action' | (string & {})
+
 export interface ColumnLeafProps {
-	// ── Behavior ──
+	// ── Core ──
 	readonly name: string
 	readonly fieldName: string | null
 	readonly fieldRef: FieldRefBase<unknown> | null
@@ -23,15 +30,27 @@ export interface ColumnLeafProps {
 	readonly filterName: string | null
 	readonly filterHandler: FilterHandler<FilterArtifact> | undefined
 	readonly isTextSearchable: boolean
-	readonly enumOptions?: readonly string[]
-	/** Column type hint for UI dispatch (e.g. 'text', 'boolean', 'enum') */
-	readonly columnType?: string
+	readonly columnType?: ColumnType
 	readonly collectSelection?: (collectorProxy: unknown) => void
+
+	// ── Enum ──
+	readonly enumOptions?: readonly string[]
+
+	// ── Relation ──
+	readonly relatedEntityName?: string
+	readonly relatedSelection?: import('@contember/bindx').SelectionMeta
+	readonly renderFilterItem?: (accessor: EntityAccessor<object>) => React.ReactNode
 
 	// ── UI ──
 	readonly header?: React.ReactNode
 	readonly renderCell: (accessor: EntityAccessor<object>) => React.ReactNode
-	readonly renderFilter?: (props: { artifact: unknown; setArtifact: (artifact: FilterArtifact) => void }) => React.ReactNode
+	readonly renderFilter?: (props: { artifact: FilterArtifact; setArtifact: (artifact: FilterArtifact) => void }) => React.ReactNode
+	readonly renderCellWrapper?: (content: React.ReactNode, item: EntityAccessor<object>) => React.ReactNode
+}
+
+/** Type guard for relation columns */
+export function isRelationColumn(col: ColumnLeafProps): col is ColumnLeafProps & { columnType: 'hasOne' | 'hasMany'; relatedEntityName: string; renderFilterItem: (accessor: EntityAccessor<object>) => React.ReactNode } {
+	return (col.columnType === 'hasOne' || col.columnType === 'hasMany') && !!col.relatedEntityName && !!col.renderFilterItem
 }
 
 /**

@@ -87,7 +87,7 @@ const uppercaseColumnDef = defineColumnType<string, TextFilterArtifact>({
 	isTextSearchable: true,
 	createFilterHandler: createTextFilterHandler,
 	extractValue: (accessor, fieldName) => {
-		const fieldRef = accessor[fieldName]
+		const fieldRef = (accessor as any)[fieldName]
 		if (!fieldRef || typeof fieldRef !== 'object') return ''
 		const value = (fieldRef as { value?: unknown }).value
 		return typeof value === 'string' ? value.toUpperCase() : ''
@@ -108,7 +108,7 @@ const filteredColumnDef = defineColumnType<string, TextFilterArtifact>({
 	isTextSearchable: false,
 	createFilterHandler: createTextFilterHandler,
 	extractValue: (accessor, fieldName) => {
-		const fieldRef = accessor[fieldName]
+		const fieldRef = (accessor as any)[fieldName]
 		if (!fieldRef || typeof fieldRef !== 'object') return ''
 		return ((fieldRef as { value?: unknown }).value as string) ?? ''
 	},

@@ -16,6 +16,7 @@ export {
 	isDefinedColumnDef,
 	hasOneColumnDef,
 	hasManyColumnDef,
+	accessField,
 } from './columnTypes.js'
 
 // ColumnLeaf, extraction, and children analysis
@@ -44,6 +45,18 @@ export {
 	type ColumnComponentProps,
 	type ColumnComponent,
 } from './createColumn.js'
+
+// createRelationColumn factory (Layer 2: relation columns)
+export {
+	createRelationColumn,
+	hasOneCellConfig,
+	hasManyCellConfig,
+	type RelationColumnConfig,
+	type RelationFilterContext,
+	type RelationCellWrapperContext,
+	type RelationColumnProps,
+	type RelationColumnComponent,
+} from './createRelationColumn.jsx'
 
 // Column components
 export {
@@ -75,6 +88,9 @@ export {
 	type DataGridColumnProps,
 	type ColumnMeta,
 	extractFieldName,
+	extractRelatedEntityName,
+	hasFieldRefMeta,
+	getRelatedAccessor,
 } from './columns.js'
 
 // State hooks
