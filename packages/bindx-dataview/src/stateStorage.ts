@@ -9,7 +9,7 @@
  * ```
  */
 
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 
 // ============================================================================
 // Storage Interface
@@ -120,16 +120,47 @@ function resolveStorage(storageOrName: StateStorageOrName): StateStorage {
 	}
 }
 
+function createFallbackStorage(storages: StateStorage[]): StateStorage {
+	return {
+		get<T>(key: string): T | undefined {
+			for (const storage of storages) {
+				const value = storage.get<T>(key)
+				if (value !== undefined) return value
+			}
+			return undefined
+		},
+		set<T>(key: string, value: T): void {
+			for (const storage of storages) {
+				storage.set(key, value)
+			}
+		},
+		remove(key: string): void {
+			for (const storage of storages) {
+				storage.remove(key)
+			}
+		},
+	}
+}
+
+function resolveStorageOrFallback(storageOrName: StateStorageOrName | StateStorageOrName[]): StateStorage {
+	if (Array.isArray(storageOrName)) {
+		return createFallbackStorage(storageOrName.map(resolveStorage))
+	}
+	return resolveStorage(storageOrName)
+}
+
 // ============================================================================
 // useStoredState Hook
 // ============================================================================
 
+export type SetStoredState<T> = (value: T | ((current: T) => T)) => void
+
 export function useStoredState<T>(
-	storageOrName: StateStorageOrName,
+	storageOrName: StateStorageOrName | StateStorageOrName[],
 	key: readonly string[],
 	initializer: (storedValue: T | undefined) => T,
-): [T, (value: T) => void] {
-	const storage = useMemo(() => resolveStorage(storageOrName), [storageOrName])
+): [T, SetStoredState<T>] {
+	const storage = useMemo(() => resolveStorageOrFallback(storageOrName), [storageOrName])
 	const storageKey = key.join(':')
 
 	const [value, setValueInternal] = useState<T>(() => {
@@ -137,9 +168,12 @@ export function useStoredState<T>(
 		return initializer(stored)
 	})
 
-	const setValue = useCallback((newValue: T): void => {
-		setValueInternal(newValue)
-		storage.set(storageKey, newValue)
+	const setValue = useCallback((update: T | ((current: T) => T)): void => {
+		setValueInternal(current => {
+			const newValue = typeof update === 'function' ? (update as (current: T) => T)(current) : update
+			storage.set(storageKey, newValue)
+			return newValue
+		})
 	}, [storage, storageKey])
 
 	return [value, setValue]
