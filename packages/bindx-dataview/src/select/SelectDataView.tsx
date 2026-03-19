@@ -105,15 +105,25 @@ function SelectDataViewImpl({
 	// ---- Filter setup ----
 	const filterDefs = useMemo((): ReadonlyMap<string, { handler: FilterHandler<FilterArtifact> }> => {
 		const map = new Map<string, { handler: FilterHandler<FilterArtifact> }>()
+
+		// Resolve query fields: explicit prop → auto-derive from selection scalars
+		let resolvedPaths: string[] | undefined
 		if (queryField) {
 			const fields = Array.isArray(queryField) ? queryField : [queryField]
-			const paths = fields.map(f => typeof f === 'string' ? f : f[FIELD_REF_META].fieldName)
-			if (paths.length > 0) {
-				map.set(QUERY_FILTER_NAME, { handler: createFullTextFilterHandler(paths) })
+			resolvedPaths = fields.map(f => typeof f === 'string' ? f : f[FIELD_REF_META].fieldName)
+		} else if (selection.fields.size > 0) {
+			// Auto-derive: use all scalar fields from selection as searchable fields
+			resolvedPaths = []
+			for (const [name, field] of selection.fields) {
+				if (!field.nested) resolvedPaths.push(name)
 			}
 		}
+
+		if (resolvedPaths && resolvedPaths.length > 0) {
+			map.set(QUERY_FILTER_NAME, { handler: createFullTextFilterHandler(resolvedPaths) })
+		}
 		return map
-	}, [queryField])
+	}, [queryField, selection])
 
 	const sortableFields = useMemo((): ReadonlySet<string> => new Set(), [])
 
