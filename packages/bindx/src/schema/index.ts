@@ -11,6 +11,8 @@ export {
 	type EntityDef,
 	type InferEntityDef,
 	scalar,
+	enumScalar,
+	type EnumFieldDef,
 	hasOne,
 	hasMany,
 	defineSchema,

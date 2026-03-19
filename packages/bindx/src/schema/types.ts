@@ -16,6 +16,15 @@ export interface ScalarFieldDef {
 }
 
 /**
+ * Enum scalar field definition — carries the allowed values at runtime
+ */
+export interface EnumFieldDef {
+	readonly type: 'enum'
+	readonly enumName: string
+	readonly values: readonly string[]
+}
+
+/**
  * Has-one relation definition
  */
 export interface HasOneRelationDef<TTarget extends string = string> {
@@ -40,6 +49,7 @@ export interface HasManyRelationDef<TTarget extends string = string> {
  */
 export type FieldDef<TTarget extends string = string> =
 	| ScalarFieldDef
+	| EnumFieldDef
 	| HasOneRelationDef<TTarget>
 	| HasManyRelationDef<TTarget>
 
@@ -68,6 +78,13 @@ export interface SchemaDefinition<
  */
 export function scalar(): ScalarFieldDef {
 	return { type: 'scalar' }
+}
+
+/**
+ * Helper function to create an enum scalar field definition with allowed values.
+ */
+export function enumScalar<T extends string>(enumName: string, values: readonly T[]): EnumFieldDef {
+	return { type: 'enum', enumName, values }
 }
 
 /**
@@ -179,6 +196,8 @@ export interface EntityDef<TEntity extends object = object> {
 	readonly $name: string
 	/** @internal phantom type — not present at runtime */
 	readonly $type?: TEntity
+	/** @internal reference to the schema definition for collection-time field lookups */
+	readonly $schema?: SchemaDefinition<Record<string, object>>
 }
 
 /**
@@ -190,7 +209,8 @@ export type InferEntityDef<T> = T extends EntityDef<infer E> ? E : never
  * Creates a type-safe entity definition reference.
  *
  * @param name - The entity name as used in the schema
+ * @param schema - Optional schema definition for collection-time field lookups
  */
-export function entityDef<TEntity extends object>(name: string): EntityDef<TEntity> {
-	return { $name: name }
+export function entityDef<TEntity extends object>(name: string, schema?: SchemaDefinition<Record<string, object>>): EntityDef<TEntity> {
+	return schema ? { $name: name, $schema: schema } : { $name: name }
 }

@@ -100,9 +100,11 @@ function createCollectorFieldRef(
 		: null
 	const isHasOneRelation = fieldDef?.type === 'hasOne'
 	const isHasManyRelation = fieldDef?.type === 'hasMany'
+	const isEnum = fieldDef?.type === 'enum'
 	const targetEntityName = (fieldDef?.type === 'hasOne' || fieldDef?.type === 'hasMany')
 		? fieldDef.target
 		: null
+	const enumName = isEnum ? fieldDef.enumName : undefined
 
 	// Initially add as scalar (will be upgraded to relation if .fields/.entity/.map is accessed)
 	// Or immediately mark as relation if schema tells us it is one
@@ -133,6 +135,7 @@ function createCollectorFieldRef(
 		fieldName,
 		isArray: isHasManyRelation,
 		isRelation: isHasOneRelation || isHasManyRelation,
+		enumName,
 	}
 
 	const noop = () => () => {}
@@ -233,6 +236,9 @@ function createCollectorFieldRef(
 		$intercept: noop,
 		$onPersisted: noop,
 		$interceptPersisting: noop,
+
+		// paginateRelation total count
+		totalCount: undefined,
 
 		// Type brand (phantom property - only exists in type system)
 		__entityType: undefined as unknown,

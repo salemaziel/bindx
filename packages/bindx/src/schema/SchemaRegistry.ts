@@ -94,6 +94,16 @@ export class SchemaRegistry<TModels extends Record<string, object> = Record<stri
 	}
 
 	/**
+	 * Gets the enum values for an enum field.
+	 * Returns undefined if the field is not an enum or doesn't exist.
+	 */
+	getEnumValues(entityType: string, fieldName: string): readonly string[] | undefined {
+		const fieldDef = this.getFieldDef(entityType, fieldName)
+		if (!fieldDef || fieldDef.type !== 'enum') return undefined
+		return fieldDef.values
+	}
+
+	/**
 	 * Gets the target entity type for a relation field.
 	 * Returns undefined if the field is not a relation or doesn't exist.
 	 */

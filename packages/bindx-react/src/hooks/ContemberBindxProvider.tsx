@@ -1,7 +1,7 @@
 import { memo, useMemo, type ReactNode } from 'react'
 import { GraphQlClient } from '@contember/graphql-client'
 import { ContentClient, ContentQueryBuilder, type SchemaNames } from '@contember/client-content'
-import { ContemberAdapter, SnapshotStore, ActionDispatcher, BatchPersister, MutationCollector, ContemberSchemaMutationAdapter, UndoManager, SchemaRegistry, type SchemaDefinition, type UndoManagerConfig, type UpdateMode } from '@contember/bindx'
+import { ContemberAdapter, SnapshotStore, ActionDispatcher, BatchPersister, MutationCollector, ContemberSchemaMutationAdapter, UndoManager, SchemaRegistry, type SchemaDefinition, type FieldDef, type UndoManagerConfig, type UpdateMode } from '@contember/bindx'
 import { BindxContext, type BindxContextValue } from './BackendAdapterContext.js'
 import { QueryBatcher } from '../batching/QueryBatcher.js'
 
@@ -9,13 +9,20 @@ import { QueryBatcher } from '../batching/QueryBatcher.js'
  * Converts SchemaNames (Contember format) to SchemaDefinition (bindx format)
  * so that a SchemaRegistry can be created for standalone hooks.
  */
-function schemaNamesToDef(schemaNames: SchemaNames): SchemaDefinition<Record<string, object>> {
-	const entities: Record<string, { fields: Record<string, { type: 'scalar' } | { type: 'hasOne'; target: string } | { type: 'hasMany'; target: string }> }> = {}
+export function schemaNamesToDef(schemaNames: SchemaNames): SchemaDefinition<Record<string, object>> {
+	const enumsMap = (schemaNames as { enums?: Record<string, readonly string[]> }).enums ?? {}
+	const entities: Record<string, { fields: Record<string, FieldDef> }> = {}
 	for (const [entityName, entity] of Object.entries(schemaNames.entities)) {
-		const fields: Record<string, { type: 'scalar' } | { type: 'hasOne'; target: string } | { type: 'hasMany'; target: string }> = {}
+		const fields: Record<string, FieldDef> = {}
 		for (const [fieldName, fieldDef] of Object.entries(entity.fields)) {
 			if (fieldDef.type === 'column') {
-				fields[fieldName] = { type: 'scalar' }
+				const enumName = (fieldDef as { enumName?: string }).enumName
+				const enumValues = enumName ? enumsMap[enumName] : undefined
+				if (enumName && enumValues) {
+					fields[fieldName] = { type: 'enum', enumName, values: enumValues }
+				} else {
+					fields[fieldName] = { type: 'scalar' }
+				}
 			} else if (fieldDef.type === 'one') {
 				fields[fieldName] = { type: 'hasOne', target: fieldDef.entity }
 			} else if (fieldDef.type === 'many') {

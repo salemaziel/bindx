@@ -71,11 +71,15 @@ export * from './schema'
 
 		const imports = entityNames.join(', ')
 		const entries = entityNames
-			.map(name => `\t${name}: entityDef<${name}>('${name}'),`)
+			.map(name => `\t${name}: entityDef<${name}>('${name}', schemaDef),`)
 			.join('\n')
 
 		return `import { entityDef } from '@contember/bindx'
+import { schemaNamesToDef } from '@contember/bindx-react'
 import type { ${imports} } from './entities'
+import { schemaNames } from './names'
+
+const schemaDef = schemaNamesToDef(schemaNames)
 
 export const schema = {
 ${entries}
