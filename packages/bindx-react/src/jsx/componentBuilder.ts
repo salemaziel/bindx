@@ -56,8 +56,9 @@ export class ComponentBuilderImpl<
 		selector?: (builder: SelectionBuilder<object>) => SelectionBuilder<object, object, object>,
 	): ComponentBuilderImpl<TState> {
 		const entityName = typeof entity === 'string' ? entity : entity.$name
+		const entitySchema = typeof entity === 'object' ? entity.$schema : undefined
 		const newConfigs = new Map(this.entityConfigs)
-		newConfigs.set(propName, { entityName, selector })
+		newConfigs.set(propName, { entityName, selector, schema: entitySchema })
 		return new ComponentBuilderImpl(
 			this.schemaRegistry,
 			newConfigs,

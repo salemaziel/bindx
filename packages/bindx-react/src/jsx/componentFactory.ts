@@ -15,9 +15,10 @@ import type {
 	SelectionMeta,
 	SelectionBuilder,
 	AnyBrand,
-	SchemaRegistry,
+	SchemaDefinition,
 } from '@contember/bindx'
 import {
+	SchemaRegistry,
 	SELECTION_META,
 	ComponentBrand,
 	createSelectionBuilder,
@@ -59,6 +60,7 @@ export interface EntityConfig {
 	readonly entityName: string | null  // null for interface-based props
 	readonly selector?: (builder: SelectionBuilder<object>) => SelectionBuilder<object, object, object>
 	readonly isInterface?: boolean
+	readonly schema?: SchemaDefinition<Record<string, object>>
 }
 
 // ============================================================================
@@ -273,8 +275,13 @@ function collectImplicitSelections<TProps extends object>(
 					scope = new SelectionScope()
 					propScopes.set(propName, scope)
 				}
-				const entityName = implicitConfigsMap.get(propName)?.entityName ?? null
-				return createCollectorProxy(scope, entityName, schemaRegistry)
+				const config = implicitConfigsMap.get(propName)
+				const entityName = config?.entityName ?? null
+				// Prefer schema from entity def, fall back to provided schemaRegistry
+				const resolvedRegistry = config?.schema
+					? new SchemaRegistry(config.schema)
+					: schemaRegistry
+				return createCollectorProxy(scope, entityName, resolvedRegistry)
 			}
 
 			// In interfaces mode, any unknown prop could be an interface entity prop
@@ -302,7 +309,13 @@ function collectImplicitSelections<TProps extends object>(
 	const jsx = renderFn(propsProxy)
 
 	// Analyze JSX tree for component-level selections (handles nested createComponent)
-	collectSelection(jsx)
+	try {
+		collectSelection(jsx)
+	} catch {
+		// staticRender of nested components may crash during collection phase
+		// when collector proxies don't fully implement all runtime interfaces.
+		// Field accesses are still captured in the scope tree via proxy.
+	}
 
 	// Create fragments for captured entities
 	for (const [propName, scope] of propScopes) {

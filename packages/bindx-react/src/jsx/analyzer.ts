@@ -97,6 +97,23 @@ export function analyzeJsx(node: ReactNode, selection: SelectionMetaCollector): 
 		return
 	}
 
+	// Check if component has staticRender — like Contember OSS's Component(render, staticRender) pattern.
+	// staticRender receives the same props (with collector proxies during analysis) and returns JSX to analyze.
+	if (
+		component !== null &&
+		(typeof component === 'object' || typeof component === 'function') &&
+		'staticRender' in component &&
+		typeof (component as { staticRender: unknown }).staticRender === 'function'
+	) {
+		const staticJsx = (component as { staticRender: (props: Record<string, unknown>) => ReactNode }).staticRender(
+			element.props as Record<string, unknown>,
+		)
+		if (staticJsx) {
+			analyzeJsx(staticJsx, selection)
+		}
+		return
+	}
+
 	// For non-bindx components, try to analyze children
 	// This handles wrapper components that pass children through
 	const children = element.props.children
@@ -160,7 +177,6 @@ function handleBindxComponent(
 	parentSelection: SelectionMetaCollector,
 ): void {
 	const entityPropsMap = component[COMPONENT_SELECTIONS]
-
 	// For each entity prop in the fragment component
 	for (const [propName, meta] of entityPropsMap) {
 		const propValue = props[propName]

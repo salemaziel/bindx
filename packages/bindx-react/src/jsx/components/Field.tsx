@@ -59,6 +59,12 @@ fieldWithSelection.getSelection = (props: FieldProps<unknown>): SelectionFieldMe
 	if (!meta) {
 		return null
 	}
+	// During collection phase, field accesses are already tracked in the scope tree via proxy.
+	// Field.getSelection should not duplicate them as flat entries which causes incorrect queries.
+	// Collection-phase refs have empty entityId.
+	if (meta.entityId === '') {
+		return null
+	}
 	return {
 		fieldName: meta.fieldName,
 		alias: meta.fieldName,

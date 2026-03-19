@@ -39,6 +39,7 @@ export {
 
 export {
 	ContemberBindxProvider,
+	schemaNamesToDef,
 } from './ContemberBindxProvider.js'
 
 export { useUndo, type UndoHookResult } from './useUndo.js'

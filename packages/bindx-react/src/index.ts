@@ -281,6 +281,7 @@ export {
 	useInterceptField,
 	// Contember
 	ContemberBindxProvider,
+	schemaNamesToDef,
 } from './hooks/index.js'
 
 // Undo hook types
@@ -304,6 +305,7 @@ export {
 	type Condition,
 	// Component (unified API)
 	createComponent,
+	withCollector,
 	isBindxComponent,
 	mergeFragments,
 	COMPONENT_MARKER,
