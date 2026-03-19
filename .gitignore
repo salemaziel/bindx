@@ -1,3 +1,14 @@
 **/dist
 **/node_modules
 *.tsbuildinfo
+
+# Claude Code sandbox bind-mounts
+.bash_profile
+.bashrc
+.gitconfig
+.gitmodules
+.mcp.json
+.profile
+.ripgreprc
+.zprofile
+.zshrc
