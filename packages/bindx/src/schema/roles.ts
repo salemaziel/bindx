@@ -56,7 +56,7 @@ export type CommonEntity<TRoleMap extends Record<string, object>> = TRoleMap[key
 export type EntityForRoles<
 	TRoleMap extends Record<string, object>,
 	TRoles extends keyof TRoleMap,
-> = UnionToIntersection<TRoleMap[TRoles]>
+> = UnionToIntersection<TRoleMap[TRoles]> & object
 
 /**
  * Resolves the entity type based on whether roles are specified.

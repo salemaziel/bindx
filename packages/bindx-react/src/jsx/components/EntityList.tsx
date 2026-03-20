@@ -71,7 +71,7 @@ function EntityListComponent<TRoleMap extends Record<string, object>>({
 	const { selection, queryKey } = useSelectionCollection({
 		entityType,
 		depsKey: optionsKey,
-		collect: collector => children(collector as unknown as EntityAccessor<TEntity>, 0),
+		collect: collector => children(collector as unknown as EntityAccessor<CommonEntity<TRoleMap>>, 0),
 		queryKeyExtra: { filter, orderBy, limit, offset },
 	})
 

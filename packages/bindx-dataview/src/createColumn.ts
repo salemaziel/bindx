@@ -73,7 +73,10 @@ export function createColumn<TValue, TFilterArtifact extends FilterArtifact, TEx
 		const sortable = (props['sortable'] as boolean | undefined) ?? columnType.defaultSortable
 		const filterEnabled = (props['filter'] as boolean | undefined) ?? true
 		const children = props['children'] as ((value: TValue | null, accessor: EntityAccessor<object>) => React.ReactNode) | undefined
-		const enumOptions = props['options'] as Readonly<Record<string, React.ReactNode>> | undefined
+		const rawOptions = props['options'] as readonly string[] | Readonly<Record<string, React.ReactNode>> | undefined
+		const enumOptions = Array.isArray(rawOptions)
+			? Object.fromEntries(rawOptions.map(v => [v, v])) as Readonly<Record<string, React.ReactNode>>
+			: rawOptions
 		const enumName = extractEnumName(fieldRef)
 
 		const renderCell = children

@@ -16,7 +16,7 @@
  * ```
  */
 import React, { type ReactElement, type ReactNode } from 'react'
-import type { EntityAccessor } from '@contember/bindx'
+import type { CommonEntity, EntityAccessor } from '@contember/bindx'
 import {
 	DataGrid,
 	type DataGridProps,
@@ -25,20 +25,20 @@ import {
 } from '@contember/bindx-dataview'
 import { DefaultDataGridLayout, type DefaultDataGridLayoutProps } from './default-layout.js'
 
-export type DefaultDataGridProps<TEntity extends object = object> =
-	& Omit<DataGridProps<TEntity>, 'children'>
+export type DefaultDataGridProps<TRoleMap extends Record<string, object> = Record<string, object>> =
+	& Omit<DataGridProps<TRoleMap>, 'children'>
 	& DefaultDataGridLayoutProps
 	& {
 		/** Children render function: receives entity proxy `it`, returns column/toolbar/layout markers */
-		children: (it: EntityAccessor<TEntity>) => ReactNode
+		children: (it: EntityAccessor<CommonEntity<TRoleMap>>) => ReactNode
 	}
 
-export function DefaultDataGrid<TEntity extends object>({
+export function DefaultDataGrid<TRoleMap extends Record<string, object>>({
 	children,
 	stickyToolbar,
 	stickyPagination,
 	...dataGridProps
-}: DefaultDataGridProps<TEntity>): ReactElement {
+}: DefaultDataGridProps<TRoleMap>): ReactElement {
 	return (
 		<DataGrid {...dataGridProps}>
 			{it => (

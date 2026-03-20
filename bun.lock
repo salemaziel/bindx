@@ -162,6 +162,7 @@
         "@contember/bindx-react": "workspace:*",
         "@contember/bindx-repeater": "workspace:*",
         "@contember/bindx-ui": "workspace:*",
+        "@contember/bindx-uploader": "workspace:*",
         "@contember/client-content": "^2.1.0-alpha.30",
         "@contember/graphql-client": "^2.1.0-alpha.30",
         "@contember/schema": "^2.1.0-alpha.30",

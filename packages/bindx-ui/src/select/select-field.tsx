@@ -103,7 +103,7 @@ export const SelectField = withCollector(function SelectField<F extends HasOneRe
 										{placeholder ?? <SelectDefaultPlaceholderUI />}
 									</SelectPlaceholder>
 									<SelectEachValue>
-										{entity => children(entity)}
+										{entity => children(entity as EntityAccessor<RelationTarget<F>>)}
 									</SelectEachValue>
 									<SelectInputActionsUI>
 										{!isPlaceholderId(field.$entity.id) && (
@@ -129,7 +129,7 @@ export const SelectField = withCollector(function SelectField<F extends HasOneRe
 								initialSorting={initialSorting}
 								filter={filter}
 							>
-								{children}
+								{children as (it: EntityAccessor<object>) => ReactNode}
 							</DefaultSelectDataView>
 						</SelectPopoverContent>
 					</Popover>

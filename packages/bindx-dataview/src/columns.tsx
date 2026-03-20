@@ -114,7 +114,7 @@ function renderEnumListDefault({ value }: ColumnRenderProps<readonly string[] | 
 // ============================================================================
 
 interface DataGridScalarColumnPropsBase<T> {
-	field: FieldRefBase<T>
+	field: FieldRefBase<T> | FieldRefBase<T | undefined>
 	header?: React.ReactNode
 	sortable?: boolean
 	filter?: boolean
@@ -130,7 +130,7 @@ export interface DataGridUuidColumnProps<T> extends DataGridScalarColumnPropsBas
 export interface DataGridIsDefinedColumnProps<T> extends DataGridScalarColumnPropsBase<T> {}
 
 interface EnumExtraProps<T extends string> {
-	options: Record<T, ReactNode>
+	options: readonly T[] | Record<T, ReactNode>
 }
 
 export interface DataGridEnumColumnProps<T extends string> extends DataGridScalarColumnPropsBase<T>, EnumExtraProps<NoInfer<T>> {}

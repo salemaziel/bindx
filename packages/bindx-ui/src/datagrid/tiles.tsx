@@ -27,9 +27,11 @@ export const DataGridTiles = ({ children, className }: DataGridTilesProps): Reac
 			</>}
 		>
 			<div className={cn('grid grid-cols-2 md:grid-cols-4 gap-4', className)}>
-				<DataViewEachRow>
-					{children}
-				</DataViewEachRow>
+				{children && (
+					<DataViewEachRow>
+						{children}
+					</DataViewEachRow>
+				)}
 			</div>
 		</DataViewLayout>
 	)

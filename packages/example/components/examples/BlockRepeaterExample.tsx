@@ -10,9 +10,7 @@ import {
 	UploadedImageView,
 } from '@contember/bindx-ui'
 import { schema } from '../../generated/schema.js'
-import type { ArticleBlock } from '../../generated/entities.js'
-
-const imageFileType = createImageFileType<ArticleBlock>({
+const imageFileType = createImageFileType<{ imageUrl: string | null }>({
 	urlField: 'imageUrl',
 })
 

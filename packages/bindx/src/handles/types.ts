@@ -719,11 +719,9 @@ export type SelectedEntityFields<
  * Extracts the role map from an EntityAccessor or EntityAccessorBase.
  */
 export type ExtractRoleMap<T> =
-	T extends EntityAccessor<any, any, any, any, any, infer TRoleMap>
+	T extends { readonly __roleMap?: infer TRoleMap extends Record<string, object> }
 		? TRoleMap
-		: T extends EntityAccessorBase<any, any, any, any, any, infer TRoleMap>
-			? TRoleMap
-			: Record<string, object>
+		: Record<string, object>
 
 export type ExtractHasOneEntityName<T> =
 	T extends HasOneRef<any, any, any, infer TEntityName, any>
