@@ -93,17 +93,17 @@ export function el(selector: string): ElementHandle {
 			return parseInt(exec(`agent-browser get count ${quoted}`), 10) || 0
 		},
 		click(): void {
-			exec(`agent-browser wait ${quoted}`)
+			exec(`agent-browser scrollintoview ${quoted}`)
 			exec(`agent-browser click ${quoted}`)
 			Bun.sleepSync(500)
 		},
 		fill(value: string): void {
-			exec(`agent-browser wait ${quoted}`)
+			exec(`agent-browser scrollintoview ${quoted}`)
 			exec(`agent-browser fill ${quoted} ${q(value)}`)
 			Bun.sleepSync(500)
 		},
 		select(optionText: string): void {
-			exec(`agent-browser wait ${quoted}`)
+			exec(`agent-browser scrollintoview ${quoted}`)
 			exec(`agent-browser select ${quoted} ${q(optionText)}`)
 			Bun.sleepSync(500)
 		},
