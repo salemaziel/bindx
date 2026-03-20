@@ -1,0 +1,125 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+
+  test:
+    name: Unit & Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run test
+
+  test-browser:
+    name: Browser Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: contember
+          POSTGRES_PASSWORD: contember
+          POSTGRES_DB: contember
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready --username contember"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+      minio:
+        image: bitnami/minio
+        env:
+          MINIO_ROOT_USER: contember
+          MINIO_ROOT_PASSWORD: contember
+          MINIO_DEFAULT_BUCKETS: contember:download
+        ports:
+          - 9000:9000
+
+      contember-engine:
+        image: contember/engine:2.1.0-alpha.30
+        env:
+          NODE_ENV: development
+          CONTEMBER_PORT: "4000"
+          CONTEMBER_ROOT_EMAIL: contember@localhost
+          CONTEMBER_ROOT_PASSWORD: contember
+          CONTEMBER_ROOT_TOKEN: "0000000000000000000000000000000000000000"
+          CONTEMBER_LOGIN_TOKEN: "1111111111111111111111111111111111111111"
+          CONTEMBER_ENCRYPTION_KEY: "2222222222222222222222222222222222222222222222222222222222222222"
+          DEFAULT_DB_HOST: postgres
+          DEFAULT_DB_PORT: "5432"
+          DEFAULT_DB_NAME: contember
+          DEFAULT_DB_USER: contember
+          DEFAULT_DB_PASSWORD: contember
+          DEFAULT_S3_ENDPOINT: http://minio:9000
+          DEFAULT_S3_BUCKET: contember
+          DEFAULT_S3_REGION: ""
+          DEFAULT_S3_KEY: contember
+          DEFAULT_S3_SECRET: contember
+          DEFAULT_S3_PROVIDER: minio
+          TENANT_MAILER_HOST: ""
+          TENANT_MAILER_PORT: "1025"
+          TENANT_MAILER_FROM: contember@localhost
+        ports:
+          - 1581:4000
+        options: >-
+          --health-cmd "curl --fail http://localhost:4000 || exit 1"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+
+      - run: bun install --frozen-lockfile
+
+      # Install agent-browser + Chromium
+      - run: bun add -g agent-browser
+      - run: agent-browser install
+
+      # Run Contember migrations & seed
+      - name: Migrate & seed
+        run: |
+          docker run --rm --network host \
+            -e CONTEMBER_API_URL=http://localhost:1581 \
+            -e CONTEMBER_API_TOKEN=0000000000000000000000000000000000000000 \
+            -e CONTEMBER_PROJECT_NAME=example \
+            -v ${{ github.workspace }}:/src \
+            -w /src/packages/example \
+            contember/cli:2.1.0-alpha.30 \
+            migrations:execute --yes
+          CONTEMBER_API_URL=http://localhost:1581 CONTEMBER_API_TOKEN=0000000000000000000000000000000000000000 bun run packages/example/seed.ts
+
+      # Start playground
+      - name: Start playground
+        run: |
+          VITE_CONTEMBER_API_URL=http://localhost:1581 \
+          VITE_CONTEMBER_API_TOKEN=0000000000000000000000000000000000000000 \
+          bun run playground &
+          # Wait for Vite to be ready
+          for i in $(seq 1 30); do
+            curl -s http://localhost:15180 > /dev/null 2>&1 && break
+            sleep 1
+          done
+
+      # Run browser tests
+      - name: Browser tests
+        run: bun run test:browser
+        env:
+          PLAYGROUND_URL: http://localhost:15180
