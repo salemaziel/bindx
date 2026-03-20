@@ -101,7 +101,7 @@ export function browserTest(name: string, fn: () => void): void {
 			currentSession = `test-${crypto.randomUUID().slice(0, 8)}`
 			exec(`agent-browser open ${PLAYGROUND_URL}`)
 			sleep(process.env['CI'] ? 5000 : 2000)
-		})
+		}, 30_000)
 		afterAll(() => {
 			try {
 				exec('agent-browser close')
@@ -109,7 +109,7 @@ export function browserTest(name: string, fn: () => void): void {
 				// ignore close errors
 			}
 			currentSession = null
-		})
+		}, 15_000)
 		fn()
 	})
 }
