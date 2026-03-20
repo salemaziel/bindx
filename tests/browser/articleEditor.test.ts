@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test'
-import { browserTest, el, waitFor } from './browser.js'
+import { browserTest, el, waitFor, screenshot } from './browser.js'
 
 browserTest('Article Editor', () => {
 	test('section renders with all sub-components', () => {
@@ -29,7 +29,9 @@ browserTest('Article Editor', () => {
 	})
 
 	test('removing a tag updates the tag list', () => {
+		screenshot('/tmp/browser-test-before-remove-tag.png')
 		el('remove-tag-React').click()
+		screenshot('/tmp/browser-test-after-remove-tag.png')
 
 		waitFor(() => !el('tag-badge-React').exists)
 		expect(el('tag-badge-JavaScript').exists).toBe(true)
