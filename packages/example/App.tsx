@@ -27,7 +27,8 @@ const client = new GraphQlClient({
 })
 
 const s3Client = new S3UploadClient({
-	signUrl: createContentApiS3Signer(client),
+	// Cast needed: root and bindx-uploader may resolve @contember/graphql-client separately
+	signUrl: createContentApiS3Signer(client as Parameters<typeof createContentApiS3Signer>[0]),
 })
 
 function AppProvider({ children }: { children: ReactNode }) {

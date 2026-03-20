@@ -43,7 +43,7 @@ jobs:
           --health-retries 10
 
       minio:
-        image: bitnami/minio
+        image: bitnami/minio:2025
         env:
           MINIO_ROOT_USER: contember
           MINIO_ROOT_PASSWORD: contember
