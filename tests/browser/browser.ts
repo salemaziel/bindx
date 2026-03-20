@@ -39,7 +39,7 @@ function resolveSelector(selectorOrTestId: string): string {
  */
 export function waitFor(
 	condition: () => boolean,
-	{ timeout = POLL_TIMEOUT, interval = POLL_INTERVAL }: { timeout?: number; interval?: number } = {},
+	{ timeout = POLL_TIMEOUT, interval = POLL_INTERVAL, message }: { timeout?: number; interval?: number; message?: string } = {},
 ): void {
 	const start = Date.now()
 	while (Date.now() - start < timeout) {
@@ -52,7 +52,9 @@ export function waitFor(
 	}
 	// One final check — let it throw naturally if still false
 	if (!condition()) {
-		throw new Error(`waitFor timed out after ${timeout}ms`)
+		const elapsed = Date.now() - start
+		const hint = message ?? condition.toString().slice(0, 120)
+		throw new Error(`waitFor timed out after ${elapsed}ms: ${hint}`)
 	}
 }
 
@@ -91,12 +93,15 @@ export function el(selector: string): ElementHandle {
 			return parseInt(exec(`agent-browser get count ${quoted}`), 10) || 0
 		},
 		click(): void {
+			exec(`agent-browser wait ${quoted}`)
 			exec(`agent-browser click ${quoted}`)
 		},
 		fill(value: string): void {
+			exec(`agent-browser wait ${quoted}`)
 			exec(`agent-browser fill ${quoted} ${q(value)}`)
 		},
 		select(optionText: string): void {
+			exec(`agent-browser wait ${quoted}`)
 			exec(`agent-browser select ${quoted} ${q(optionText)}`)
 		},
 	}
