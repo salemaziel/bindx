@@ -1,10 +1,10 @@
 import { test, expect, describe } from 'bun:test'
-import { browserTest, el } from './browser.js'
+import { browserTest, el, waitFor } from './browser.js'
 
 browserTest('Entity Lists', () => {
 	describe('Article View (read-only)', () => {
 		test('renders article title and author', () => {
-			expect(el('article-view').exists).toBe(true)
+			waitFor(() => el('article-view').exists)
 			expect(el('article-view-title').exists).toBe(true)
 			expect(el('article-view-author').text).toContain('By:')
 		})

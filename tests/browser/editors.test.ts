@@ -1,9 +1,9 @@
 import { test, expect } from 'bun:test'
-import { browserTest, el } from './browser.js'
+import { browserTest, el, waitFor } from './browser.js'
 
 browserTest('Editors', () => {
 	test('Rich Text Editor renders with toolbar', () => {
-		expect(el('rich-text-editor').exists).toBe(true)
+		waitFor(() => el('rich-text-editor').exists)
 		expect(el('rte-bold-button').exists).toBe(true)
 		expect(el('rte-italic-button').exists).toBe(true)
 		expect(el('rte-underline-button').exists).toBe(true)

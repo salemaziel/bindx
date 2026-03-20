@@ -1,9 +1,9 @@
 import { test, expect } from 'bun:test'
-import { browserTest, el } from './browser.js'
+import { browserTest, el, waitFor } from './browser.js'
 
 browserTest('Undo/Redo Demo', () => {
 	test('section renders', () => {
-		expect(el('undo-demo').exists).toBe(true)
+		waitFor(() => el('undo-demo').exists)
 	})
 
 	test('undo and redo buttons are initially disabled', () => {

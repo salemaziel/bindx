@@ -1,9 +1,9 @@
 import { test, expect } from 'bun:test'
-import { browserTest, el } from './browser.js'
+import { browserTest, el, waitFor } from './browser.js'
 
 browserTest('Location Picker', () => {
 	test('section renders', () => {
-		expect(el('location-picker').exists).toBe(true)
+		waitFor(() => el('location-picker').exists)
 		expect(el('location-select').exists).toBe(true)
 	})
 
