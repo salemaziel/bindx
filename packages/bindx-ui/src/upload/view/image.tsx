@@ -35,12 +35,14 @@ export const UploadedImageView = ({
 	}
 
 	return (
-		<div className="flex items-center justify-center h-40 rounded-md group relative">
-			<img
-				src={url}
-				alt={alt ?? fileName ?? 'Uploaded image'}
-				className="max-w-full max-h-full object-contain"
-			/>
+		<div className="rounded-md border border-gray-200 bg-gray-50 p-2 group relative">
+			<div className="flex items-center justify-center min-h-32">
+				<img
+					src={url}
+					alt={alt ?? fileName ?? 'Uploaded image'}
+					className="max-w-full max-h-48 object-contain rounded"
+				/>
+			</div>
 			<FileActions
 				{...actionProps}
 				metadata={<ImageMetadata {...metadata} />}

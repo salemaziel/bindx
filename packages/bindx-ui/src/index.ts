@@ -27,7 +27,7 @@ export { Popover, PopoverTrigger, PopoverContent, PopoverAnchor } from './ui/pop
 export { Tooltip, type TooltipProps } from './ui/tooltip.js'
 export {
 	Sheet, SheetPortal, SheetOverlay, SheetTrigger, SheetClose,
-	SheetContent, SheetHeader, SheetFooter, SheetTitle, SheetDescription,
+	SheetContent, SheetHeader, SheetBody, SheetFooter, SheetTitle, SheetDescription,
 } from './ui/sheet.js'
 
 // Form Components

@@ -9,20 +9,20 @@ export const UploaderDropzoneWrapperUI = uic('div', {
 
 export const UploaderDropzoneAreaUI = uic('div', {
 	baseClass: `
-		h-40 w-40 flex flex-col gap-1 justify-center items-center py-4 border-dashed border-2 border-gray-300 rounded-sm relative
+		flex flex-col gap-1 justify-center items-center py-6 border-dashed border-2 border-gray-300 rounded-md relative
 		transition-colors
-		hover:border-gray-300 hover:bg-gray-50 hover:cursor-pointer
-		data-[dropzone-accept]:border-green-500 data-[dropzone-accept]:bg-green-100
-		data-[dropzone-reject]:border-red-500 data-[dropzone-reject]:bg-red-100
+		hover:border-gray-400 hover:bg-gray-50 hover:cursor-pointer
+		data-[dropzone-accept]:border-green-500 data-[dropzone-accept]:bg-green-50
+		data-[dropzone-reject]:border-red-500 data-[dropzone-reject]:bg-red-50
 	`,
 	variants: {
 		size: {
 			square: 'h-40 w-40',
-			wide: 'h-40 w-full',
+			wide: 'w-full',
 		},
 	},
 	defaultVariants: {
-		size: 'square',
+		size: 'wide',
 	},
 	displayName: 'UploaderDropzoneAreaUI',
 })

@@ -32,30 +32,33 @@ const SheetContent = React.forwardRef<
 		<DialogPrimitive.Content
 			ref={ref}
 			className={cn(
-				'fixed z-50 gap-4 bg-background p-6 shadow-lg',
+				'fixed z-50 flex flex-col bg-background shadow-lg',
 				'inset-y-0 right-0 h-full w-3/4 max-w-md border-l',
 				'data-[state=open]:animate-in data-[state=closed]:animate-out',
 				'data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right',
-				'duration-200 overflow-y-auto',
+				'duration-200',
 				className,
 			)}
 			{...props}
 		>
 			{children}
-			<DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
-				<XIcon className="h-4 w-4" />
-			</DialogPrimitive.Close>
 		</DialogPrimitive.Content>
 	</SheetPortal>
 ))
 SheetContent.displayName = 'SheetContent'
 
 function SheetHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>): React.ReactNode {
-	return <div className={cn('flex flex-col space-y-2 text-left', className)} {...props} />
+	return (
+		<div className={cn('flex items-center justify-between gap-4 px-6 py-4 border-b shrink-0', className)} {...props} />
+	)
+}
+
+function SheetBody({ className, ...props }: React.HTMLAttributes<HTMLDivElement>): React.ReactNode {
+	return <div className={cn('flex-1 overflow-y-auto px-6 py-4', className)} {...props} />
 }
 
 function SheetFooter({ className, ...props }: React.HTMLAttributes<HTMLDivElement>): React.ReactNode {
-	return <div className={cn('flex justify-end gap-2 pt-4', className)} {...props} />
+	return <div className={cn('flex justify-end gap-2 px-6 py-4 border-t shrink-0', className)} {...props} />
 }
 
 const SheetTitle = React.forwardRef<
@@ -90,6 +93,7 @@ export {
 	SheetClose,
 	SheetContent,
 	SheetHeader,
+	SheetBody,
 	SheetFooter,
 	SheetTitle,
 	SheetDescription,

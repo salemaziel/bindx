@@ -27,12 +27,13 @@ import {
 	verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVerticalIcon, PlusCircleIcon, Trash2Icon } from 'lucide-react'
+import { GripVerticalIcon, PlusCircleIcon, Trash2Icon, XIcon } from 'lucide-react'
 import { Button } from '../ui/button.js'
 import {
 	Sheet,
 	SheetContent,
 	SheetHeader,
+	SheetBody,
 	SheetTitle,
 	SheetFooter,
 	SheetClose,
@@ -435,21 +436,26 @@ function BlockItemContent<TEntity, TSelected, TBrand extends AnyBrand, TEntityNa
 				<Sheet open={editOpen} onOpenChange={setEditOpen} modal={false}>
 					<SheetContent onFocusOutside={(e: Event) => e.preventDefault()}>
 						<SheetHeader>
-							<SheetTitle className="flex items-center gap-2">
-								{info.block?.label ?? info.blockType}
+							<SheetTitle>{info.block?.label ?? info.blockType}</SheetTitle>
+							<div className="flex items-center gap-1">
 								<Button
-									variant="link"
+									variant="ghost"
 									size="sm"
-									className="gap-1 px-0 group/button ml-auto"
+									className="text-gray-400 hover:text-red-600"
 									onClick={() => { info.remove(); setEditOpen(false) }}
 								>
-									<Trash2Icon className="group-hover/button:text-red-600" size={16} />
+									<Trash2Icon size={16} />
 								</Button>
-							</SheetTitle>
+								<SheetClose asChild>
+									<Button variant="ghost" size="sm" className="text-gray-400 hover:text-gray-600">
+										<XIcon size={16} />
+									</Button>
+								</SheetClose>
+							</div>
 						</SheetHeader>
-						<div className="my-4">
+						<SheetBody>
 							{blockDef.form!(entity, info)}
-						</div>
+						</SheetBody>
 						<SheetFooter>
 							<SheetClose asChild>
 								<Button variant="outline">{dict.blockRepeater.close}</Button>

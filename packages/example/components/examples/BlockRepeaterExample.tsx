@@ -130,11 +130,13 @@ export function StyledBlockRepeaterExample({ id }: { id: string }): ReactNode {
 						label: 'Image',
 						render: (block) => (
 							<Uploader entity={block} fileType={imageFileType}>
-								{block.imageUrl.value
-									? <UploadedImageView url={block.imageUrl.value} onRemove={() => block.imageUrl.setValue(null)} />
-									: <UploaderDropzone />
-								}
-								<UploaderProgress />
+								<div className="flex flex-col gap-3">
+									{block.imageUrl.value
+										? <UploadedImageView url={block.imageUrl.value} onRemove={() => block.imageUrl.setValue(null)} />
+										: <UploaderDropzone />
+									}
+									<UploaderProgress />
+								</div>
 							</Uploader>
 						),
 					},
@@ -194,11 +196,13 @@ export function DualModeBlockRepeaterExample({ id }: { id: string }): ReactNode 
 						),
 						form: (block) => (
 							<Uploader entity={block} fileType={imageFileType}>
-								{block.imageUrl.value
-									? <UploadedImageView url={block.imageUrl.value} onRemove={() => block.imageUrl.setValue(null)} />
-									: <UploaderDropzone />
-								}
-								<UploaderProgress />
+								<div className="flex flex-col gap-3">
+									{block.imageUrl.value
+										? <UploadedImageView url={block.imageUrl.value} onRemove={() => block.imageUrl.setValue(null)} />
+										: <UploaderDropzone />
+									}
+									<UploaderProgress />
+								</div>
 							</Uploader>
 						),
 					},
