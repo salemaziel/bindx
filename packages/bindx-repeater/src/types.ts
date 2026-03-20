@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import type { EntityAccessor, HasManyRef, AnyBrand } from '@contember/bindx'
+import type { EntityAccessor, HasManyRef, AnyBrand, FieldRef } from '@contember/bindx'
 
 /**
  * Index for adding items to the repeater.
@@ -121,4 +121,102 @@ export interface RepeaterProps<
 
 	/** Render function that receives items collection and methods */
 	children: RepeaterRenderFn<TEntity, TSelected, TBrand, TEntityName, TSchema>
+}
+
+// ============================================================================
+// Block Repeater Types
+// ============================================================================
+
+/**
+ * Minimal block definition for headless use.
+ */
+export interface BlockDefinition {
+	label?: ReactNode
+}
+
+/**
+ * Extended item info with block type discrimination.
+ */
+export interface BlockRepeaterItemInfo extends RepeaterItemInfo {
+	/** Value of the discrimination field */
+	blockType: string | null
+	/** Resolved block definition, undefined if block type is unknown */
+	block: { name: string; label?: ReactNode } | undefined
+}
+
+/**
+ * Items collection for BlockRepeater with BlockRepeaterItemInfo.
+ */
+export interface BlockRepeaterItems<
+	TEntity,
+	TSelected = TEntity,
+	TBrand extends AnyBrand = AnyBrand,
+	TEntityName extends string = string,
+	TSchema extends Record<string, object> = Record<string, object>,
+> {
+	map: <R>(
+		fn: (
+			entity: EntityAccessor<TEntity, TSelected, TBrand, TEntityName, TSchema>,
+			info: BlockRepeaterItemInfo,
+		) => R,
+	) => R[]
+
+	/** Number of items in the repeater */
+	length: number
+}
+
+/**
+ * Methods for BlockRepeater — addItem requires a block type.
+ */
+export interface BlockRepeaterMethods<TBlockNames extends string> {
+	/** Add a new item with the given block type */
+	addItem: (type: TBlockNames, index?: RepeaterAddItemIndex) => void
+
+	/** Whether the repeater is empty */
+	isEmpty: boolean
+
+	/** List of all defined blocks */
+	blockList: ReadonlyArray<{ name: TBlockNames; label?: ReactNode }>
+}
+
+/**
+ * Render function type for BlockRepeater.
+ */
+export type BlockRepeaterRenderFn<
+	TEntity,
+	TSelected = TEntity,
+	TBrand extends AnyBrand = AnyBrand,
+	TEntityName extends string = string,
+	TSchema extends Record<string, object> = Record<string, object>,
+	TBlockNames extends string = string,
+> = (
+	items: BlockRepeaterItems<TEntity, TSelected, TBrand, TEntityName, TSchema>,
+	methods: BlockRepeaterMethods<TBlockNames>,
+) => ReactNode
+
+/**
+ * Props for the BlockRepeater component.
+ */
+export interface BlockRepeaterProps<
+	TEntity,
+	TSelected = TEntity,
+	TBrand extends AnyBrand = AnyBrand,
+	TEntityName extends string = string,
+	TSchema extends Record<string, object> = Record<string, object>,
+	TBlockNames extends string = string,
+> {
+	/** The has-many relation field */
+	field: HasManyRef<TEntity, TSelected, TBrand, TEntityName, TSchema>
+
+	/** Name of the scalar field used to discriminate block types */
+	discriminationField: string
+
+	/** Optional field name for sorting (must be a numeric field) */
+	sortableBy?: string
+
+	/** Block definitions keyed by block type name */
+	blocks: Record<TBlockNames, BlockDefinition>
+
+	/** Render function that receives items collection and methods */
+	children: BlockRepeaterRenderFn<TEntity, TSelected, TBrand, TEntityName, TSchema, TBlockNames>
 }

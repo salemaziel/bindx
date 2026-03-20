@@ -14,6 +14,12 @@ export type {
 	RepeaterMethods,
 	RepeaterRenderFn,
 	RepeaterProps,
+	BlockDefinition,
+	BlockRepeaterItemInfo,
+	BlockRepeaterItems,
+	BlockRepeaterMethods,
+	BlockRepeaterRenderFn,
+	BlockRepeaterProps,
 } from './types.js'
 
 // Hooks (internal, but exposed for advanced use cases)
@@ -28,3 +34,4 @@ export {
 
 // Components
 export { Repeater, RepeaterWithMeta } from './components/index.js'
+export { BlockRepeater, BlockRepeaterWithMeta } from './components/index.js'
