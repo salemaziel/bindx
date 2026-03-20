@@ -131,8 +131,8 @@ describe('Selection Collection with Schema', () => {
 			.entity('entity', schema.Project)
 			.render(({ entity }) => (
 				<div>
-					<span>{entity.name.value}</span>
-					<span>{entity.slug.value}</span>
+					<span>{entity.name.inputProps.value}</span>
+					<span>{entity.slug.inputProps.value}</span>
 				</div>
 			))
 
@@ -147,8 +147,8 @@ describe('Selection Collection with Schema', () => {
 			.entity('entity', schema.Project)
 			.render(({ entity }) => (
 				<div>
-					<span>{entity.name.value}</span>
-					<span>{entity.organization.name.value}</span>
+					<span>{entity.name.inputProps.value}</span>
+					<span>{entity.organization.name.inputProps.value}</span>
 				</div>
 			))
 
@@ -167,9 +167,9 @@ describe('Selection Collection with Schema', () => {
 			.entity('entity', schema.Voucher)
 			.render(({ entity }) => (
 				<div>
-					<span>{entity.code.value}</span>
+					<span>{entity.code.inputProps.value}</span>
 					<HasMany field={entity.usages}>
-						{usage => <span>{usage.creditedAmount.value}</span>}
+						{usage => <span>{usage.creditedAmount.inputProps.value}</span>}
 					</HasMany>
 				</div>
 			))
@@ -333,9 +333,9 @@ describe('Selection Collection with Schema', () => {
 			.entity('entity', schema.Project)
 			.render(({ entity }) => (
 				<div>
-					<span>{entity.name.value}</span>
+					<span>{entity.name.inputProps.value}</span>
 					<MockSelectField field={entity.featureFlagSet}>
-						{it => <span>{it.name.value}</span>}
+						{it => <span>{it.name.inputProps.value}</span>}
 					</MockSelectField>
 				</div>
 			))

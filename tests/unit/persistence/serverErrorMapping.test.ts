@@ -591,6 +591,8 @@ describe('BatchPersister - Server Error Mapping', () => {
 			store.addFieldError('Article', 'a-1', 'title', {
 				message: 'Server said no',
 				source: 'server',
+				category: 'validation',
+				retryable: false,
 			})
 			store.addFieldError('Article', 'a-1', 'content', {
 				message: 'Client validation',

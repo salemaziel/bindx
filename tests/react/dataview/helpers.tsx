@@ -142,7 +142,7 @@ function FilterControl({ column, artifact, onArtifactChange, onReset }: FilterCo
 			return <BooleanFilterControl fieldName={fieldName} header={column.header} artifact={artifact} onChange={onArtifactChange} onReset={onReset} />
 		case 'enum':
 		case 'enumList':
-			return <EnumFilterControl fieldName={fieldName} header={column.header} artifact={artifact} onChange={onArtifactChange} onReset={onReset} options={column.enumOptions ?? []} />
+			return <EnumFilterControl fieldName={fieldName} header={column.header} artifact={artifact} onChange={onArtifactChange} onReset={onReset} options={column.enumOptions ? Object.keys(column.enumOptions) : []} />
 		default:
 			return <span />
 	}

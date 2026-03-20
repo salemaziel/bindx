@@ -142,7 +142,7 @@ const roleSchema = {
 } as const
 
 // Mock data
-function createMockData(): Record<string, Record<string, unknown>> {
+function createMockData(): Record<string, Record<string, Record<string, unknown>>> {
 	return {
 		Article: {
 			'article-1': {
