@@ -47,4 +47,4 @@ browserTest('Undo/Redo Demo', () => {
 
 		el('undo-button').click()
 	})
-})
+}, 'undo')

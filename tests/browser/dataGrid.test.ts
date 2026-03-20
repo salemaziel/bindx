@@ -82,4 +82,4 @@ browserTest('DataGrid', () => {
 			expect(el(`${scope} ${tid('datagrid-row-0')}[data-highlighted]`).exists).toBe(false)
 		})
 	})
-})
+}, 'datagrid')

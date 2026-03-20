@@ -51,4 +51,4 @@ browserTest('Article Editor', () => {
 		expect(el('tag-badge-React').exists).toBe(true)
 		expect(el('tag-badge-TypeScript').exists).toBe(false)
 	})
-})
+}, 'article-editor')

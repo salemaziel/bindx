@@ -43,4 +43,4 @@ browserTest('Entity Lists', () => {
 			expect(el(`tag-list-badge-${tag}`).exists).toBe(true)
 		})
 	})
-})
+}, 'entity-lists')

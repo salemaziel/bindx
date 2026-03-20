@@ -122,11 +122,12 @@ export function wait(ms: number): void {
 	Bun.sleepSync(ms)
 }
 
-export function browserTest(name: string, fn: () => void): void {
+export function browserTest(name: string, fn: () => void, hash?: string): void {
 	describe(name, () => {
 		beforeAll(() => {
 			currentSession = `test-${crypto.randomUUID().slice(0, 8)}`
-			exec(`agent-browser open ${PLAYGROUND_URL}`)
+			const url = hash ? `${PLAYGROUND_URL}#${hash}` : PLAYGROUND_URL
+			exec(`agent-browser open ${url}`)
 			waitFor(() => {
 				try {
 					return exec('agent-browser get title').length > 0

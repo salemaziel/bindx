@@ -33,4 +33,4 @@ browserTest('Location Picker', () => {
 
 		expect(el('location-details').exists).toBe(false)
 	})
-})
+}, 'location-picker')

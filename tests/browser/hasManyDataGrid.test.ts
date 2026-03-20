@@ -58,4 +58,4 @@ browserTest('HasMany DataGrid', () => {
 			el(`${scope} ${tid('datagrid-body')}`).click()
 		})
 	})
-})
+}, 'hasmany-datagrid')

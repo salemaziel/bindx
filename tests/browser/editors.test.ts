@@ -21,4 +21,4 @@ browserTest('Editors', () => {
 	test('Simple Block Editor renders', () => {
 		expect(el('simple-block-editor').exists).toBe(true)
 	})
-})
+}, 'editors')

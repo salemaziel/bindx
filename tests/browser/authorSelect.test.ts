@@ -29,4 +29,4 @@ browserTest('Article with Author Select', () => {
 
 		waitFor(() => el('author-select-save-button').isDisabled)
 	})
-})
+}, 'author-select')
