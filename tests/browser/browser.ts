@@ -22,7 +22,7 @@ function exec(cmd: string): string {
 }
 
 function sleep(ms: number): void {
-	execSync(`sleep ${ms / 1000}`, { timeout: ms + 5000 })
+	Bun.sleepSync(ms)
 }
 
 function q(s: string): string {
