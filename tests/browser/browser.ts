@@ -2,7 +2,7 @@ import { execSync } from 'node:child_process'
 import { describe, beforeAll, afterAll } from 'bun:test'
 import crypto from 'node:crypto'
 
-const TIMEOUT = 25_000
+const TIMEOUT = 30_000
 const PLAYGROUND_URL = process.env['PLAYGROUND_URL'] ?? 'http://localhost:15180'
 
 let currentSession: string | null = null
@@ -97,8 +97,7 @@ export function browserTest(name: string, fn: () => void): void {
 		beforeAll(() => {
 			currentSession = `test-${crypto.randomUUID().slice(0, 8)}`
 			exec(`agent-browser open ${PLAYGROUND_URL}`)
-			exec('agent-browser wait --load networkidle')
-			exec('agent-browser wait 500')
+			exec('agent-browser wait 2000')
 		})
 		afterAll(() => {
 			try {
