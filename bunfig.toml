@@ -1,5 +1,6 @@
 [test]
 preload = ["./tests/setup.ts"]
+timeout = 15000
 
 [install]
 peer = true

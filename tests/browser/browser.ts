@@ -9,8 +9,8 @@ const PLAYGROUND_URL = process.env['PLAYGROUND_URL'] ?? 'http://localhost:15180'
 let currentSession: string | null = null
 
 function exec(cmd: string): string {
-	const sessionFlag = currentSession ? ` --session ${currentSession}` : ''
-	const fullCmd = cmd.replace(/^agent-browser\s/, `agent-browser${sessionFlag} `)
+	const sessionFlag = currentSession ? `--session ${currentSession} ` : ''
+	const fullCmd = cmd.replace(/^agent-browser /, `agent-browser ${sessionFlag}`)
 	try {
 		const raw = execSync(fullCmd, { encoding: 'utf-8', timeout: TIMEOUT, stdio: ['pipe', 'pipe', 'pipe'] }).trim()
 		return raw.replace(/\x1B\[[0-9;]*m/g, '')
@@ -19,6 +19,10 @@ function exec(cmd: string): string {
 		const output = err.stdout?.trim() ?? err.stderr?.trim() ?? err.message ?? 'unknown error'
 		throw new Error(`agent-browser command failed: ${fullCmd}\n${output}`)
 	}
+}
+
+function sleep(ms: number): void {
+	execSync(`sleep ${ms / 1000}`, { timeout: ms + 5000 })
 }
 
 function q(s: string): string {
@@ -68,15 +72,15 @@ export function el(selector: string): ElementHandle {
 		},
 		click(): void {
 			exec(`agent-browser click ${quoted}`)
-			exec(`agent-browser wait ${ACTION_DELAY}`)
+			sleep(ACTION_DELAY)
 		},
 		fill(value: string): void {
 			exec(`agent-browser fill ${quoted} ${q(value)}`)
-			exec(`agent-browser wait ${ACTION_DELAY}`)
+			sleep(ACTION_DELAY)
 		},
 		select(optionText: string): void {
 			exec(`agent-browser select ${quoted} ${q(optionText)}`)
-			exec(`agent-browser wait ${ACTION_DELAY}`)
+			sleep(ACTION_DELAY)
 		},
 	}
 }
@@ -89,16 +93,14 @@ export function tid(testId: string): string {
 	return `[data-testid="${testId}"]`
 }
 
-export function wait(ms: number): void {
-	exec(`agent-browser wait ${ms}`)
-}
+export { sleep as wait }
 
 export function browserTest(name: string, fn: () => void): void {
 	describe(name, () => {
 		beforeAll(() => {
 			currentSession = `test-${crypto.randomUUID().slice(0, 8)}`
 			exec(`agent-browser open ${PLAYGROUND_URL}`)
-			exec(`agent-browser wait ${process.env['CI'] ? 4000 : 2000}`)
+			sleep(process.env['CI'] ? 5000 : 2000)
 		})
 		afterAll(() => {
 			try {
