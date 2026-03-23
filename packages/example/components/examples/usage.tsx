@@ -98,22 +98,26 @@ export const ArticleExplicitInExplicit = () => {
 		e.title().author(AuthorArticlesExplicit.$author),
 	)
 
-	if (article.isLoading) {
+	if (article.$isLoading) {
 		return <div>Loading article...</div>
 	}
 
-	if (article.isError) {
-		return <div>Error: {article.error.message}</div>
+	if (article.$isError) {
+		return <div>Error: {article.$error.message}</div>
+	}
+
+	if (article.$isNotFound) {
+		return <div>Article not found</div>
 	}
 
 	return (
 		<article className="article-detail">
 			<header>
 				<h1>
-					<Field field={article.fields.title} />
+					<Field field={article.title} />
 				</h1>
 			</header>
-			<AuthorArticlesExplicit author={article.fields.author.$entity} />
+			<AuthorArticlesExplicit author={article.author} />
 		</article>
 	)
 }
@@ -129,24 +133,27 @@ export const ArticleImplicitInExplicit = () => {
 		e.title().author(mergeFragments(AuthorArticlesImplicit.$author, AuthorBioImplicit.$author)),
 	)
 
-	if (article.isLoading) {
+	if (article.$isLoading) {
 		return <div>Loading article...</div>
 	}
 
-	if (article.isError) {
-		return <div>Error: {article.error.message}</div>
+	if (article.$isError) {
+		return <div>Error: {article.$error.message}</div>
+	}
+	if (article.$isNotFound) {
+		return <div>Article not found</div>
 	}
 
 	return (
 		<article className="article-detail">
 			<header>
 				<h1>
-					<Field field={article.fields.title} />
+					<Field field={article.title} />
 				</h1>
 			</header>
-			<AuthorBioImplicit author={article.fields.author.$entity} />
+			<AuthorBioImplicit author={article.author} />
 
-			<AuthorArticlesImplicit author={article.fields.author.$entity} />
+			<AuthorArticlesImplicit author={article.author} />
 		</article>
 	)
 }

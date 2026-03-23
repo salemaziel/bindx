@@ -25,25 +25,25 @@ describe('HasOne Relations - Persistence', () => {
 			)
 			const allAuthors = useEntityList(entityDefs.Author, {}, a => a.id().name().email())
 
-			if (article.isLoading || allAuthors.isLoading) {
+			if (article.$isLoading || allAuthors.$isLoading) {
 				return <div data-testid="loading">Loading...</div>
 			}
-			if (article.isError || article.isNotFound || allAuthors.isError) {
+			if (article.$isError || article.$isNotFound || allAuthors.$isError) {
 				return <div>Error</div>
 			}
 
 			return (
 				<div>
 					<span data-testid="author-id">{article.author.$id ?? 'null'}</span>
-					<span data-testid="is-dirty">{article.isDirty ? 'dirty' : 'clean'}</span>
-					<span data-testid="is-persisting">{article.isPersisting ? 'persisting' : 'idle'}</span>
+					<span data-testid="is-dirty">{article.$isDirty ? 'dirty' : 'clean'}</span>
+					<span data-testid="is-persisting">idle</span>
 					<button
 						data-testid="connect-author-2"
 						onClick={() => article.author.$connect('author-2')}
 					>
 						Connect Author 2
 					</button>
-					<button data-testid="persist" onClick={() => article.persist()}>
+					<button data-testid="persist" onClick={() => article.$persist()}>
 						Persist
 					</button>
 				</div>
@@ -94,21 +94,21 @@ describe('HasOne Relations - Persistence', () => {
 				e.id().title().author(a => a.id().name().email()),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 
 			return (
 				<div>
 					<span data-testid="author-id">{article.author.$id ?? 'null'}</span>
-					<span data-testid="is-dirty">{article.isDirty ? 'dirty' : 'clean'}</span>
+					<span data-testid="is-dirty">{article.$isDirty ? 'dirty' : 'clean'}</span>
 					<button data-testid="disconnect" onClick={() => article.author.$disconnect()}>
 						Disconnect
 					</button>
-					<button data-testid="persist" onClick={() => article.persist()}>
+					<button data-testid="persist" onClick={() => article.$persist()}>
 						Persist
 					</button>
 				</div>

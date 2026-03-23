@@ -11,18 +11,18 @@ export function UndoDemo({ id }: { id: string }): React.ReactElement {
 
 	const article = useEntity(schema.Article, { by: { id } }, e => e.id().title().content())
 
-	if (article.isLoading) {
+	if (article.$isLoading) {
 		return <div className="loading">Loading...</div>
 	}
 
-	if (article.isError) {
-		return <div className="error">Error: {article.error?.message}</div>
+	if (article.$isError || article.$isNotFound) {
+		return <div className="error">Error: {article.$error?.message ?? 'Not found'}</div>
 	}
 
 	const handleBulkUpdate = (): void => {
 		const groupId = beginGroup('Bulk update')
-		article.fields.title.setValue('Bulk Updated Title')
-		article.fields.content.setValue('Bulk Updated Content - this is a single undo operation!')
+		article.$fields.title.setValue('Bulk Updated Title')
+		article.$fields.content.setValue('Bulk Updated Content - this is a single undo operation!')
 		endGroup(groupId)
 	}
 
@@ -42,13 +42,13 @@ export function UndoDemo({ id }: { id: string }): React.ReactElement {
 
 			<div className="form-fields">
 				<InputField
-					field={article.fields.title}
+					field={article.$fields.title}
 					label="Title"
 					inputProps={{ 'data-testid': 'undo-title-input' }}
 				/>
 
 				<TextareaField
-					field={article.fields.content}
+					field={article.$fields.content}
 					label="Content"
 					inputProps={{ 'data-testid': 'undo-content-input', rows: 4 }}
 				/>

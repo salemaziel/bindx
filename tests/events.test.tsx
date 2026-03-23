@@ -438,8 +438,8 @@ describe('Event React Hooks', () => {
 					events.push(event as FieldChangedEvent)
 				})
 
-				if (article.isLoading) return <div>Loading...</div>
-				if (article.isError || article.isNotFound) return <div>Error</div>
+				if (article.$isLoading) return <div>Loading...</div>
+				if (article.$isError || article.$isNotFound) return <div>Error</div>
 
 				return (
 					<div>
@@ -487,8 +487,8 @@ describe('Event React Hooks', () => {
 					capturedValues.push(counter)
 				})
 
-				if (article.isLoading) return <div>Loading...</div>
-				if (article.isError || article.isNotFound) return <div>Error</div>
+				if (article.$isLoading) return <div>Loading...</div>
+				if (article.$isError || article.$isNotFound) return <div>Error</div>
 
 				return (
 					<div>
@@ -550,8 +550,8 @@ describe('Event React Hooks', () => {
 					article1Events.push(event as FieldChangedEvent)
 				})
 
-				if (article1.isLoading || article2.isLoading) return <div>Loading...</div>
-				if (article1.isError || article1.isNotFound || article2.isError || article2.isNotFound) return <div>Error</div>
+				if (article1.$isLoading || article2.$isLoading) return <div>Loading...</div>
+				if (article1.$isError || article1.$isNotFound || article2.$isError || article2.$isNotFound) return <div>Error</div>
 
 				return (
 					<div>
@@ -617,8 +617,8 @@ describe('Event React Hooks', () => {
 					titleEvents.push(event as FieldChangedEvent)
 				})
 
-				if (article.isLoading) return <div>Loading...</div>
-				if (article.isError || article.isNotFound) return <div>Error</div>
+				if (article.$isLoading) return <div>Loading...</div>
+				if (article.$isError || article.$isNotFound) return <div>Error</div>
 
 				return (
 					<div>
@@ -691,8 +691,8 @@ describe('Event React Hooks', () => {
 			function TestComponent({ showListener }: { showListener: boolean }) {
 				const article = useEntity(articleDef, { by: { id: 'article-1' } }, e => e.id().title())
 
-				if (article.isLoading) return <div>Loading...</div>
-				if (article.isError || article.isNotFound) return <div>Error</div>
+				if (article.$isLoading) return <div>Loading...</div>
+				if (article.$isError || article.$isNotFound) return <div>Error</div>
 
 				return (
 					<div>

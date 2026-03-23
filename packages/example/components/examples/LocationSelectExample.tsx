@@ -11,12 +11,12 @@ export function LocationSelectExample() {
 
 	const locations = useEntityList(schema.Location, {}, e => e.id().label().lat().lng())
 
-	if (locations.isLoading) {
+	if (locations.$isLoading) {
 		return <div>Loading locations...</div>
 	}
 
-	if (locations.isError) {
-		return <div>Error: {locations.error.message}</div>
+	if (locations.$isError) {
+		return <div>Error: {locations.$error.message}</div>
 	}
 
 	const selectedLocation = selectedLocationId

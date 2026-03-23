@@ -80,7 +80,7 @@ describe('useEntityList', () => {
 			function TestComponent(): React.ReactElement {
 				const authors = useEntityList(authorDef, {}, a => a.id().name().email())
 
-				if (authors.isLoading) {
+				if (authors.$status !== 'ready') {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -97,7 +97,7 @@ describe('useEntityList', () => {
 						<button
 							data-testid="add-button"
 							onClick={() => {
-								addedId = authors.add({ name: 'New Author', email: 'new@example.com' })
+								addedId = authors.$add({ name: 'New Author', email: 'new@example.com' })
 							}}
 						>
 							Add
@@ -146,7 +146,7 @@ describe('useEntityList', () => {
 			function TestComponent(): React.ReactElement {
 				const authors = useEntityList(authorDef, {}, a => a.id().name())
 
-				if (authors.isLoading) {
+				if (authors.$status !== 'ready') {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -156,7 +156,7 @@ describe('useEntityList', () => {
 						<button
 							data-testid="add-button"
 							onClick={() => {
-								addedId = authors.add()
+								addedId = authors.$add()
 							}}
 						>
 							Add
@@ -201,7 +201,7 @@ describe('useEntityList', () => {
 			function TestComponent(): React.ReactElement {
 				const authors = useEntityList(authorDef, {}, a => a.id().name())
 
-				if (authors.isLoading) {
+				if (authors.$status !== 'ready') {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -211,9 +211,9 @@ describe('useEntityList', () => {
 						<button
 							data-testid="add-button"
 							onClick={() => {
-								addedIds.push(authors.add({ name: 'Author A' }))
-								addedIds.push(authors.add({ name: 'Author B' }))
-								addedIds.push(authors.add({ name: 'Author C' }))
+								addedIds.push(authors.$add({ name: 'Author A' }))
+								addedIds.push(authors.$add({ name: 'Author B' }))
+								addedIds.push(authors.$add({ name: 'Author C' }))
 							}}
 						>
 							Add Three
@@ -259,7 +259,7 @@ describe('useEntityList', () => {
 			function TestComponent(): React.ReactElement {
 				const authors = useEntityList(authorDef, {}, a => a.id().name().email())
 
-				if (authors.isLoading) {
+				if (authors.$status !== 'ready') {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -273,7 +273,7 @@ describe('useEntityList', () => {
 						<button
 							data-testid="add-button"
 							onClick={() => {
-								authors.add({ name: 'Initial Name', email: 'test@example.com' })
+								authors.$add({ name: 'Initial Name', email: 'test@example.com' })
 							}}
 						>
 							Add
@@ -315,7 +315,7 @@ describe('useEntityList', () => {
 			function TestComponent(): React.ReactElement {
 				const authors = useEntityList(authorDef, {}, a => a.id().name().email())
 
-				if (authors.isLoading) {
+				if (authors.$status !== 'ready') {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -328,7 +328,7 @@ describe('useEntityList', () => {
 									{author.name.value}
 									<button
 										data-testid={`remove-${author.id}`}
-										onClick={() => authors.remove(author.id)}
+										onClick={() => authors.$remove(author.id)}
 									>
 										Remove
 									</button>
@@ -378,7 +378,7 @@ describe('useEntityList', () => {
 			function TestComponent(): React.ReactElement {
 				const authors = useEntityList(authorDef, {}, a => a.id().name().email())
 
-				if (authors.isLoading) {
+				if (authors.$status !== 'ready') {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -391,7 +391,7 @@ describe('useEntityList', () => {
 									{author.name.value ?? 'unnamed'}
 									<button
 										data-testid={`remove-${author.id}`}
-										onClick={() => authors.remove(author.id)}
+										onClick={() => authors.$remove(author.id)}
 									>
 										Remove
 									</button>
@@ -401,7 +401,7 @@ describe('useEntityList', () => {
 						<button
 							data-testid="add-button"
 							onClick={() => {
-								addedId = authors.add({ name: 'New Author', email: 'new@example.com' })
+								addedId = authors.$add({ name: 'New Author', email: 'new@example.com' })
 							}}
 						>
 							Add
@@ -459,7 +459,7 @@ describe('useEntityList', () => {
 			function TestComponent(): React.ReactElement {
 				const authors = useEntityList(authorDef, {}, a => a.id().name().email())
 
-				if (authors.isLoading) {
+				if (authors.$status !== 'ready') {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -471,7 +471,7 @@ describe('useEntityList', () => {
 							onClick={() => {
 								// Remove all items
 								for (const author of [...authors.items]) {
-									authors.remove(author.id)
+									authors.$remove(author.id)
 								}
 							}}
 						>
@@ -517,7 +517,7 @@ describe('useEntityList', () => {
 			function TestComponent(): React.ReactElement {
 				const authors = useEntityList(authorDef, {}, a => a.id().name().email())
 
-				if (authors.isLoading) {
+				if (authors.$status !== 'ready') {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -533,7 +533,7 @@ describe('useEntityList', () => {
 						</ul>
 						<button
 							data-testid="move-button"
-							onClick={() => authors.move(0, 1)}
+							onClick={() => authors.$move(0, 1)}
 						>
 							Move First to Last
 						</button>
@@ -573,7 +573,7 @@ describe('useEntityList', () => {
 			function TestComponent(): React.ReactElement {
 				const authors = useEntityList(authorDef, {}, a => a.id().name().email())
 
-				if (authors.isLoading) {
+				if (authors.$status !== 'ready') {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -589,7 +589,7 @@ describe('useEntityList', () => {
 						</ul>
 						<button
 							data-testid="move-button"
-							onClick={() => authors.move(1, 0)}
+							onClick={() => authors.$move(1, 0)}
 						>
 							Move Last to First
 						</button>
@@ -629,7 +629,7 @@ describe('useEntityList', () => {
 			function TestComponent(): React.ReactElement {
 				const authors = useEntityList(authorDef, {}, a => a.id().name().email())
 
-				if (authors.isLoading) {
+				if (authors.$status !== 'ready') {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -645,13 +645,13 @@ describe('useEntityList', () => {
 						</ul>
 						<button
 							data-testid="move-negative"
-							onClick={() => authors.move(-1, 0)}
+							onClick={() => authors.$move(-1, 0)}
 						>
 							Move Negative
 						</button>
 						<button
 							data-testid="move-out-of-bounds"
-							onClick={() => authors.move(0, 10)}
+							onClick={() => authors.$move(0, 10)}
 						>
 							Move Out of Bounds
 						</button>
@@ -696,7 +696,7 @@ describe('useEntityList', () => {
 			function TestComponent(): React.ReactElement {
 				const authors = useEntityList(authorDef, {}, a => a.id().name().email())
 
-				if (authors.isLoading) {
+				if (authors.$status !== 'ready') {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -712,7 +712,7 @@ describe('useEntityList', () => {
 						</ul>
 						<button
 							data-testid="move-same"
-							onClick={() => authors.move(0, 0)}
+							onClick={() => authors.$move(0, 0)}
 						>
 							Move Same
 						</button>
@@ -748,7 +748,7 @@ describe('useEntityList', () => {
 			function TestComponent(): React.ReactElement {
 				const authors = useEntityList(authorDef, {}, a => a.id().name().email())
 
-				if (authors.isLoading) {
+				if (authors.$status !== 'ready') {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -765,14 +765,14 @@ describe('useEntityList', () => {
 						<button
 							data-testid="add-button"
 							onClick={() => {
-								authors.add({ name: 'New Author', email: 'new@example.com' })
+								authors.$add({ name: 'New Author', email: 'new@example.com' })
 							}}
 						>
 							Add
 						</button>
 						<button
 							data-testid="move-new-to-first"
-							onClick={() => authors.move(2, 0)}
+							onClick={() => authors.$move(2, 0)}
 						>
 							Move New to First
 						</button>

@@ -15,10 +15,10 @@ function HasManyTestComponent({ articleId }: TestComponentProps): React.ReactEle
 		e.id().title().tags(t => t.id().name().color()),
 	)
 
-	if (article.isLoading) {
+	if (article.$isLoading) {
 		return <div>Loading...</div>
 	}
-	if (article.isError || article.isNotFound) {
+	if (article.$isError || article.$isNotFound) {
 		return <div data-testid="loading">Loading...</div>
 	}
 
@@ -61,10 +61,10 @@ describe('HasMany Relations - Edge Cases', () => {
 				e.id().tags(t => t.id().name()),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 
@@ -106,10 +106,10 @@ describe('HasMany Relations - Edge Cases', () => {
 				e.id().tags(t => t.id().name()),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 
@@ -151,10 +151,10 @@ describe('HasMany Relations - Edge Cases', () => {
 				e.id().tags(t => t.id().name()),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 
@@ -203,10 +203,10 @@ describe('HasMany Relations - Edge Cases', () => {
 				e.id().tags(t => t.id().name()),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 
@@ -331,10 +331,10 @@ describe('HasMany Relations - UI Reactivity', () => {
 				e.id().tags(t => t.id().name()),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 
@@ -382,10 +382,10 @@ describe('HasMany Relations - Nested Entity Reactivity', () => {
 				e.id().title().tags(t => t.id().name().color()),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 
@@ -438,10 +438,10 @@ describe('HasMany Relations - Nested Entity Reactivity', () => {
 				e.id().title().tags(t => t.id().name().color()),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 

@@ -16,24 +16,24 @@ describe('useEntity hook - reset functionality', () => {
 		function TestComponent() {
 			const article = useEntity(schema.Article, { by: { id: 'article-1' } }, e => e.title())
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div>Error</div>
 			}
 
 			return (
 				<div>
 					<span data-testid="title">{article.title.value}</span>
-					<span data-testid="dirty">{article.isDirty ? 'dirty' : 'clean'}</span>
+					<span data-testid="dirty">{article.$isDirty ? 'dirty' : 'clean'}</span>
 					<button
 						data-testid="update-btn"
 						onClick={() => article.title.setValue('New Title')}
 					>
 						Update
 					</button>
-					<button data-testid="reset-btn" onClick={() => article.reset()}>
+					<button data-testid="reset-btn" onClick={() => article.$reset()}>
 						Reset
 					</button>
 				</div>

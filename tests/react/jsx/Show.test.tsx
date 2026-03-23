@@ -38,10 +38,10 @@ describe('Show component', () => {
 			function TestComponent(): React.ReactElement {
 				const article = useEntity(schema.Article, { by: { id: 'article-1' } }, a => a.id().title())
 
-				if (article.isLoading) {
+				if (article.$isLoading) {
 					return <div data-testid="loading">Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$isError || article.$isNotFound) {
 					return <div data-testid="error">Error</div>
 				}
 
@@ -82,10 +82,10 @@ describe('Show component', () => {
 			function TestComponent(): React.ReactElement {
 				const article = useEntity(schema.Article, { by: { id: 'article-1' } }, a => a.id().publishedAt())
 
-				if (article.isLoading) {
+				if (article.$isLoading) {
 					return <div data-testid="loading">Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$isError || article.$isNotFound) {
 					return <div data-testid="error">Error</div>
 				}
 
@@ -131,10 +131,10 @@ describe('Show component', () => {
 			function TestComponent(): React.ReactElement {
 				const article = useEntity(schema.Article, { by: { id: 'article-1' } }, a => a.id().publishedAt())
 
-				if (article.isLoading) {
+				if (article.$isLoading) {
 					return <div data-testid="loading">Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$isError || article.$isNotFound) {
 					return <div data-testid="error">Error</div>
 				}
 
@@ -171,10 +171,10 @@ describe('Show component', () => {
 			function TestComponent(): React.ReactElement {
 				const article = useEntity(schema.Article, { by: { id: 'article-1' } }, a => a.id().title())
 
-				if (article.isLoading) {
+				if (article.$isLoading) {
 					return <div data-testid="loading">Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$isError || article.$isNotFound) {
 					return <div data-testid="error">Error</div>
 				}
 
@@ -218,10 +218,10 @@ describe('Show component', () => {
 			function TestComponent(): React.ReactElement {
 				const article = useEntity(schema.Article, { by: { id: 'article-1' } }, a => a.id().publishedAt())
 
-				if (article.isLoading) {
+				if (article.$isLoading) {
 					return <div data-testid="loading">Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$isError || article.$isNotFound) {
 					return <div data-testid="error">Error</div>
 				}
 
@@ -267,10 +267,10 @@ describe('Show component', () => {
 			function TestComponent(): React.ReactElement {
 				const article = useEntity(schema.Article, { by: { id: 'article-1' } }, a => a.id().views())
 
-				if (article.isLoading) {
+				if (article.$isLoading) {
 					return <div data-testid="loading">Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$isError || article.$isNotFound) {
 					return <div data-testid="error">Error</div>
 				}
 
@@ -307,10 +307,10 @@ describe('Show component', () => {
 			function TestComponent(): React.ReactElement {
 				const article = useEntity(schema.Article, { by: { id: 'article-1' } }, a => a.id().title())
 
-				if (article.isLoading) {
+				if (article.$isLoading) {
 					return <div data-testid="loading">Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$isError || article.$isNotFound) {
 					return <div data-testid="error">Error</div>
 				}
 
@@ -342,10 +342,10 @@ describe('Show component', () => {
 			function TestComponent(): React.ReactElement {
 				const article = useEntity(schema.Article, { by: { id: 'article-1' } }, a => a.id().published())
 
-				if (article.isLoading) {
+				if (article.$isLoading) {
 					return <div data-testid="loading">Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$isError || article.$isNotFound) {
 					return <div data-testid="error">Error</div>
 				}
 
@@ -389,10 +389,10 @@ describe('Show component', () => {
 			function TestComponent(): React.ReactElement {
 				const article = useEntity(schema.Article, { by: { id: 'article-1' } }, a => a.id().publishedAt())
 
-				if (article.isLoading) {
+				if (article.$isLoading) {
 					return <div data-testid="loading">Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$isError || article.$isNotFound) {
 					return <div data-testid="error">Error</div>
 				}
 
@@ -446,10 +446,10 @@ describe('Show component', () => {
 			function TestComponent(): React.ReactElement {
 				const article = useEntity(schema.Article, { by: { id: 'article-1' } }, a => a.id().publishedAt())
 
-				if (article.isLoading) {
+				if (article.$isLoading) {
 					return <div data-testid="loading">Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$isError || article.$isNotFound) {
 					return <div data-testid="error">Error</div>
 				}
 

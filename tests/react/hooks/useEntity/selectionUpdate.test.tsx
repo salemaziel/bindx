@@ -24,14 +24,14 @@ describe('useEntity hook - selection update on definer change', () => {
 					: e => e.title(),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div data-testid="loading">Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div>Error</div>
 			}
 
-			const data = article.data as Record<string, unknown>
+			const data = article.$data as Record<string, unknown>
 
 			return (
 				<div>

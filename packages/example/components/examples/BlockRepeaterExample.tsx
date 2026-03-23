@@ -22,8 +22,8 @@ export function HeadlessBlockRepeaterExample({ id }: { id: string }): ReactNode 
 		e.id().title().blocks(b => b.id().blockType().order().textContent().imageUrl()),
 	)
 
-	if (article.isLoading) return <p>Loading...</p>
-	if (article.isError || article.isNotFound) return <p>Error loading article</p>
+	if (article.$isLoading) return <p>Loading...</p>
+	if (article.$isError || article.$isNotFound) return <p>Error loading article</p>
 
 	return (
 		<div>
@@ -109,8 +109,8 @@ export function StyledBlockRepeaterExample({ id }: { id: string }): ReactNode {
 		e.id().title().blocks(b => b.id().blockType().order().textContent().imageUrl()),
 	)
 
-	if (article.isLoading) return <p>Loading...</p>
-	if (article.isError || article.isNotFound) return <p>Error loading article</p>
+	if (article.$isLoading) return <p>Loading...</p>
+	if (article.$isError || article.$isNotFound) return <p>Error loading article</p>
 
 	return (
 		<div>
@@ -154,8 +154,8 @@ export function DualModeBlockRepeaterExample({ id }: { id: string }): ReactNode 
 		e.id().title().blocks(b => b.id().blockType().order().textContent().imageUrl()),
 	)
 
-	if (article.isLoading) return <p>Loading...</p>
-	if (article.isError || article.isNotFound) return <p>Error loading article</p>
+	if (article.$isLoading) return <p>Loading...</p>
+	if (article.$isError || article.$isNotFound) return <p>Error loading article</p>
 
 	return (
 		<div>

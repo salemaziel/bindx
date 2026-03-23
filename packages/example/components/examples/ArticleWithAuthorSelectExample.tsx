@@ -15,48 +15,48 @@ export function ArticleWithAuthorSelectExample({ id }: { id: string }) {
 			.author(a => a.id().name().email()),
 	)
 
-	if (article.isLoading) {
+	if (article.$isLoading) {
 		return <div>Loading article...</div>
 	}
 
-	if (article.isError) {
-		return <div>Error: {article.error.message}</div>
+	if (article.$isError || article.$isNotFound) {
+		return <div>Error: {article.$error?.message ?? 'Not found'}</div>
 	}
 
-	const currentAuthorId = article.fields.author.$id ?? ''
-	const authorEntity = article.fields.author.$entity
+	const currentAuthorId = article.$fields.author.$id ?? ''
+	const authorEntity = article.$fields.author.$entity
 
 	return (
 		<div className="article-with-select" data-testid="article-with-author-select">
 			<h3>Edit Article (with Author Select)</h3>
 
-			<InputField field={article.fields.title} label="Title" inputProps={{ 'data-testid': 'author-select-title-input' }} />
-			<InputField field={article.fields.content} label="Content" inputProps={{ 'data-testid': 'author-select-content-input' }} />
+			<InputField field={article.$fields.title} label="Title" inputProps={{ 'data-testid': 'author-select-title-input' }} />
+			<InputField field={article.$fields.content} label="Content" inputProps={{ 'data-testid': 'author-select-content-input' }} />
 
-			<SelectField field={article.fields.author} label="Author">
-				{it => <>{it.$fields.name.value} ({it.$fields.email.value})</>}
+			<SelectField field={article.$fields.author} label="Author">
+				{it => <>{it.$fields['name'].value} ({it.$fields['email'].value})</>}
 			</SelectField>
 
 			<div className="current-author" data-testid="current-author-display">
 				{currentAuthorId ? (
 					<p>
-						<strong>Current author:</strong> {authorEntity.$fields.name.value} ({authorEntity.$fields.email.value})
+						<strong>Current author:</strong> {authorEntity.$fields['name'].value} ({authorEntity.$fields['email'].value})
 					</p>
 				) : (
 					<p>
 						<strong>Author:</strong> None
 					</p>
 				)}
-				{article.isDirty && (
+				{article.$isDirty && (
 					<p className="warning">Changes will be applied on save</p>
 				)}
 			</div>
 
 			<div className="actions">
-				<Button onClick={() => article.persist()} disabled={!article.isDirty || article.isPersisting} data-testid="author-select-save-button">
-					{article.isPersisting ? 'Saving...' : 'Save'}
+				<Button onClick={() => article.$persist()} disabled={!article.$isDirty} data-testid="author-select-save-button">
+					Save
 				</Button>
-				<Button variant="outline" onClick={() => article.reset()} disabled={!article.isDirty} data-testid="author-select-reset-button">
+				<Button variant="outline" onClick={() => article.$reset()} disabled={!article.$isDirty} data-testid="author-select-reset-button">
 					Reset
 				</Button>
 			</div>

@@ -15,10 +15,10 @@ function HasManyTestComponent({ articleId }: TestComponentProps): React.ReactEle
 		e.id().title().tags(t => t.id().name().color()),
 	)
 
-	if (article.isLoading) {
+	if (article.$isLoading) {
 		return <div>Loading...</div>
 	}
-	if (article.isError || article.isNotFound) {
+	if (article.$isError || article.$isNotFound) {
 		return <div data-testid="loading">Loading...</div>
 	}
 
@@ -147,10 +147,10 @@ describe('HasMany Relations - Basic Operations', () => {
 				e.id().tags(t => t.id().name()),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 
@@ -237,10 +237,10 @@ describe('HasMany Relations - Basic Operations', () => {
 				e.id().tags(t => t.id().name()),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 

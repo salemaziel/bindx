@@ -132,7 +132,7 @@ describe('Select', () => {
 				e.id().title().category(c => c.id().name()),
 			)
 
-			if (article.isLoading || article.isError || article.isNotFound) {
+			if (article.$isLoading || article.$isError || article.$isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 
@@ -175,7 +175,7 @@ describe('Select', () => {
 				e.id().title().category(c => c.id().name()),
 			)
 
-			if (article.isLoading || article.isError || article.isNotFound) {
+			if (article.$isLoading || article.$isError || article.$isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 
@@ -216,7 +216,7 @@ describe('Select', () => {
 				e.id().title().category(c => c.id().name()),
 			)
 
-			if (article.isLoading || article.isError || article.isNotFound) {
+			if (article.$isLoading || article.$isError || article.$isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 
@@ -280,7 +280,7 @@ describe('Select', () => {
 				e.id().title().category(c => c.id().name()),
 			)
 
-			if (article.isLoading || article.isError || article.isNotFound) {
+			if (article.$isLoading || article.$isError || article.$isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 
@@ -343,7 +343,7 @@ describe('MultiSelect', () => {
 				e.id().title().tags(t => t.id().name()),
 			)
 
-			if (article.isLoading || article.isError || article.isNotFound) {
+			if (article.$isLoading || article.$isError || article.$isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 
@@ -417,7 +417,7 @@ describe('MultiSelect', () => {
 				e.id().title().tags(t => t.id().name()),
 			)
 
-			if (article.isLoading || article.isError || article.isNotFound) {
+			if (article.$isLoading || article.$isError || article.$isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 

@@ -20,10 +20,10 @@ describe('useEntity hook - data rendering', () => {
 				e => e.title().content(),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div>Error</div>
 			}
 
@@ -59,18 +59,18 @@ describe('useEntity hook - data rendering', () => {
 				e => e.title().author(a => a.name().email()),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div>Error</div>
 			}
 
 			return (
 				<div>
 					<h1 data-testid="title">{article.title.value}</h1>
-					<p data-testid="author-name">{article.data.author?.name ?? 'N/A'}</p>
-					<p data-testid="author-email">{article.data.author?.email ?? 'N/A'}</p>
+					<p data-testid="author-name">{article.$data!.author?.name ?? 'N/A'}</p>
+					<p data-testid="author-email">{article.$data!.author?.email ?? 'N/A'}</p>
 				</div>
 			)
 		}
@@ -100,10 +100,10 @@ describe('useEntity hook - data rendering', () => {
 				e => e.title().tags(t => t.id().name()),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div>Error</div>
 			}
 
@@ -111,7 +111,7 @@ describe('useEntity hook - data rendering', () => {
 				<div>
 					<h1 data-testid="title">{article.title.value}</h1>
 					<ul data-testid="tags">
-						{article.data.tags?.map(tag => (
+						{article.$data!.tags?.map(tag => (
 							<li key={tag.id} data-testid={`tag-${tag.id}`}>
 								{tag.name}
 							</li>
@@ -136,7 +136,7 @@ describe('useEntity hook - data rendering', () => {
 		expect(tags.children.length).toBe(2)
 	})
 
-	test('should render location via article.data (ArticleEditor pattern)', async () => {
+	test('should render location via article.$data (ArticleEditor pattern)', async () => {
 		const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 		function TestComponent() {
@@ -146,21 +146,21 @@ describe('useEntity hook - data rendering', () => {
 				e => e.title().location(l => l.id().label().lat().lng()).tags(t => t.id().name().color()),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div>Error</div>
 			}
 
 			return (
 				<div>
 					<h1 data-testid="title">{article.title.value}</h1>
-					<p data-testid="location-label">{article.data.location?.label ?? 'N/A'}</p>
-					<p data-testid="location-lat">{article.data.location?.lat ?? 'N/A'}</p>
-					<p data-testid="tags-count">{article.data.tags?.length ?? 0}</p>
+					<p data-testid="location-label">{article.$data!.location?.label ?? 'N/A'}</p>
+					<p data-testid="location-lat">{article.$data!.location?.lat ?? 'N/A'}</p>
+					<p data-testid="tags-count">{article.$data!.tags?.length ?? 0}</p>
 					<ul data-testid="tags">
-						{article.data.tags?.map(tag => (
+						{article.$data!.tags?.map(tag => (
 							<li key={tag.id} data-testid={`tag-${tag.id}`}>
 								{tag.name}
 							</li>
@@ -198,14 +198,17 @@ describe('useEntity hook - data rendering', () => {
 				e => e.title().location(l => l.id().label()).tags(t => t.id().name()),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div data-testid="loading">Loading...</div>
+			}
+			if (article.$isError || article.$isNotFound) {
+				return <div>Error</div>
 			}
 
 			return (
 				<div>
-					<span data-testid="location-label">{article.data.location?.label ?? 'N/A'}</span>
-					<span data-testid="tags-count">{article.data.tags?.length ?? 0}</span>
+					<span data-testid="location-label">{article.$data!.location?.label ?? 'N/A'}</span>
+					<span data-testid="tags-count">{article.$data!.tags?.length ?? 0}</span>
 				</div>
 			)
 		}
@@ -240,10 +243,10 @@ describe('useEntity hook - data rendering', () => {
 				e => e.title().author(a => a.id().name()).location(l => l.id().label()).tags(t => t.id().name()),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div data-testid="editor-loading">Loading editor...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div>Error</div>
 			}
 
@@ -251,8 +254,8 @@ describe('useEntity hook - data rendering', () => {
 				<div data-testid="editor">
 					<span data-testid="editor-title">{article.title.value}</span>
 					<span data-testid="editor-author">{article.author.name.value}</span>
-					<span data-testid="editor-location">{article.data.location?.label ?? 'N/A'}</span>
-					<span data-testid="editor-tags">{article.data.tags?.length ?? 0}</span>
+					<span data-testid="editor-location">{article.$data!.location?.label ?? 'N/A'}</span>
+					<span data-testid="editor-tags">{article.$data!.tags?.length ?? 0}</span>
 				</div>
 			)
 		}
@@ -264,10 +267,10 @@ describe('useEntity hook - data rendering', () => {
 				e => e.title().content(),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div data-testid="view-loading">Loading view...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div>Error</div>
 			}
 
@@ -311,14 +314,14 @@ describe('useEntity hook - data rendering', () => {
 				e => e.title().location(l => l.id().label()).tags(t => t.id().name()),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div>Error</div>
 			}
 
-			return <div data-testid="data">{JSON.stringify(article.data)}</div>
+			return <div data-testid="data">{JSON.stringify(article.$data)}</div>
 		}
 
 		const { container } = render(
@@ -350,14 +353,14 @@ describe('useEntity hook - data rendering', () => {
 				e => e.title().content(),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div>Error</div>
 			}
 
-			return <div data-testid="data">{JSON.stringify(article.data)}</div>
+			return <div data-testid="data">{JSON.stringify(article.$data)}</div>
 		}
 
 		const { container } = render(

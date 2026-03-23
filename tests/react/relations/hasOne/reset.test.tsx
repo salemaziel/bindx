@@ -23,10 +23,10 @@ describe('HasOne Relations - Reset Operations', () => {
 				e.id().title().author(a => a.id().name()),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 
@@ -83,10 +83,10 @@ describe('HasOne Relations - Reset Operations', () => {
 				e.id().title().author(a => a.id().name()),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 

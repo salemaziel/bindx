@@ -39,10 +39,10 @@ describe('HasOne component', () => {
 			function TestComponent(): React.ReactElement {
 				const article = useEntity(schema.Article, { by: { id: 'article-1' } }, a => a.id().title().author(au => au.id().name().email()))
 
-				if (article.isLoading) {
+				if (article.$isLoading) {
 					return <div data-testid="loading">Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$isError || article.$isNotFound) {
 					return <div data-testid="error">Error</div>
 				}
 
@@ -82,10 +82,10 @@ describe('HasOne component', () => {
 			function TestComponent(): React.ReactElement {
 				const article = useEntity(schema.Article, { by: { id: 'article-no-author' } }, a => a.id().title().author(au => au.id().name()))
 
-				if (article.isLoading) {
+				if (article.$isLoading) {
 					return <div data-testid="loading">Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$isError || article.$isNotFound) {
 					return <div data-testid="error">Error</div>
 				}
 
@@ -126,10 +126,10 @@ describe('HasOne component', () => {
 			function TestComponent(): React.ReactElement {
 				const article = useEntity(schema.Article, { by: { id: 'article-1' } }, a => a.id().author(au => au.id().name().email()))
 
-				if (article.isLoading) {
+				if (article.$isLoading) {
 					return <div data-testid="loading">Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$isError || article.$isNotFound) {
 					return <div data-testid="error">Error</div>
 				}
 
@@ -169,10 +169,10 @@ describe('HasOne component', () => {
 			function TestComponent(): React.ReactElement {
 				const article = useEntity(schema.Article, { by: { id: 'article-1' } }, a => a.id().author(au => au.id().name()))
 
-				if (article.isLoading) {
+				if (article.$isLoading) {
 					return <div data-testid="loading">Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$isError || article.$isNotFound) {
 					return <div data-testid="error">Error</div>
 				}
 
@@ -221,10 +221,10 @@ describe('HasOne component', () => {
 			function TestComponent(): React.ReactElement {
 				const article = useEntity(schema.Article, { by: { id: 'article-1' } }, a => a.id().author(au => au.id().name()))
 
-				if (article.isLoading) {
+				if (article.$isLoading) {
 					return <div data-testid="loading">Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$isError || article.$isNotFound) {
 					return <div data-testid="error">Error</div>
 				}
 
@@ -264,10 +264,10 @@ describe('HasOne component', () => {
 					a.id().title().location(l => l.id().label().lat().lng()),
 				)
 
-				if (article.isLoading) {
+				if (article.$isLoading) {
 					return <div data-testid="loading">Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$isError || article.$isNotFound) {
 					return <div data-testid="error">Error</div>
 				}
 
@@ -311,10 +311,10 @@ describe('HasOne component', () => {
 			function TestComponent(): React.ReactElement {
 				const article = useEntity(schema.Article, { by: { id: 'article-1' } }, a => a.id().title().author(au => au.id().name().email()))
 
-				if (article.isLoading) {
+				if (article.$isLoading) {
 					return <div data-testid="loading">Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$isError || article.$isNotFound) {
 					return <div data-testid="error">Error</div>
 				}
 
@@ -369,10 +369,10 @@ describe('HasOne component', () => {
 			function TestComponent(): React.ReactElement {
 				const article = useEntity(schema.Article, { by: { id: 'article-1' } }, a => a.id().author(au => au.id().name()))
 
-				if (article.isLoading) {
+				if (article.$isLoading) {
 					return <div data-testid="loading">Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$isError || article.$isNotFound) {
 					return <div data-testid="error">Error</div>
 				}
 
@@ -425,10 +425,10 @@ describe('HasOne component', () => {
 			function TestComponent(): React.ReactElement {
 				const article = useEntity(schema.Article, { by: { id: 'article-1' } }, a => a.id().author(au => au.id().name()))
 
-				if (article.isLoading) {
+				if (article.$isLoading) {
 					return <div data-testid="loading">Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$isError || article.$isNotFound) {
 					return <div data-testid="error">Error</div>
 				}
 

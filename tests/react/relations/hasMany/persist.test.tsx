@@ -15,8 +15,8 @@ describe('HasMany Relations - Persistence', () => {
 
 		function TestComponent() {
 			const article = useEntity(entityDefs.Article, { by: { id: 'article-1' } }, e => e.id().title().tags(t => t.id().name()))
-			if (article.isLoading) return <div data-testid="loading">Loading</div>
-			if (article.isError || article.isNotFound) return <div>Error</div>
+			if (article.$isLoading) return <div data-testid="loading">Loading</div>
+			if (article.$isError || article.$isNotFound) return <div>Error</div>
 
 			const tagIds = article.tags.items.map(t => t.id).join(',')
 			const isDirty = article.tags.isDirty ? 'dirty' : 'clean'
@@ -68,8 +68,8 @@ describe('HasMany Relations - Persistence', () => {
 
 		function TestComponent() {
 			const article = useEntity(entityDefs.Article, { by: { id: 'article-1' } }, e => e.id().tags(t => t.id()))
-			if (article.isLoading) return <div data-testid="loading">Loading</div>
-			if (article.isError || article.isNotFound) return <div>Error</div>
+			if (article.$isLoading) return <div data-testid="loading">Loading</div>
+			if (article.$isError || article.$isNotFound) return <div>Error</div>
 
 			return (
 				<div>
@@ -111,8 +111,8 @@ describe('HasMany Relations - Persistence', () => {
 
 		function TestComponent() {
 			const article = useEntity(entityDefs.Article, { by: { id: 'article-empty' } }, e => e.id().tags(t => t.id()))
-			if (article.isLoading) return <div data-testid="loading">Loading</div>
-			if (article.isError || article.isNotFound) return <div>Error</div>
+			if (article.$isLoading) return <div data-testid="loading">Loading</div>
+			if (article.$isError || article.$isNotFound) return <div>Error</div>
 
 			return (
 				<div>
@@ -158,8 +158,8 @@ describe('HasMany Relations - Persistence', () => {
 
 		function TestComponent() {
 			const article = useEntity(entityDefs.Article, { by: { id: 'article-1' } }, e => e.id().tags(t => t.id()))
-			if (article.isLoading) return <div data-testid="loading">Loading</div>
-			if (article.isError || article.isNotFound) return <div>Error</div>
+			if (article.$isLoading) return <div data-testid="loading">Loading</div>
+			if (article.$isError || article.$isNotFound) return <div>Error</div>
 
 			return (
 				<div>
@@ -216,8 +216,8 @@ describe('HasMany Relations - Persistence', () => {
 
 		function TestComponent() {
 			const article = useEntity(entityDefs.Article, { by: { id: 'article-1' } }, e => e.id().tags(t => t.id()))
-			if (article.isLoading) return <div data-testid="loading">Loading</div>
-			if (article.isError || article.isNotFound) return <div>Error</div>
+			if (article.$isLoading) return <div data-testid="loading">Loading</div>
+			if (article.$isError || article.$isNotFound) return <div>Error</div>
 
 			const tagIds = article.tags.items.map(t => t.id).join(',')
 
@@ -260,8 +260,8 @@ describe('HasMany Relations - Persistence', () => {
 
 		function TestComponent() {
 			const article = useEntity(entityDefs.Article, { by: { id: 'article-1' } }, e => e.id().tags(t => t.id().name()))
-			if (article.isLoading) return <div data-testid="loading">Loading</div>
-			if (article.isError || article.isNotFound) return <div>Error</div>
+			if (article.$isLoading) return <div data-testid="loading">Loading</div>
+			if (article.$isError || article.$isNotFound) return <div>Error</div>
 
 			const tagIds = article.tags.items.map(t => t.id).join(',')
 
@@ -302,8 +302,8 @@ describe('HasMany Relations - Persistence', () => {
 
 		function TestComponent() {
 			const article = useEntity(entityDefs.Article, { by: { id: 'article-1' } }, e => e.id().tags(t => t.id()))
-			if (article.isLoading) return <div data-testid="loading">Loading</div>
-			if (article.isError || article.isNotFound) return <div>Error</div>
+			if (article.$isLoading) return <div data-testid="loading">Loading</div>
+			if (article.$isError || article.$isNotFound) return <div>Error</div>
 
 			const tagIds = article.tags.items.map(t => t.id).join(',')
 
@@ -344,8 +344,8 @@ describe('HasMany Relations - Persistence', () => {
 
 		function TestComponent() {
 			const article = useEntity(entityDefs.Article, { by: { id: 'article-1' } }, e => e.id().tags(t => t.id()))
-			if (article.isLoading) return <div data-testid="loading">Loading</div>
-			if (article.isError || article.isNotFound) return <div>Error</div>
+			if (article.$isLoading) return <div data-testid="loading">Loading</div>
+			if (article.$isError || article.$isNotFound) return <div>Error</div>
 
 			const tagIds = article.tags.items.map(t => t.id).join(',')
 

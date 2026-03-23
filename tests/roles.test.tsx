@@ -314,7 +314,7 @@ describe('useEntity type inference', () => {
 			const article = useEntity(roleSchema.Article, { by: { id: 'article-1' } }, e => e.id().title())
 			// The definer callback should only allow common fields
 			// e.title() ✓ (common), e.internalNotes() would be ✗ (admin only)
-			if (article.status !== 'ready') return <div>Loading</div>
+			if (article.$status !== 'ready') return <div>Loading</div>
 			return <div>{article.title.value}</div>
 		}
 		// If this compiles, the type inference is correct
@@ -329,7 +329,7 @@ describe('useEntity type inference', () => {
 				e => e.id().title().content().internalNotes(),
 			)
 			// Admin role allows all fields including internalNotes
-			if (article.status !== 'ready') return <div>Loading</div>
+			if (article.$status !== 'ready') return <div>Loading</div>
 			return <div>{article.title.value}</div>
 		}
 		expect(TestComponent).toBeDefined()
@@ -338,7 +338,7 @@ describe('useEntity type inference', () => {
 	test('useEntity with single-role entityDef works like before', () => {
 		function TestComponent(): React.ReactElement {
 			const article = useEntity(simpleSchema.Article, { by: { id: 'article-1' } }, e => e.id().title().content())
-			if (article.status !== 'ready') return <div>Loading</div>
+			if (article.$status !== 'ready') return <div>Loading</div>
 			return <div>{article.title.value}</div>
 		}
 		expect(TestComponent).toBeDefined()
@@ -359,8 +359,8 @@ describe('useEntity runtime with roles', () => {
 				{ by: { id: 'article-1' }, roles: ['admin'] },
 				e => e.title(),
 			)
-			if (article.status === 'loading') return <div data-testid="loading">Loading</div>
-			if (article.status !== 'ready') return <div data-testid="error">Error</div>
+			if (article.$status === 'loading') return <div data-testid="loading">Loading</div>
+			if (article.$status !== 'ready') return <div data-testid="error">Error</div>
 			return <div data-testid="title">{article.title.value}</div>
 		}
 
@@ -386,8 +386,8 @@ describe('useEntity runtime with roles', () => {
 				{ by: { id: 'article-1' } },
 				e => e.title(),
 			)
-			if (article.status === 'loading') return <div data-testid="loading">Loading</div>
-			if (article.status !== 'ready') return <div data-testid="error">Error</div>
+			if (article.$status === 'loading') return <div data-testid="loading">Loading</div>
+			if (article.$status !== 'ready') return <div data-testid="error">Error</div>
 			return <div data-testid="title">{article.title.value}</div>
 		}
 

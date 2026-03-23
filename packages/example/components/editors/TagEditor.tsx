@@ -1,4 +1,4 @@
-import type { EntityRef, EntityListAccessorResult } from '@contember/bindx-react'
+import type { EntityRef, UseEntityListResult } from '@contember/bindx-react'
 import { InputField } from '@contember/bindx-ui'
 import { Button } from '@contember/bindx-ui'
 
@@ -26,14 +26,14 @@ export function TagEditor({ tag }: { tag: EntityRef<TagData> }) {
 export function TagListEditor({
 	tags,
 }: {
-	tags: EntityListAccessorResult<TagData>
+	tags: UseEntityListResult<TagData>
 }) {
-	if (tags.isLoading) {
+	if (tags.$isLoading) {
 		return <div>Loading tags...</div>
 	}
 
-	if (tags.isError) {
-		return <div>Error loading tags: {tags.error.message}</div>
+	if (tags.$isError) {
+		return <div>Error loading tags: {tags.$error.message}</div>
 	}
 
 	return (
@@ -43,11 +43,11 @@ export function TagListEditor({
 			{tags.items.map(item => (
 				<div key={item.id} className="tag-item">
 					<TagEditor tag={item} />
-					<Button variant="destructive" size="sm" onClick={() => tags.remove(item.id)}>Remove</Button>
+					<Button variant="destructive" size="sm" onClick={() => tags.$remove(item.id)}>Remove</Button>
 				</div>
 			))}
 
-			<Button variant="outline" size="sm" onClick={() => tags.add({ name: '', color: '#000000' })}>Add Tag</Button>
+			<Button variant="outline" size="sm" onClick={() => tags.$add({ name: '', color: '#000000' })}>Add Tag</Button>
 		</div>
 	)
 }

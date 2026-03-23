@@ -25,10 +25,10 @@ describe('useEntity hook - relation field handles', () => {
 				e => e.title().author(a => a.id().name().email()),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div>Error</div>
 			}
 
@@ -67,10 +67,10 @@ describe('useEntity hook - relation field handles', () => {
 				e => e.title().tags(t => t.id().name()),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div>Error</div>
 			}
 
@@ -118,10 +118,10 @@ describe('useEntity hook - relation field handles', () => {
 				e => e.title().tags(t => t.id().name()),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div>Error</div>
 			}
 
@@ -166,17 +166,17 @@ describe('useEntity hook - fragment composition', () => {
 				e => e.title().author(AuthorFragment),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div>Error</div>
 			}
 
 			return (
 				<div>
 					<h1 data-testid="title">{article.title.value}</h1>
-					<p data-testid="author-name">{article.data.author?.name ?? 'N/A'}</p>
+					<p data-testid="author-name">{article.$data!.author?.name ?? 'N/A'}</p>
 				</div>
 			)
 		}
@@ -230,17 +230,17 @@ describe('useEntity hook - fragment composition', () => {
 				e => e.title().author(a => a.id().name().email()),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div data-testid="loading">Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div>Error</div>
 			}
 
 			return (
 				<div>
 					<TextInput field={article.title} label="Title" />
-					<AuthorDisplay data={article.data.author} />
+					<AuthorDisplay data={article.$data!.author} />
 				</div>
 			)
 		}
@@ -273,10 +273,10 @@ describe('useEntity hook - has-many connect/disconnect', () => {
 				e => e.title().tags(t => t.id().name()),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div>Error</div>
 			}
 
@@ -338,10 +338,10 @@ describe('useEntity hook - has-many connect/disconnect', () => {
 				e => e.title().tags(t => t.id().name()),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div>Error</div>
 			}
 
@@ -402,10 +402,10 @@ describe('useEntity hook - has-many connect/disconnect', () => {
 				e => e.title().tags(t => t.id().name()),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div>Error</div>
 			}
 

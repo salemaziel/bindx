@@ -15,10 +15,10 @@ function HasManyTestComponent({ articleId }: TestComponentProps): React.ReactEle
 		e.id().title().tags(t => t.id().name().color()),
 	)
 
-	if (article.isLoading) {
+	if (article.$isLoading) {
 		return <div>Loading...</div>
 	}
-	if (article.isError || article.isNotFound) {
+	if (article.$isError || article.$isNotFound) {
 		return <div data-testid="loading">Loading...</div>
 	}
 
@@ -119,10 +119,10 @@ describe('HasMany Relations - Reset Operations', () => {
 				e.id().tags(t => t.id().name()),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 
@@ -138,7 +138,7 @@ describe('HasMany Relations - Reset Operations', () => {
 					>
 						Connect
 					</button>
-					<button data-testid="reset" onClick={() => article.reset()}>
+					<button data-testid="reset" onClick={() => article.$reset()}>
 						Reset
 					</button>
 				</div>
@@ -178,10 +178,10 @@ describe('HasMany Relations - Reset Operations', () => {
 				e.id().tags(t => t.id().name()),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 
@@ -197,7 +197,7 @@ describe('HasMany Relations - Reset Operations', () => {
 					>
 						Disconnect
 					</button>
-					<button data-testid="reset" onClick={() => article.reset()}>
+					<button data-testid="reset" onClick={() => article.$reset()}>
 						Reset
 					</button>
 				</div>
@@ -237,10 +237,10 @@ describe('HasMany Relations - Reset Operations', () => {
 				e.id().tags(t => t.id().name()),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 
@@ -262,7 +262,7 @@ describe('HasMany Relations - Reset Operations', () => {
 					>
 						Disconnect
 					</button>
-					<button data-testid="reset" onClick={() => article.reset()}>
+					<button data-testid="reset" onClick={() => article.$reset()}>
 						Reset
 					</button>
 				</div>

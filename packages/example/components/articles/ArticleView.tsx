@@ -7,18 +7,15 @@ import { schema } from '../../generated/index.js'
 export function ArticleView({ id }: { id: string }) {
 	const article = useEntity(schema.Article, { by: { id } }, e => e.title().author(a => a.name()))
 
-	if (article.isLoading) {
-		return <div>Loading...</div>
-	}
-
-	if (article.isError) {
-		return <div>Error: {article.error.message}</div>
+	if (article.$status !== 'ready') {
+		if (article.$status === 'loading') return <div>Loading...</div>
+		return <div>Error: {article.$error?.message ?? 'Not found'}</div>
 	}
 
 	return (
 		<div className="article-view" data-testid="article-view">
-			<h2 data-testid="article-view-title">{article.data.title}</h2>
-			<p data-testid="article-view-author">By: {article.data.author?.name ?? 'Unknown'}</p>
+			<h2 data-testid="article-view-title">{article.$data?.title}</h2>
+			<p data-testid="article-view-author">By: {article.$data?.author?.name ?? 'Unknown'}</p>
 		</div>
 	)
 }

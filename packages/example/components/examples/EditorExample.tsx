@@ -221,14 +221,16 @@ export function RichTextEditorExample({ id }: { id: string }): ReactNode {
 		e.id().title().content(),
 	)
 
-	if (article.isLoading) return <div>Loading...</div>
-	if (article.isError) return <div>Error: {article.error.message}</div>
+	if (article.$status !== 'ready') {
+		if (article.$status === 'loading') return <div>Loading...</div>
+		return <div>Error: {article.$error?.message ?? 'Not found'}</div>
+	}
 
 	return (
 		<div className="editor-example" data-testid="rich-text-editor">
-			<h3>{article.fields.title.value}</h3>
+			<h3>{article.$fields.title.value}</h3>
 
-			<RichTextEditor field={article.fields.content} plugins={richTextPlugins}>
+			<RichTextEditor field={article.$fields.content} plugins={richTextPlugins}>
 				{editor => (
 					<div>
 						<div className="editor-toolbar">
@@ -254,7 +256,7 @@ export function RichTextEditorExample({ id }: { id: string }): ReactNode {
 				)}
 			</RichTextEditor>
 
-			{article.fields.content.isDirty && (
+			{article.$fields.content.isDirty && (
 				<p style={{ color: 'orange', fontSize: '12px' }} data-testid="rte-dirty-notice">Content has been modified</p>
 			)}
 		</div>
@@ -366,15 +368,17 @@ export function SimpleBlockEditorExample({ id }: { id: string }): ReactNode {
 		e.id().title().richContent(),
 	)
 
-	if (article.isLoading) return <div>Loading...</div>
-	if (article.isError) return <div>Error: {article.error.message}</div>
+	if (article.$status !== 'ready') {
+		if (article.$status === 'loading') return <div>Loading...</div>
+		return <div>Error: {article.$error?.message ?? 'Not found'}</div>
+	}
 
 	return (
 		<div className="editor-example" data-testid="simple-block-editor">
-			<h3>{article.fields.title.value}</h3>
+			<h3>{article.$fields.title.value}</h3>
 
 			<BlockEditor
-				field={article.fields.richContent as unknown as FieldRefBase<SerializableEditorNode | null>}
+				field={article.$fields.richContent as unknown as FieldRefBase<SerializableEditorNode | null>}
 				plugins={blockEditorPlugins}
 			>
 				{editor => (

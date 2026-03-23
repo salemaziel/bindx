@@ -59,22 +59,22 @@ function UndoTestComponent({ id }: { id: string }): React.ReactElement {
 	const { canUndo, canRedo, undo, redo, undoCount, redoCount, beginGroup, endGroup } = useUndo()
 	const article = useEntity(articleDef, { by: { id } }, e => e.id().title().content())
 
-	if (article.isLoading) return <div data-testid="loading">Loading</div>
-	if (article.isError) return <div data-testid="error">Error</div>
+	if (article.$isLoading) return <div data-testid="loading">Loading</div>
+	if (article.$isError || article.$isNotFound) return <div data-testid="error">Error</div>
 
 	return (
 		<div>
-			<span data-testid="title-value">{article.fields.title.value}</span>
-			<span data-testid="content-value">{article.fields.content.value}</span>
+			<span data-testid="title-value">{article.$fields.title.value}</span>
+			<span data-testid="content-value">{article.$fields.content.value}</span>
 			<span data-testid="can-undo">{String(canUndo)}</span>
 			<span data-testid="can-redo">{String(canRedo)}</span>
 			<span data-testid="undo-count">{undoCount}</span>
 			<span data-testid="redo-count">{redoCount}</span>
-			<span data-testid="title-dirty">{String(article.fields.title.isDirty)}</span>
+			<span data-testid="title-dirty">{String(article.$fields.title.isDirty)}</span>
 			<input
 				data-testid="title-input"
-				value={article.fields.title.value ?? ''}
-				onChange={e => article.fields.title.setValue(e.target.value)}
+				value={article.$fields.title.value ?? ''}
+				onChange={e => article.$fields.title.setValue(e.target.value)}
 			/>
 			<button data-testid="undo-btn" onClick={undo} disabled={!canUndo}>Undo</button>
 			<button data-testid="redo-btn" onClick={redo} disabled={!canRedo}>Redo</button>
@@ -82,8 +82,8 @@ function UndoTestComponent({ id }: { id: string }): React.ReactElement {
 				data-testid="bulk-btn"
 				onClick={() => {
 					const gid = beginGroup('bulk')
-					article.fields.title.setValue('Bulk Title')
-					article.fields.content.setValue('Bulk Content')
+					article.$fields.title.setValue('Bulk Title')
+					article.$fields.content.setValue('Bulk Content')
 					endGroup(gid)
 				}}
 			>

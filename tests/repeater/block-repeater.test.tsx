@@ -102,8 +102,8 @@ describe('BlockRepeater', () => {
 				e.id().title().blocks(b => b.id().type().content().order()),
 			)
 
-			if (page.isLoading) return <div data-testid="loading">Loading</div>
-			if (page.isError || page.isNotFound) return <div>Error</div>
+			if (page.$isLoading) return <div data-testid="loading">Loading</div>
+			if (page.$isError || page.$isNotFound) return <div>Error</div>
 
 			return (
 				<BlockRepeater
@@ -160,8 +160,8 @@ describe('BlockRepeater', () => {
 				e.id().blocks(b => b.id().type().content().order()),
 			)
 
-			if (page.isLoading) return <div data-testid="loading">Loading</div>
-			if (page.isError || page.isNotFound) return <div>Error</div>
+			if (page.$isLoading) return <div data-testid="loading">Loading</div>
+			if (page.$isError || page.$isNotFound) return <div>Error</div>
 
 			return (
 				<BlockRepeater
@@ -220,8 +220,8 @@ describe('BlockRepeater', () => {
 				e.id().blocks(b => b.id().type().content().order()),
 			)
 
-			if (page.isLoading) return <div data-testid="loading">Loading</div>
-			if (page.isError || page.isNotFound) return <div>Error</div>
+			if (page.$isLoading) return <div data-testid="loading">Loading</div>
+			if (page.$isError || page.$isNotFound) return <div>Error</div>
 
 			return (
 				<BlockRepeater
@@ -281,8 +281,8 @@ describe('BlockRepeater', () => {
 				e.id().blocks(b => b.id().type().content().order()),
 			)
 
-			if (page.isLoading) return <div data-testid="loading">Loading</div>
-			if (page.isError || page.isNotFound) return <div>Error</div>
+			if (page.$isLoading) return <div data-testid="loading">Loading</div>
+			if (page.$isError || page.$isNotFound) return <div>Error</div>
 
 			return (
 				<BlockRepeater
@@ -337,8 +337,8 @@ describe('BlockRepeater', () => {
 				e.id().blocks(b => b.id().type().content().order()),
 			)
 
-			if (page.isLoading) return <div data-testid="loading">Loading</div>
-			if (page.isError || page.isNotFound) return <div>Error</div>
+			if (page.$isLoading) return <div data-testid="loading">Loading</div>
+			if (page.$isError || page.$isNotFound) return <div>Error</div>
 
 			return (
 				<BlockRepeater
@@ -405,8 +405,8 @@ describe('BlockRepeater', () => {
 				e.id().blocks(b => b.id().type().content().order()),
 			)
 
-			if (page.isLoading) return <div data-testid="loading">Loading</div>
-			if (page.isError || page.isNotFound) return <div>Error</div>
+			if (page.$isLoading) return <div data-testid="loading">Loading</div>
+			if (page.$isError || page.$isNotFound) return <div>Error</div>
 
 			return (
 				<BlockRepeater
@@ -466,8 +466,8 @@ describe('BlockRepeater', () => {
 				e.id().blocks(b => b.id().type().content().order()),
 			)
 
-			if (page.isLoading) return <div data-testid="loading">Loading</div>
-			if (page.isError || page.isNotFound) return <div>Error</div>
+			if (page.$isLoading) return <div data-testid="loading">Loading</div>
+			if (page.$isError || page.$isNotFound) return <div>Error</div>
 
 			return (
 				<BlockRepeater

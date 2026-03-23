@@ -25,10 +25,10 @@ describe('HasOne Relations - Dirty State Tracking', () => {
 			)
 			const allAuthors = useEntityList(entityDefs.Author, {}, a => a.id().name())
 
-			if (article.isLoading || allAuthors.isLoading) {
+			if (article.$isLoading || allAuthors.$isLoading) {
 				return <div data-testid="loading">Loading...</div>
 			}
-			if (article.isError || article.isNotFound || allAuthors.isError) {
+			if (article.$isError || article.$isNotFound || allAuthors.$isError) {
 				return <div>Error</div>
 			}
 
@@ -36,7 +36,7 @@ describe('HasOne Relations - Dirty State Tracking', () => {
 				<div>
 					<span data-testid="author-id">{article.author.$id ?? 'null'}</span>
 					<span data-testid="relation-dirty">{article.author.$isDirty ? 'dirty' : 'clean'}</span>
-					<span data-testid="entity-dirty">{article.isDirty ? 'dirty' : 'clean'}</span>
+					<span data-testid="entity-dirty">{article.$isDirty ? 'dirty' : 'clean'}</span>
 					<button
 						data-testid="connect-author-2"
 						onClick={() => article.author.$connect('author-2')}
@@ -81,10 +81,10 @@ describe('HasOne Relations - Dirty State Tracking', () => {
 				e.id().title().author(a => a.id().name()),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 
@@ -92,7 +92,7 @@ describe('HasOne Relations - Dirty State Tracking', () => {
 				<div>
 					<span data-testid="author-id">{article.author.$id ?? 'null'}</span>
 					<span data-testid="relation-dirty">{article.author.$isDirty ? 'dirty' : 'clean'}</span>
-					<span data-testid="entity-dirty">{article.isDirty ? 'dirty' : 'clean'}</span>
+					<span data-testid="entity-dirty">{article.$isDirty ? 'dirty' : 'clean'}</span>
 					<button
 						data-testid="disconnect"
 						onClick={() => article.author.$disconnect()}
@@ -138,10 +138,10 @@ describe('HasOne Relations - Dirty State Tracking', () => {
 			)
 			const allAuthors = useEntityList(entityDefs.Author, {}, a => a.id().name())
 
-			if (article.isLoading || allAuthors.isLoading) {
+			if (article.$isLoading || allAuthors.$isLoading) {
 				return <div data-testid="loading">Loading...</div>
 			}
-			if (article.isError || article.isNotFound || allAuthors.isError) {
+			if (article.$isError || article.$isNotFound || allAuthors.$isError) {
 				return <div>Error</div>
 			}
 
@@ -200,10 +200,10 @@ describe('HasOne Relations - Dirty State Tracking', () => {
 			)
 			const allAuthors = useEntityList(entityDefs.Author, {}, a => a.id().name())
 
-			if (article.isLoading || allAuthors.isLoading) {
+			if (article.$isLoading || allAuthors.$isLoading) {
 				return <div data-testid="loading">Loading...</div>
 			}
-			if (article.isError || article.isNotFound || allAuthors.isError) {
+			if (article.$isError || article.$isNotFound || allAuthors.$isError) {
 				return <div>Error</div>
 			}
 
@@ -211,7 +211,7 @@ describe('HasOne Relations - Dirty State Tracking', () => {
 				<div>
 					<span data-testid="author-id">{article.author.$id ?? 'null'}</span>
 					<span data-testid="relation-dirty">{article.author.$isDirty ? 'dirty' : 'clean'}</span>
-					<span data-testid="entity-dirty">{article.isDirty ? 'dirty' : 'clean'}</span>
+					<span data-testid="entity-dirty">{article.$isDirty ? 'dirty' : 'clean'}</span>
 					<button
 						data-testid="connect-author-2"
 						onClick={() => article.author.$connect('author-2')}
@@ -220,7 +220,7 @@ describe('HasOne Relations - Dirty State Tracking', () => {
 					</button>
 					<button
 						data-testid="reset"
-						onClick={() => article.reset()}
+						onClick={() => article.$reset()}
 					>
 						Reset
 					</button>
@@ -267,10 +267,10 @@ describe('HasOne Relations - Dirty State Tracking', () => {
 			)
 			const allAuthors = useEntityList(entityDefs.Author, {}, a => a.id().name())
 
-			if (article.isLoading || allAuthors.isLoading) {
+			if (article.$isLoading || allAuthors.$isLoading) {
 				return <div data-testid="loading">Loading...</div>
 			}
-			if (article.isError || article.isNotFound || allAuthors.isError) {
+			if (article.$isError || article.$isNotFound || allAuthors.$isError) {
 				return <div>Error</div>
 			}
 
@@ -331,10 +331,10 @@ describe('HasOne Relations - Dirty State Tracking', () => {
 				e.id().title().author(a => a.id().name().email()),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div data-testid="loading">Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div>Error</div>
 			}
 
@@ -343,7 +343,7 @@ describe('HasOne Relations - Dirty State Tracking', () => {
 					<span data-testid="author-name">{article.author.$fields.name.value}</span>
 					<span data-testid="author-field-dirty">{article.author.$fields.name.isDirty ? 'dirty' : 'clean'}</span>
 					<span data-testid="relation-dirty">{article.author.$isDirty ? 'dirty' : 'clean'}</span>
-					<span data-testid="entity-dirty">{article.isDirty ? 'dirty' : 'clean'}</span>
+					<span data-testid="entity-dirty">{article.$isDirty ? 'dirty' : 'clean'}</span>
 					<button
 						data-testid="change-name"
 						onClick={() => article.author.$fields.name.setValue('Updated Name')}
@@ -392,16 +392,16 @@ describe('HasOne Relations - Dirty State Tracking', () => {
 			)
 			const allAuthors = useEntityList(entityDefs.Author, {}, a => a.id().name())
 
-			if (article.isLoading || allAuthors.isLoading) {
+			if (article.$isLoading || allAuthors.$isLoading) {
 				return <div data-testid="loading">Loading...</div>
 			}
-			if (article.isError || article.isNotFound || allAuthors.isError) {
+			if (article.$isError || article.$isNotFound || allAuthors.$isError) {
 				return <div>Error</div>
 			}
 
 			return (
 				<div>
-					<span data-testid="entity-dirty">{article.isDirty ? 'dirty' : 'clean'}</span>
+					<span data-testid="entity-dirty">{article.$isDirty ? 'dirty' : 'clean'}</span>
 					<button
 						data-testid="connect-author-2"
 						onClick={() => article.author.$connect('author-2')}

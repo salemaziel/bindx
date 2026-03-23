@@ -25,10 +25,10 @@ describe('HasOne Relations - Connect Operations', () => {
 				e.id().title().author(a => a.id().name().email()),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 
@@ -80,10 +80,10 @@ describe('HasOne Relations - Connect Operations', () => {
 				e.id().title().author(a => a.id().name()),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 
@@ -139,10 +139,10 @@ describe('HasOne Relations - Connect Operations', () => {
 				e.id().title().author(a => a.id().name()),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 
@@ -201,10 +201,10 @@ describe('HasOne Relations - Connect Operations', () => {
 				e.id().title().author(a => a.id().name()),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div data-testid="loading">Loading...</div>
 			}
 
@@ -264,10 +264,10 @@ describe('HasOne Relations - Connect Operations', () => {
 			// Load all authors (like a real app would do for a select dropdown)
 			const allAuthors = useEntityList(entityDefs.Author, {}, a => a.id().name().email())
 
-			if (article.isLoading || allAuthors.isLoading) {
+			if (article.$isLoading || allAuthors.$isLoading) {
 				return <div data-testid="loading">Loading...</div>
 			}
-			if (article.isError || article.isNotFound || allAuthors.isError) {
+			if (article.$isError || article.$isNotFound || allAuthors.$isError) {
 				return <div>Error</div>
 			}
 
@@ -331,10 +331,10 @@ describe('HasOne Relations - Connect Operations', () => {
 
 			const allAuthors = useEntityList(entityDefs.Author, {}, a => a.id().name().email())
 
-			if (article.isLoading || allAuthors.isLoading) {
+			if (article.$isLoading || allAuthors.$isLoading) {
 				return <div data-testid="loading">Loading...</div>
 			}
-			if (article.isError || article.isNotFound || allAuthors.isError) {
+			if (article.$isError || article.$isNotFound || allAuthors.$isError) {
 				return <div>Error</div>
 			}
 

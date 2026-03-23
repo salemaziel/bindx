@@ -8,12 +8,12 @@ import { schema } from '../../generated/index.js'
 export function AuthorListExample() {
 	const authors = useEntityList(schema.Author, {}, e => e.id().name().email().bio())
 
-	if (authors.isLoading) {
+	if (authors.$isLoading) {
 		return <div>Loading authors...</div>
 	}
 
-	if (authors.isError) {
-		return <div>Error: {authors.error.message}</div>
+	if (authors.$isError) {
+		return <div>Error: {authors.$error.message}</div>
 	}
 
 	return (
@@ -21,10 +21,10 @@ export function AuthorListExample() {
 			<h3 data-testid="author-list-count">All Authors ({authors.length})</h3>
 			<ul>
 				{authors.items.map(item => (
-					<li key={item.id} data-testid={`author-item-${item.$data?.name}`}>
-						<strong>{item.$data?.name}</strong>
-						<span> - {item.$data?.email}</span>
-						<p>{item.$data?.bio}</p>
+					<li key={item.id} data-testid={`author-item-${item.name.value}`}>
+						<strong>{item.name.value}</strong>
+						<span> - {item.email.value}</span>
+						<p>{item.bio.value}</p>
 					</li>
 				))}
 			</ul>

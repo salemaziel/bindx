@@ -90,8 +90,8 @@ describe('useEntityList core behavior', () => {
 
 				return (
 					<div>
-						<span data-testid="loading">{authors.isLoading ? 'true' : 'false'}</span>
-						<span data-testid="ready">{!authors.isLoading ? 'true' : 'false'}</span>
+						<span data-testid="loading">{authors.$isLoading ? 'true' : 'false'}</span>
+						<span data-testid="ready">{!authors.$isLoading ? 'true' : 'false'}</span>
 					</div>
 				)
 			}
@@ -124,13 +124,13 @@ describe('useEntityList core behavior', () => {
 				const authors = useEntityList(authorDef, {}, a => a.id().name())
 				renderCount++
 
-				if (authors.isLoading) {
+				if (authors.$isLoading) {
 					states.push('loading')
 				} else {
 					states.push('ready')
 				}
 
-				if (authors.isLoading) {
+				if (authors.$status !== 'ready') {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -163,7 +163,7 @@ describe('useEntityList core behavior', () => {
 			function TestComponent(): React.ReactElement {
 				const authors = useEntityList(authorDef, {}, a => a.id().name().email())
 
-				if (authors.isLoading) {
+				if (authors.$status !== 'ready') {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -203,7 +203,7 @@ describe('useEntityList core behavior', () => {
 			function TestComponent(): React.ReactElement {
 				const authors = useEntityList(authorDef, {}, a => a.id().name().email())
 
-				if (authors.isLoading) {
+				if (authors.$status !== 'ready') {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -243,7 +243,7 @@ describe('useEntityList core behavior', () => {
 			function TestComponent(): React.ReactElement {
 				const authors = useEntityList(authorDef, {}, a => a.id().name())
 
-				if (authors.isLoading) {
+				if (authors.$status !== 'ready') {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -283,7 +283,7 @@ describe('useEntityList core behavior', () => {
 					a => a.id().name().role(),
 				)
 
-				if (authors.isLoading) {
+				if (authors.$status !== 'ready') {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -332,7 +332,7 @@ describe('useEntityList core behavior', () => {
 			function TestComponent(): React.ReactElement {
 				const authors = useEntityList(authorDef, {}, a => a.id().name())
 
-				if (authors.isLoading) {
+				if (authors.$status !== 'ready') {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -366,7 +366,7 @@ describe('useEntityList core behavior', () => {
 			function TestComponent(): React.ReactElement {
 				const authors = useEntityList(authorDef, {}, a => a.id().name())
 
-				if (authors.isLoading) {
+				if (authors.$status !== 'ready') {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -406,7 +406,7 @@ describe('useEntityList core behavior', () => {
 			function TestComponent(): React.ReactElement {
 				const authors = useEntityList(authorDef, {}, a => a.id().name())
 
-				if (authors.isLoading) {
+				if (authors.$status !== 'ready') {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -438,7 +438,7 @@ describe('useEntityList core behavior', () => {
 			function TestComponent(): React.ReactElement {
 				const authors = useEntityList(authorDef, {}, a => a.id().name())
 
-				if (authors.isLoading) {
+				if (authors.$status !== 'ready') {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -475,7 +475,7 @@ describe('useEntityList core behavior', () => {
 				const authors1 = useEntityList(authorDef, {}, a => a.id().name())
 				const authors2 = useEntityList(authorDef, {}, a => a.id().email())
 
-				if (authors1.isLoading || authors2.isLoading) {
+				if (authors1.$status !== 'ready' || authors2.$status !== 'ready') {
 					return <div data-testid="loading">Loading...</div>
 				}
 

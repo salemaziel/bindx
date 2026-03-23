@@ -58,19 +58,19 @@ describe('not_found state', () => {
 		function TestComponent() {
 			const author = useEntity(authorDef, { by: { id: 'non-existent' } }, e => e.name())
 
-			if (author.status === 'loading') {
+			if (author.$status === 'loading') {
 				return <div data-testid="loading">Loading...</div>
 			}
 
-			if (author.status === 'not_found') {
+			if (author.$status === 'not_found') {
 				return <div data-testid="not-found">Not Found</div>
 			}
 
-			if (author.status === 'error') {
+			if (author.$status === 'error') {
 				return <div data-testid="error">Error</div>
 			}
 
-			return <div data-testid="ready">{author.data.name}</div>
+			return <div data-testid="ready">{author.$data!.name}</div>
 		}
 
 		const { container } = render(
@@ -97,11 +97,11 @@ describe('not_found state', () => {
 			const author = useEntity(authorDef, { by: { id: 'missing' } }, e => e.name())
 			capturedResult = author
 
-			if (author.status === 'loading') {
+			if (author.$status === 'loading') {
 				return <div data-testid="loading">Loading...</div>
 			}
 
-			if (author.status === 'not_found') {
+			if (author.$status === 'not_found') {
 				return <div data-testid="not-found">Not Found</div>
 			}
 
@@ -119,10 +119,9 @@ describe('not_found state', () => {
 		})
 
 		expect(capturedResult).not.toBeNull()
-		expect(capturedResult!.status).toBe('not_found')
-		expect(capturedResult!.isLoading).toBe(false)
-		expect(capturedResult!.isError).toBe(false)
-		expect(capturedResult!.isPersisting).toBe(false)
-		expect(capturedResult!.isDirty).toBe(false)
+		expect(capturedResult!.$status).toBe('not_found')
+		expect(capturedResult!.$isLoading).toBe(false)
+		expect(capturedResult!.$isError).toBe(false)
+		expect(capturedResult!.$isNotFound).toBe(true)
 	})
 })

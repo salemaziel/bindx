@@ -16,10 +16,10 @@ describe('useEntity hook - loading state', () => {
 		function TestComponent() {
 			const article = useEntity(schema.Article, { by: { id: 'article-1' } }, e => e.title())
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div data-testid="loading">Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div>Error</div>
 			}
 
@@ -59,6 +59,6 @@ describe('useEntity hook - loading state', () => {
 		)
 
 		expect(accessor).not.toBeNull()
-		expect(accessor!.isLoading).toBe(true)
+		expect(accessor!.$isLoading).toBe(true)
 	})
 })

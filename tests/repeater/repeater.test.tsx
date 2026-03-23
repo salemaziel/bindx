@@ -104,8 +104,8 @@ describe('Repeater Component', () => {
 					e.id().name().articles(a => a.id().title().order()),
 				)
 
-				if (author.isLoading) return <div data-testid="loading">Loading</div>
-				if (author.isError || author.isNotFound) return <div>Error</div>
+				if (author.$isLoading) return <div data-testid="loading">Loading</div>
+				if (author.$isError || author.$isNotFound) return <div>Error</div>
 
 				return (
 					<Repeater field={author.articles}>
@@ -162,8 +162,8 @@ describe('Repeater Component', () => {
 					e.id().articles(a => a.id().title()),
 				)
 
-				if (author.isLoading) return <div data-testid="loading">Loading</div>
-				if (author.isError || author.isNotFound) return <div>Error</div>
+				if (author.$isLoading) return <div data-testid="loading">Loading</div>
+				if (author.$isError || author.$isNotFound) return <div>Error</div>
 
 				return (
 					<Repeater field={author.articles}>
@@ -201,8 +201,8 @@ describe('Repeater Component', () => {
 					e.id().articles(a => a.id().title()),
 				)
 
-				if (author.isLoading) return <div data-testid="loading">Loading</div>
-				if (author.isError || author.isNotFound) return <div>Error</div>
+				if (author.$isLoading) return <div data-testid="loading">Loading</div>
+				if (author.$isError || author.$isNotFound) return <div>Error</div>
 
 				return (
 					<Repeater field={author.articles}>
@@ -240,8 +240,8 @@ describe('Repeater Component', () => {
 					e.id().articles(a => a.id().title()),
 				)
 
-				if (author.isLoading) return <div data-testid="loading">Loading</div>
-				if (author.isError || author.isNotFound) return <div>Error</div>
+				if (author.$isLoading) return <div data-testid="loading">Loading</div>
+				if (author.$isError || author.$isNotFound) return <div>Error</div>
 
 				return (
 					<Repeater field={author.articles}>
@@ -282,8 +282,8 @@ describe('Repeater Component', () => {
 					e.id().articles(a => a.id().title()),
 				)
 
-				if (author.isLoading) return <div data-testid="loading">Loading</div>
-				if (author.isError || author.isNotFound) return <div>Error</div>
+				if (author.$isLoading) return <div data-testid="loading">Loading</div>
+				if (author.$isError || author.$isNotFound) return <div>Error</div>
 
 				return (
 					<Repeater field={author.articles}>
@@ -330,8 +330,8 @@ describe('Repeater Component', () => {
 					e.id().articles(a => a.id().title()),
 				)
 
-				if (author.isLoading) return <div data-testid="loading">Loading</div>
-				if (author.isError || author.isNotFound) return <div>Error</div>
+				if (author.$isLoading) return <div data-testid="loading">Loading</div>
+				if (author.$isError || author.$isNotFound) return <div>Error</div>
 
 				return (
 					<Repeater field={author.articles}>
@@ -396,8 +396,8 @@ describe('Repeater Component', () => {
 					e.id().articles(a => a.id().title().order()),
 				)
 
-				if (author.isLoading) return <div data-testid="loading">Loading</div>
-				if (author.isError || author.isNotFound) return <div>Error</div>
+				if (author.$isLoading) return <div data-testid="loading">Loading</div>
+				if (author.$isError || author.$isNotFound) return <div>Error</div>
 
 				return (
 					<Repeater field={author.articles} sortableBy="order">
@@ -436,8 +436,8 @@ describe('Repeater Component', () => {
 					e.id().articles(a => a.id().title().order()),
 				)
 
-				if (author.isLoading) return <div data-testid="loading">Loading</div>
-				if (author.isError || author.isNotFound) return <div>Error</div>
+				if (author.$isLoading) return <div data-testid="loading">Loading</div>
+				if (author.$isError || author.$isNotFound) return <div>Error</div>
 
 				return (
 					<Repeater field={author.articles} sortableBy="order">
@@ -490,8 +490,8 @@ describe('Repeater Component', () => {
 					e.id().articles(a => a.id().title().order()),
 				)
 
-				if (author.isLoading) return <div data-testid="loading">Loading</div>
-				if (author.isError || author.isNotFound) return <div>Error</div>
+				if (author.$isLoading) return <div data-testid="loading">Loading</div>
+				if (author.$isError || author.$isNotFound) return <div>Error</div>
 
 				return (
 					<Repeater field={author.articles} sortableBy="order">
@@ -540,8 +540,8 @@ describe('Repeater Component', () => {
 					e.id().articles(a => a.id().title()),
 				)
 
-				if (author.isLoading) return <div data-testid="loading">Loading</div>
-				if (author.isError || author.isNotFound) return <div>Error</div>
+				if (author.$isLoading) return <div data-testid="loading">Loading</div>
+				if (author.$isError || author.$isNotFound) return <div>Error</div>
 
 				return (
 					<Repeater field={author.articles}>

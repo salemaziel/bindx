@@ -8,12 +8,12 @@ import { schema } from '../../generated/index.js'
 export function TagListExample() {
 	const tags = useEntityList(schema.Tag, {}, e => e.id().name().color())
 
-	if (tags.isLoading) {
+	if (tags.$isLoading) {
 		return <div>Loading tags...</div>
 	}
 
-	if (tags.isError) {
-		return <div>Error: {tags.error.message}</div>
+	if (tags.$isError) {
+		return <div>Error: {tags.$error.message}</div>
 	}
 
 	return (

@@ -46,10 +46,10 @@ describe('HasMany component', () => {
 					a.id().title().tags(t => t.id().name().color()),
 				)
 
-				if (article.isLoading) {
+				if (article.$isLoading) {
 					return <div data-testid="loading">Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$isError || article.$isNotFound) {
 					return <div data-testid="error">Error</div>
 				}
 
@@ -93,10 +93,10 @@ describe('HasMany component', () => {
 					a.id().title().tags(t => t.id().name()),
 				)
 
-				if (article.isLoading) {
+				if (article.$isLoading) {
 					return <div data-testid="loading">Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$isError || article.$isNotFound) {
 					return <div data-testid="error">Error</div>
 				}
 
@@ -139,10 +139,10 @@ describe('HasMany component', () => {
 					a.id().title().tags(t => t.id().name()),
 				)
 
-				if (article.isLoading) {
+				if (article.$isLoading) {
 					return <div data-testid="loading">Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$isError || article.$isNotFound) {
 					return <div data-testid="error">Error</div>
 				}
 
@@ -186,10 +186,10 @@ describe('HasMany component', () => {
 					a.id().tags(t => t.id().name()),
 				)
 
-				if (article.isLoading) {
+				if (article.$isLoading) {
 					return <div data-testid="loading">Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$isError || article.$isNotFound) {
 					return <div data-testid="error">Error</div>
 				}
 
@@ -231,10 +231,10 @@ describe('HasMany component', () => {
 					a.id().tags(t => t.id().name()),
 				)
 
-				if (article.isLoading) {
+				if (article.$isLoading) {
 					return <div data-testid="loading">Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$isError || article.$isNotFound) {
 					return <div data-testid="error">Error</div>
 				}
 
@@ -277,10 +277,10 @@ describe('HasMany component', () => {
 					a.id().tags(t => t.id().name()),
 				)
 
-				if (article.isLoading) {
+				if (article.$isLoading) {
 					return <div data-testid="loading">Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$isError || article.$isNotFound) {
 					return <div data-testid="error">Error</div>
 				}
 
@@ -327,10 +327,10 @@ describe('HasMany component', () => {
 					a.id().tags(t => t.id().name().color()),
 				)
 
-				if (article.isLoading) {
+				if (article.$isLoading) {
 					return <div data-testid="loading">Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$isError || article.$isNotFound) {
 					return <div data-testid="error">Error</div>
 				}
 
@@ -377,10 +377,10 @@ describe('HasMany component', () => {
 					a.id().tags(t => t.id().name()),
 				)
 
-				if (article.isLoading) {
+				if (article.$isLoading) {
 					return <div data-testid="loading">Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$isError || article.$isNotFound) {
 					return <div data-testid="error">Error</div>
 				}
 
@@ -435,10 +435,10 @@ describe('HasMany component', () => {
 					a.id().tags(t => t.id().name()),
 				)
 
-				if (article.isLoading) {
+				if (article.$isLoading) {
 					return <div data-testid="loading">Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$isError || article.$isNotFound) {
 					return <div data-testid="error">Error</div>
 				}
 
@@ -493,10 +493,10 @@ describe('HasMany component', () => {
 					a.id().tags(t => t.id().name()),
 				)
 
-				if (article.isLoading) {
+				if (article.$isLoading) {
 					return <div data-testid="loading">Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$isError || article.$isNotFound) {
 					return <div data-testid="error">Error</div>
 				}
 
@@ -541,10 +541,10 @@ describe('HasMany component', () => {
 					a.id().tags(t => t.id().name()),
 				)
 
-				if (article.isLoading) {
+				if (article.$isLoading) {
 					return <div data-testid="loading">Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$isError || article.$isNotFound) {
 					return <div data-testid="error">Error</div>
 				}
 
@@ -600,10 +600,10 @@ describe('HasMany component', () => {
 					a.id().tags(t => t.id().name()),
 				)
 
-				if (article.isLoading) {
+				if (article.$isLoading) {
 					return <div data-testid="loading">Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$isError || article.$isNotFound) {
 					return <div data-testid="error">Error</div>
 				}
 
@@ -639,10 +639,10 @@ describe('HasMany component', () => {
 					a.id().tags(t => t.id().name()),
 				)
 
-				if (article.isLoading) {
+				if (article.$isLoading) {
 					return <div data-testid="loading">Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$isError || article.$isNotFound) {
 					return <div data-testid="error">Error</div>
 				}
 

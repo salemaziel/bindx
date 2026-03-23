@@ -12,46 +12,46 @@ export function AuthorSimpleExample({ authorId }: { authorId: string }) {
 			{author => (
 				<div className="author-card">
 					{/* Scalar fields - fully typed */}
-					<h2><Field field={author.$fields.name} /></h2>
+					<h2><Field field={author.name} /></h2>
 					<p className="email">
-						<Field field={author.$fields.email}>
+						<Field field={author.email}>
 							{field => <a href={`mailto:${field.value}`}>{field.value}</a>}
 						</Field>
 					</p>
 
 					{/* Optional field with Show component */}
-					<Show field={author.$fields.bio} fallback={<p className="no-bio">No bio available</p>}>
+					<Show field={author.bio} fallback={<p className="no-bio">No bio available</p>}>
 						{bio => <p className="bio">{bio}</p>}
 					</Show>
 
 					{/* HasMany relation - nested type safety */}
 					<section className="articles">
 						<h3>Articles</h3>
-						<HasMany field={author.$fields.articles} limit={5}>
+						<HasMany field={author.articles} limit={5}>
 							{(article, index) => (
 								<article key={article.id} className="article-preview">
 									<h4>
-										{index + 1}. <Field field={article.$fields.title} />
+										{index + 1}. <Field field={article.title} />
 									</h4>
 
 									{/* Nested HasOne relation */}
-									<HasOne field={article.$fields.location}>
+									<HasOne field={article.location}>
 										{location => (
 											<span className="location">
-												<Field field={location.$fields.label} />
+												<Field field={location.label} />
 											</span>
 										)}
 									</HasOne>
 
 									{/* Nested HasMany relation */}
 									<div className="tags">
-										<HasMany field={article.$fields.tags}>
+										<HasMany field={article.tags}>
 											{tag => (
 												<span
 													className="tag"
-													style={{ backgroundColor: tag.$fields.color.value ?? undefined }}
+													style={{ backgroundColor: tag.color.value ?? undefined }}
 												>
-													<Field field={tag.$fields.name} />
+													<Field field={tag.name} />
 												</span>
 											)}
 										</HasMany>
@@ -59,10 +59,10 @@ export function AuthorSimpleExample({ authorId }: { authorId: string }) {
 
 									{/* Conditional rendering with If */}
 									<If
-										condition={article.$fields.publishedAt.value !== null}
+										condition={article.publishedAt.value !== null}
 										then={
 											<time className="published">
-												Published: <Field field={article.$fields.publishedAt} />
+												Published: <Field field={article.publishedAt} />
 											</time>
 										}
 										else={<span className="draft">Draft</span>}
@@ -86,16 +86,16 @@ export function ArticleDetailExample({ articleId }: { articleId: string }) {
 			{article => (
 				<article className="article-detail">
 					<header>
-						<h1><Field field={article.$fields.title} /></h1>
+						<h1><Field field={article.title} /></h1>
 
 						{/* Author info with HasOne */}
-						<HasOne field={article.$fields.author}>
+						<HasOne field={article.author}>
 							{author => (
 								<div className="author-info">
 									<span>By </span>
-									<strong><Field field={author.$fields.name} /></strong>
+									<strong><Field field={author.name} /></strong>
 									<span> (</span>
-									<Field field={author.$fields.email} />
+									<Field field={author.email} />
 									<span>)</span>
 								</div>
 							)}
@@ -103,14 +103,14 @@ export function ArticleDetailExample({ articleId }: { articleId: string }) {
 					</header>
 
 					<div className="content">
-						<Field field={article.$fields.content} />
+						<Field field={article.content} />
 					</div>
 
 					<footer>
-						<HasMany field={article.$fields.tags}>
+						<HasMany field={article.tags}>
 							{tag => (
 								<span className="tag" key={tag.id}>
-									<Field field={tag.$fields.name} />
+									<Field field={tag.name} />
 								</span>
 							)}
 						</HasMany>
@@ -138,26 +138,26 @@ export function AuthorEditExample({ authorId }: { authorId: string }) {
 						<label>Name</label>
 						<input
 							type="text"
-							value={author.$fields.name.value ?? ''}
-							onChange={e => author.$fields.name.setValue(e.target.value)}
+							value={author.name.value ?? ''}
+							onChange={e => author.name.setValue(e.target.value)}
 						/>
-						{author.$fields.name.isDirty && <span className="dirty">*</span>}
+						{author.name.isDirty && <span className="dirty">*</span>}
 					</div>
 
 					<div className="form-field">
 						<label>Email</label>
 						<input
 							type="email"
-							value={author.$fields.email.value ?? ''}
-							onChange={e => author.$fields.email.setValue(e.target.value)}
+							value={author.email.value ?? ''}
+							onChange={e => author.email.setValue(e.target.value)}
 						/>
 					</div>
 
 					<div className="form-field">
 						<label>Bio</label>
 						<textarea
-							value={author.$fields.bio.value ?? ''}
-							onChange={e => author.$fields.bio.setValue(e.target.value)}
+							value={author.bio.value ?? ''}
+							onChange={e => author.bio.setValue(e.target.value)}
 						/>
 					</div>
 

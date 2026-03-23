@@ -17,10 +17,10 @@ describe('useEntity hook - persist functionality', () => {
 		function TestComponent() {
 			const article = useEntity(schema.Article, { by: { id: 'article-1' } }, e => e.title())
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div>Error</div>
 			}
 
@@ -28,14 +28,14 @@ describe('useEntity hook - persist functionality', () => {
 				<div>
 					<span data-testid="title">{article.title.value}</span>
 					<span data-testid="server-value">{article.title.serverValue}</span>
-					<span data-testid="dirty">{article.isDirty ? 'dirty' : 'clean'}</span>
+					<span data-testid="dirty">{article.$isDirty ? 'dirty' : 'clean'}</span>
 					<button
 						data-testid="update-btn"
 						onClick={() => article.title.setValue('Persisted Title')}
 					>
 						Update
 					</button>
-					<button data-testid="persist-btn" onClick={() => article.persist()}>
+					<button data-testid="persist-btn" onClick={() => article.$persist()}>
 						Persist
 					</button>
 				</div>
@@ -81,23 +81,23 @@ describe('useEntity hook - persist functionality', () => {
 		function TestComponent() {
 			const article = useEntity(schema.Article, { by: { id: 'article-1' } }, e => e.title())
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div>Error</div>
 			}
 
 			return (
 				<div>
-					<span data-testid="persisting">{article.isPersisting ? 'persisting' : 'idle'}</span>
+					<span data-testid="persisting">{article.$isPersisting ? 'persisting' : 'idle'}</span>
 					<button
 						data-testid="update-btn"
 						onClick={() => article.title.setValue('New Title')}
 					>
 						Update
 					</button>
-					<button data-testid="persist-btn" onClick={() => article.persist()}>
+					<button data-testid="persist-btn" onClick={() => article.$persist()}>
 						Persist
 					</button>
 				</div>

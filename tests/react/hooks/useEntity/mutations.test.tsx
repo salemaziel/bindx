@@ -16,10 +16,10 @@ describe('useEntity hook - optimistic updates', () => {
 		function TestComponent() {
 			const article = useEntity(schema.Article, { by: { id: 'article-1' } }, e => e.title())
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div>Error</div>
 			}
 
@@ -70,17 +70,17 @@ describe('useEntity hook - optimistic updates', () => {
 				e => e.author(a => a.id().name()),
 			)
 
-			if (article.isLoading) {
+			if (article.$isLoading) {
 				return <div>Loading...</div>
 			}
-			if (article.isError || article.isNotFound) {
+			if (article.$isError || article.$isNotFound) {
 				return <div>Error</div>
 			}
 
 			return (
 				<div>
-					<span data-testid="author-name">{article.data.author?.name ?? 'N/A'}</span>
-					<span data-testid="author-id">{article.data.author?.id ?? 'N/A'}</span>
+					<span data-testid="author-name">{article.$data!.author?.name ?? 'N/A'}</span>
+					<span data-testid="author-id">{article.$data!.author?.id ?? 'N/A'}</span>
 				</div>
 			)
 		}

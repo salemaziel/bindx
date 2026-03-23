@@ -120,7 +120,7 @@ describe('useEntityList selection', () => {
 				// Selection: id, name, email
 				const authors = useEntityList(entityDefs.Author, {}, a => a.id().name().email())
 
-				if (authors.isLoading) {
+				if (authors.$status !== 'ready') {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -156,7 +156,7 @@ describe('useEntityList selection', () => {
 				// Selection with bio
 				const authors = useEntityList(entityDefs.Author, {}, a => a.id().name().bio())
 
-				if (authors.isLoading) {
+				if (authors.$status !== 'ready') {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -197,7 +197,7 @@ describe('useEntityList selection', () => {
 					a.id().title().author(au => au.id().name().email()),
 				)
 
-				if (articles.isLoading) {
+				if (articles.$status !== 'ready') {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -233,7 +233,7 @@ describe('useEntityList selection', () => {
 					a.id().title().author(au => au.id().name()),
 				)
 
-				if (articles.isLoading) {
+				if (articles.$status !== 'ready') {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -275,7 +275,7 @@ describe('useEntityList selection', () => {
 				const authors = useEntityList(entityDefs.Author, {}, a => a.id().name().email())
 				renderCount++
 
-				if (authors.isLoading) {
+				if (authors.$status !== 'ready') {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -326,7 +326,7 @@ describe('useEntityList selection', () => {
 			function TestComponent({ filter }: { filter?: Record<string, unknown> }): React.ReactElement {
 				const authors = useEntityList(entityDefs.Author, { filter }, a => a.id().name())
 
-				if (authors.isLoading) {
+				if (authors.$status !== 'ready') {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -376,7 +376,7 @@ describe('useEntityList selection', () => {
 			function TestComponent({ limit }: { limit?: number }): React.ReactElement {
 				const authors = useEntityList(entityDefs.Author, { limit }, a => a.id().name())
 
-				if (authors.isLoading) {
+				if (authors.$status !== 'ready') {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -426,7 +426,7 @@ describe('useEntityList selection', () => {
 					a.id().name().email().bio(),
 				)
 
-				if (authors.isLoading) {
+				if (authors.$status !== 'ready') {
 					return <div data-testid="loading">Loading...</div>
 				}
 

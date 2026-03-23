@@ -135,11 +135,11 @@ describe('Store Synchronization', () => {
 			function ComponentA() {
 				const author = useEntity(entityDefs.Author, { by: { id: 'author-1' } }, e => e.name())
 
-				if (author.isLoading) {
+				if (author.$status === 'loading') {
 					return <div data-testid="a-loading">Loading A...</div>
 				}
 
-				if (author.isError || author.isNotFound) {
+				if (author.$status === 'error' || author.$status === 'not_found') {
 					return <div data-testid="a-error">Error A</div>
 				}
 
@@ -160,11 +160,11 @@ describe('Store Synchronization', () => {
 			function ComponentB() {
 				const author = useEntity(entityDefs.Author, { by: { id: 'author-1' } }, e => e.name())
 
-				if (author.isLoading) {
+				if (author.$status === 'loading') {
 					return <div data-testid="b-loading">Loading B...</div>
 				}
 
-				if (author.isError || author.isNotFound) {
+				if (author.$status === 'error' || author.$status === 'not_found') {
 					return <div data-testid="b-error">Error B</div>
 				}
 
@@ -219,7 +219,7 @@ describe('Store Synchronization', () => {
 	})
 
 	describe('nested entity access via data', () => {
-		test('article.data.author should be accessible', async () => {
+		test('article.$data.author should be accessible', async () => {
 			const adapter = new MockAdapter(createMockData(), { delay: 0 })
 
 			// Component that accesses author through article data
@@ -228,18 +228,18 @@ describe('Store Synchronization', () => {
 					e.title().author(a => a.id().name())
 				)
 
-				if (article.isLoading) {
+				if (article.$status === 'loading') {
 					return <div data-testid="article-loading">Loading...</div>
 				}
 
-				if (article.isError || article.isNotFound) {
+				if (article.$status === 'error' || article.$status === 'not_found') {
 					return <div data-testid="article-error">Error</div>
 				}
 
 				return (
 					<div>
-						<span data-testid="article-title">{article.data.title}</span>
-						<span data-testid="article-author-name">{article.data.author?.name ?? 'N/A'}</span>
+						<span data-testid="article-title">{article.$data?.title}</span>
+						<span data-testid="article-author-name">{article.$data?.author?.name ?? 'N/A'}</span>
 					</div>
 				)
 			}
@@ -248,18 +248,18 @@ describe('Store Synchronization', () => {
 			function AuthorComponent() {
 				const author = useEntity(entityDefs.Author, { by: { id: 'author-1' } }, e => e.name().email())
 
-				if (author.isLoading) {
+				if (author.$status === 'loading') {
 					return <div data-testid="author-loading">Loading...</div>
 				}
 
-				if (author.isError || author.isNotFound) {
+				if (author.$status === 'error' || author.$status === 'not_found') {
 					return <div data-testid="author-error">Error</div>
 				}
 
 				return (
 					<div>
-						<span data-testid="author-name">{author.data.name}</span>
-						<span data-testid="author-email">{author.data.email}</span>
+						<span data-testid="author-name">{author.$data?.name}</span>
+						<span data-testid="author-email">{author.$data?.email}</span>
 						<button
 							data-testid="author-update"
 							onClick={() => author.name.setValue('Updated Directly')}
@@ -296,12 +296,12 @@ describe('Store Synchronization', () => {
 			function ComponentA() {
 				const author = useEntity(entityDefs.Author, { by: { id: 'author-1' } }, e => e.name())
 
-				if (author.isLoading) return <div>Loading...</div>
-				if (author.isError || author.isNotFound) return <div>Error</div>
+				if (author.$status === 'loading') return <div>Loading...</div>
+				if (author.$status === 'error' || author.$status === 'not_found') return <div>Error</div>
 
 				return (
 					<div>
-						<span data-testid="a-dirty">{author.isDirty ? 'dirty' : 'clean'}</span>
+						<span data-testid="a-dirty">{author.$isDirty ? 'dirty' : 'clean'}</span>
 						<span data-testid="a-field-dirty">{author.name.isDirty ? 'dirty' : 'clean'}</span>
 						<button
 							data-testid="a-update"
@@ -316,12 +316,12 @@ describe('Store Synchronization', () => {
 			function ComponentB() {
 				const author = useEntity(entityDefs.Author, { by: { id: 'author-1' } }, e => e.name())
 
-				if (author.isLoading) return <div>Loading...</div>
-				if (author.isError || author.isNotFound) return <div>Error</div>
+				if (author.$status === 'loading') return <div>Loading...</div>
+				if (author.$status === 'error' || author.$status === 'not_found') return <div>Error</div>
 
 				return (
 					<div>
-						<span data-testid="b-dirty">{author.isDirty ? 'dirty' : 'clean'}</span>
+						<span data-testid="b-dirty">{author.$isDirty ? 'dirty' : 'clean'}</span>
 						<span data-testid="b-field-dirty">{author.name.isDirty ? 'dirty' : 'clean'}</span>
 					</div>
 				)
@@ -365,15 +365,15 @@ describe('Store Synchronization', () => {
 			function TestComponent() {
 				const author = useEntity(entityDefs.Author, { by: { id: 'author-1' }, cache: true }, e => e.name())
 
-				if (author.isLoading) {
+				if (author.$status === 'loading') {
 					return <div data-testid="loading">Loading...</div>
 				}
 
-				if (author.isError || author.isNotFound) {
+				if (author.$status === 'error' || author.$status === 'not_found') {
 					return <div data-testid="error">Error</div>
 				}
 
-				return <span data-testid="name">{author.data.name}</span>
+				return <span data-testid="name">{author.$data?.name}</span>
 			}
 
 			const { container } = render(
@@ -401,12 +401,12 @@ describe('Store Synchronization', () => {
 					e.tags(t => t.id().name())
 				)
 
-				if (article.isLoading) return <div>Loading...</div>
-				if (article.isError || article.isNotFound) return <div>Error</div>
+				if (article.$status === 'loading') return <div>Loading...</div>
+				if (article.$status === 'error' || article.$status === 'not_found') return <div>Error</div>
 
 				return (
 					<div data-testid="tags">
-						{article.data.tags?.map(tag => (
+						{article.$data?.tags?.map(tag => (
 							<span key={tag.id} data-testid={`tag-${tag.id}`}>
 								{tag.name}
 							</span>

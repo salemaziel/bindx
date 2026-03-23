@@ -77,10 +77,10 @@ describe('Field Mutations', () => {
 					e.id().title().content(),
 				)
 
-				if (article.isLoading) {
+				if (article.$status === 'loading') {
 					return <div>Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$status === 'error' || article.$status === 'not_found') {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -130,10 +130,10 @@ describe('Field Mutations', () => {
 					e.id().title(),
 				)
 
-				if (article.isLoading) {
+				if (article.$status === 'loading') {
 					return <div>Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$status === 'error' || article.$status === 'not_found') {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -195,10 +195,10 @@ describe('Field Mutations', () => {
 					e.id().title(),
 				)
 
-				if (article.isLoading) {
+				if (article.$status === 'loading') {
 					return <div>Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$status === 'error' || article.$status === 'not_found') {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -260,10 +260,10 @@ describe('Field Mutations', () => {
 					e.id().views(),
 				)
 
-				if (article.isLoading) {
+				if (article.$status === 'loading') {
 					return <div>Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$status === 'error' || article.$status === 'not_found') {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -311,10 +311,10 @@ describe('Field Mutations', () => {
 					e.id().title().content(),
 				)
 
-				if (article.isLoading) {
+				if (article.$status === 'loading') {
 					return <div>Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$status === 'error' || article.$status === 'not_found') {
 					return <div data-testid="loading">Loading...</div>
 				}
 
@@ -322,7 +322,7 @@ describe('Field Mutations', () => {
 					<div>
 						<span data-testid="title">{article.title.value}</span>
 						<span data-testid="content">{article.content.value}</span>
-						<span data-testid="entity-dirty">{article.isDirty ? 'dirty' : 'clean'}</span>
+						<span data-testid="entity-dirty">{article.$isDirty ? 'dirty' : 'clean'}</span>
 						<button
 							data-testid="set-title"
 							onClick={() => article.title.setValue('New Title')}
@@ -335,7 +335,7 @@ describe('Field Mutations', () => {
 						>
 							Set Content
 						</button>
-						<button data-testid="reset" onClick={() => article.reset()}>
+						<button data-testid="reset" onClick={() => article.$reset()}>
 							Reset
 						</button>
 					</div>
@@ -385,10 +385,10 @@ describe('Field Mutations', () => {
 					e.id().title(),
 				)
 
-				if (article.isLoading) {
+				if (article.$status === 'loading') {
 					return <div>Loading...</div>
 				}
-				if (article.isError || article.isNotFound) {
+				if (article.$status === 'error' || article.$status === 'not_found') {
 					return <div data-testid="loading">Loading...</div>
 				}
 
