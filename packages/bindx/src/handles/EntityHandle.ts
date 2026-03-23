@@ -25,12 +25,17 @@ import type {
 } from '../events/types.js'
 import { HasOneHandle } from './HasOneHandle.js'
 import { HasManyListHandle } from './HasManyListHandle.js'
-import { createHandleProxy, ENTITY_HANDLE_PROPERTIES } from './proxyFactory.js'
+import { createHandleProxy } from './proxyFactory.js'
 import type { SelectionMeta } from '../selection/types.js'
 import { UnfetchedFieldError } from '../errors/UnfetchedFieldError.js'
 
 // Type for relation handle cache
 type RelationHandle = HasOneHandle<object> | HasManyListHandle<object>
+
+interface CachedHandle<T> {
+	readonly raw: T
+	readonly proxy: T
+}
 
 /**
  * EntityHandle provides stable access to an entity.
@@ -51,10 +56,10 @@ type RelationHandle = HasOneHandle<object> | HasManyListHandle<object>
  */
 export class EntityHandle<T extends object = object, TSelected = T> extends EntityRelatedHandle implements EntityRef<T, TSelected> {
 	/** Cache for field handles to ensure stable identity */
-	private readonly fieldHandleCache = new Map<string, FieldHandle<unknown>>()
+	private readonly fieldHandleCache = new Map<string, CachedHandle<FieldHandle<unknown>>>()
 
 	/** Cache for relation handles */
-	private readonly relationHandleCache = new Map<string, RelationHandle>()
+	private readonly relationHandleCache = new Map<string, CachedHandle<RelationHandle>>()
 
 	/** Runtime brand symbols for validation */
 	readonly __brands?: Set<symbol>
@@ -100,10 +105,7 @@ export class EntityHandle<T extends object = object, TSelected = T> extends Enti
 		brands?: Set<symbol>,
 		selection?: SelectionMeta,
 	): EntityHandle<T, TSelected> {
-		return createHandleProxy(new EntityHandle<T, TSelected>(id, entityType, store, dispatcher, schema, brands, selection), {
-			knownProperties: ENTITY_HANDLE_PROPERTIES,
-			getFields: (target) => target.fields,
-		})
+		return createHandleProxy(new EntityHandle<T, TSelected>(id, entityType, store, dispatcher, schema, brands, selection), (target) => target.fields)
 	}
 
 	/**
@@ -238,12 +240,12 @@ export class EntityHandle<T extends object = object, TSelected = T> extends Enti
 		const cached = this.fieldHandleCache.get(cacheKey)
 
 		if (cached) {
-			return cached as FieldHandle<T[K]>
+			return cached.proxy as FieldHandle<T[K]>
 		}
 
 		const enumName = this.schema.getEnumName(this.entityType, cacheKey)
 		const columnType = this.schema.getColumnType(this.entityType, cacheKey)
-		const handle = FieldHandle.create<T[K]>(
+		const raw = FieldHandle.createRaw<T[K]>(
 			this.entityType,
 			this.entityId,
 			[cacheKey],
@@ -252,9 +254,10 @@ export class EntityHandle<T extends object = object, TSelected = T> extends Enti
 			enumName,
 			columnType,
 		)
-		this.fieldHandleCache.set(cacheKey, handle as FieldHandle<unknown>)
+		const proxy = FieldHandle.wrapProxy(raw)
+		this.fieldHandleCache.set(cacheKey, { raw, proxy } as CachedHandle<FieldHandle<unknown>>)
 
-		return handle
+		return proxy
 	}
 
 	/**
@@ -265,7 +268,7 @@ export class EntityHandle<T extends object = object, TSelected = T> extends Enti
 		const cached = this.relationHandleCache.get(cacheKey)
 
 		if (cached) {
-			return cached as HasOneHandle<TRelated>
+			return cached.proxy as HasOneHandle<TRelated>
 		}
 
 		const targetType = this.schema.getRelationTarget(this.entityType, fieldName)
@@ -275,7 +278,7 @@ export class EntityHandle<T extends object = object, TSelected = T> extends Enti
 			)
 		}
 
-		const handle = HasOneHandle.create<TRelated>(
+		const raw = HasOneHandle.createRaw<TRelated>(
 			this.entityType,
 			this.entityId,
 			fieldName,
@@ -286,9 +289,10 @@ export class EntityHandle<T extends object = object, TSelected = T> extends Enti
 			undefined,
 			nestedSelection,
 		)
-		this.relationHandleCache.set(cacheKey, handle as RelationHandle)
+		const proxy = HasOneHandle.wrapProxy(raw)
+		this.relationHandleCache.set(cacheKey, { raw, proxy } as CachedHandle<RelationHandle>)
 
-		return handle
+		return proxy
 	}
 
 	/**
@@ -303,7 +307,7 @@ export class EntityHandle<T extends object = object, TSelected = T> extends Enti
 		const cached = this.relationHandleCache.get(cacheKey)
 
 		if (cached) {
-			return cached as HasManyListHandle<TItem>
+			return cached.proxy as HasManyListHandle<TItem>
 		}
 
 		const targetType = this.schema.getRelationTarget(this.entityType, fieldName)
@@ -325,7 +329,7 @@ export class EntityHandle<T extends object = object, TSelected = T> extends Enti
 			effectiveAlias,
 			nestedSelection,
 		)
-		this.relationHandleCache.set(cacheKey, handle as RelationHandle)
+		this.relationHandleCache.set(cacheKey, { raw: handle, proxy: handle } as CachedHandle<RelationHandle>)
 
 		return handle
 	}
@@ -358,13 +362,13 @@ export class EntityHandle<T extends object = object, TSelected = T> extends Enti
 	override dispose(): void {
 		super.dispose()
 
-		for (const handle of this.fieldHandleCache.values()) {
-			handle.dispose()
+		for (const { raw } of this.fieldHandleCache.values()) {
+			raw.dispose()
 		}
 		this.fieldHandleCache.clear()
 
-		for (const handle of this.relationHandleCache.values()) {
-			handle.dispose()
+		for (const { raw } of this.relationHandleCache.values()) {
+			raw.dispose()
 		}
 		this.relationHandleCache.clear()
 	}

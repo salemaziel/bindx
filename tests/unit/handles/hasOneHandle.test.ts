@@ -120,7 +120,7 @@ describe('HasOneHandle', () => {
 			})
 			const handle = createHasOneHandle()
 
-			expect(handle.relatedId).toBe('auth-1')
+			expect(handle.$relatedId).toBe('auth-1')
 		})
 
 		test('should return related ID from embedded data when no relation state', () => {
@@ -131,14 +131,14 @@ describe('HasOneHandle', () => {
 			}, true)
 			const handle = createHasOneHandle()
 
-			expect(handle.relatedId).toBe('auth-1')
+			expect(handle.$relatedId).toBe('auth-1')
 		})
 
 		test('should return null when no relation', () => {
 			store.setEntityData('Article', 'a-1', { id: 'a-1', title: 'Test' }, true)
 			const handle = createHasOneHandle()
 
-			expect(handle.relatedId).toBeNull()
+			expect(handle.$relatedId).toBeNull()
 		})
 	})
 
@@ -276,7 +276,7 @@ describe('HasOneHandle', () => {
 			store.setEntityData('Article', 'a-1', { id: 'a-1', title: 'Test' }, true)
 			const handle = createHasOneHandle()
 
-			handle.connect('auth-new')
+			handle.$connect('auth-new')
 
 			const relation = store.getRelation('Article', 'a-1', 'author')
 			expect(relation?.currentId).toBe('auth-new')
@@ -295,7 +295,7 @@ describe('HasOneHandle', () => {
 			})
 
 			const handle = createHasOneHandle()
-			handle.disconnect()
+			handle.$disconnect()
 
 			const relation = store.getRelation('Article', 'a-1', 'author')
 			expect(relation?.currentId).toBeNull()
@@ -314,7 +314,7 @@ describe('HasOneHandle', () => {
 			})
 
 			const handle = createHasOneHandle()
-			handle.delete()
+			handle.$delete()
 
 			const relation = store.getRelation('Article', 'a-1', 'author')
 			expect(relation?.state).toBe('deleted')
@@ -339,7 +339,7 @@ describe('HasOneHandle', () => {
 			})
 
 			const handle = createHasOneHandle()
-			handle.reset()
+			handle.$reset()
 
 			const relation = store.getRelation('Article', 'a-1', 'author')
 			expect(relation?.currentId).toBe('auth-1')
@@ -445,7 +445,7 @@ describe('HasOneHandle', () => {
 			store.setEntityData('Article', 'a-1', { id: 'a-1', title: 'Test' }, true)
 			const handle = createHasOneHandle()
 
-			expect(handle.__entityName).toBe('Author')
+			expect(handle.$__entityName).toBe('Author')
 		})
 	})
 })

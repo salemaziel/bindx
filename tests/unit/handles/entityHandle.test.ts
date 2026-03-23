@@ -92,7 +92,7 @@ describe('EntityHandle', () => {
 
 		test('should return entity type', () => {
 			const handle = createEntityHandle('a-1')
-			expect(handle.entityType).toBe('Article')
+			expect(handle.$entityType).toBe('Article')
 		})
 	})
 
@@ -117,14 +117,14 @@ describe('EntityHandle', () => {
 
 			const handle = createEntityHandle()
 
-			expect(handle.serverData).toEqual({ id: 'a-1', title: 'Original' })
+			expect(handle.$serverData).toEqual({ id: 'a-1', title: 'Original' })
 		})
 
 		test('should return snapshot', () => {
 			store.setEntityData('Article', 'a-1', { id: 'a-1', title: 'Test' }, true)
 			const handle = createEntityHandle()
 
-			const snapshot = handle.getSnapshot()
+			const snapshot = handle.$getSnapshot()
 			expect(snapshot).toBeDefined()
 			expect(snapshot?.id).toBe('a-1')
 		})
@@ -135,25 +135,25 @@ describe('EntityHandle', () => {
 	describe('Load State', () => {
 		test('should check if entity is loaded', () => {
 			const handle = createEntityHandle()
-			expect(handle.isLoaded).toBe(false)
+			expect(handle.$isLoaded).toBe(false)
 
 			store.setEntityData('Article', 'a-1', { id: 'a-1', title: 'Test' }, true)
-			expect(handle.isLoaded).toBe(true)
+			expect(handle.$isLoaded).toBe(true)
 		})
 
 		test('should check if entity is loading', () => {
 			store.setLoadState('Article', 'a-1', 'loading')
 			const handle = createEntityHandle()
 
-			expect(handle.isLoading).toBe(true)
+			expect(handle.$isLoading).toBe(true)
 		})
 
 		test('should check if entity has error', () => {
 			store.setLoadState('Article', 'a-1', 'error', createLoadError(new Error('Network error')))
 			const handle = createEntityHandle()
 
-			expect(handle.isError).toBe(true)
-			expect(handle.error?.message).toBe('Network error')
+			expect(handle.$isError).toBe(true)
+			expect(handle.$error?.message).toBe('Network error')
 		})
 	})
 
@@ -187,8 +187,8 @@ describe('EntityHandle', () => {
 
 			const handle = createEntityHandle()
 
-			expect(handle.getDirtyFields()).toContain('title')
-			expect(handle.getDirtyFields()).not.toContain('content')
+			expect(handle.$getDirtyFields()).toContain('title')
+			expect(handle.$getDirtyFields()).not.toContain('content')
 		})
 	})
 
@@ -199,10 +199,10 @@ describe('EntityHandle', () => {
 			store.setEntityData('Article', 'a-1', { id: 'a-1', title: 'Test' }, true)
 			const handle = createEntityHandle()
 
-			expect(handle.isPersisting).toBe(false)
+			expect(handle.$isPersisting).toBe(false)
 
 			store.setPersisting('Article', 'a-1', true)
-			expect(handle.isPersisting).toBe(true)
+			expect(handle.$isPersisting).toBe(true)
 		})
 	})
 
@@ -247,7 +247,7 @@ describe('EntityHandle', () => {
 			store.setEntityData('Article', 'a-1', { id: 'a-1', title: 'Test' }, true)
 			const handle = createEntityHandle()
 
-			const titleField = handle.field('title')
+			const titleField = handle.$field('title')
 			expect(titleField.value).toBe('Test')
 		})
 
@@ -255,8 +255,8 @@ describe('EntityHandle', () => {
 			store.setEntityData('Article', 'a-1', { id: 'a-1', title: 'Test' }, true)
 			const handle = createEntityHandle()
 
-			const field1 = handle.field('title')
-			const field2 = handle.field('title')
+			const field1 = handle.$field('title')
+			const field2 = handle.$field('title')
 
 			expect(field1).toBe(field2)
 		})
@@ -276,7 +276,7 @@ describe('EntityHandle', () => {
 			store.setEntityData('Article', 'a-1', { id: 'a-1', title: 'Test', author: { id: 'auth-1', name: 'John' } }, true)
 			const handle = createEntityHandle()
 
-			const authorHandle = handle.hasOne('author')
+			const authorHandle = handle.$hasOne('author')
 			expect(authorHandle).toBeDefined()
 		})
 
@@ -284,8 +284,8 @@ describe('EntityHandle', () => {
 			store.setEntityData('Article', 'a-1', { id: 'a-1', title: 'Test' }, true)
 			const handle = createEntityHandle()
 
-			const handle1 = handle.hasOne('author')
-			const handle2 = handle.hasOne('author')
+			const handle1 = handle.$hasOne('author')
+			const handle2 = handle.$hasOne('author')
 
 			expect(handle1).toBe(handle2)
 		})
@@ -298,7 +298,7 @@ describe('EntityHandle', () => {
 			}, true)
 			const handle = createEntityHandle()
 
-			const tagsHandle = handle.hasMany('tags')
+			const tagsHandle = handle.$hasMany('tags')
 			expect(tagsHandle).toBeDefined()
 		})
 
@@ -306,7 +306,7 @@ describe('EntityHandle', () => {
 			store.setEntityData('Article', 'a-1', { id: 'a-1', title: 'Test' }, true)
 			const handle = createEntityHandle()
 
-			expect(() => handle.hasOne('nonExistent')).toThrow()
+			expect(() => handle.$hasOne('nonExistent')).toThrow()
 		})
 	})
 
@@ -318,7 +318,7 @@ describe('EntityHandle', () => {
 			store.setFieldValue('Article', 'a-1', ['title'], 'Modified')
 
 			const handle = createEntityHandle()
-			handle.reset()
+			handle.$reset()
 
 			expect(store.getEntitySnapshot('Article', 'a-1')?.data).toHaveProperty('title', 'Original')
 		})
@@ -328,7 +328,7 @@ describe('EntityHandle', () => {
 			store.setFieldValue('Article', 'a-1', ['title'], 'Modified')
 
 			const handle = createEntityHandle()
-			handle.commit()
+			handle.$commit()
 
 			expect(store.getEntitySnapshot('Article', 'a-1')?.serverData).toHaveProperty('title', 'Modified')
 		})
@@ -398,7 +398,7 @@ describe('EntityHandle', () => {
 			const listener = mock(() => {})
 			handle.$on('field:changed', listener)
 
-			handle.field('title').setValue('Updated')
+			handle.$field('title').setValue('Updated')
 
 			expect(listener).toHaveBeenCalledTimes(1)
 		})
@@ -418,7 +418,7 @@ describe('EntityHandle', () => {
 			})
 
 			expect(result).toBe(false)
-			expect(handle.field('title').value).toBe('Original')
+			expect(handle.$field('title').value).toBe('Original')
 		})
 	})
 
@@ -427,7 +427,7 @@ describe('EntityHandle', () => {
 	describe('Type Brands', () => {
 		test('should return entity type name via __entityName', () => {
 			const handle = createEntityHandle()
-			expect(handle.__entityName).toBe('Article')
+			expect(handle.$__entityName).toBe('Article')
 		})
 
 	})
@@ -440,13 +440,13 @@ describe('EntityHandle', () => {
 			const handle = createEntityHandle()
 
 			// Access some fields to populate cache
-			handle.field('title')
-			handle.hasOne('author')
+			handle.$field('title')
+			handle.$hasOne('author')
 
-			handle.dispose()
+			handle.$dispose()
 
 			// After dispose, handle should throw on operations
-			expect(() => handle.reset()).toThrow()
+			expect(() => handle.$reset()).toThrow()
 		})
 	})
 })

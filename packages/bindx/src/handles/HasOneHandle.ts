@@ -34,7 +34,7 @@ import type {
 } from '../events/types.js'
 import { EntityHandle } from './EntityHandle.js'
 import { PlaceholderHandle } from './PlaceholderHandle.js'
-import { createHandleProxy, HAS_ONE_HANDLE_PROPERTIES } from './proxyFactory.js'
+import { createHandleProxy } from './proxyFactory.js'
 
 
 /**
@@ -99,10 +99,25 @@ export class HasOneHandle<TEntity extends object = object, TSelected = TEntity> 
 		brands?: Set<symbol>,
 		selection?: SelectionMeta,
 	): HasOneHandle<TEntity, TSelected> {
-		return createHandleProxy(new HasOneHandle<TEntity, TSelected>(parentEntityType, parentEntityId, fieldName, targetType, store, dispatcher, schema, brands, selection), {
-			knownProperties: HAS_ONE_HANDLE_PROPERTIES,
-			getFields: (target) => target.entity.$fields,
-		})
+		return createHandleProxy(new HasOneHandle<TEntity, TSelected>(parentEntityType, parentEntityId, fieldName, targetType, store, dispatcher, schema, brands, selection), (target) => target.entity.$fields)
+	}
+
+	static createRaw<TEntity extends object = object, TSelected = TEntity>(
+		parentEntityType: string,
+		parentEntityId: string,
+		fieldName: string,
+		targetType: string,
+		store: SnapshotStore,
+		dispatcher: ActionDispatcher,
+		schema: SchemaRegistry,
+		brands?: Set<symbol>,
+		selection?: SelectionMeta,
+	): HasOneHandle<TEntity, TSelected> {
+		return new HasOneHandle<TEntity, TSelected>(parentEntityType, parentEntityId, fieldName, targetType, store, dispatcher, schema, brands, selection)
+	}
+
+	static wrapProxy<TEntity extends object, TSelected>(handle: HasOneHandle<TEntity, TSelected>): HasOneHandle<TEntity, TSelected> {
+		return createHandleProxy(handle, (target) => target.entity.$fields)
 	}
 
 	/**

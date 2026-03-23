@@ -53,6 +53,22 @@ export class FieldHandle<T = unknown> extends EntityRelatedHandle implements Fie
 		return createAliasProxy(new FieldHandle<T>(entityType, entityId, fieldPath, store, dispatcher, enumName, columnType))
 	}
 
+	static createRaw<T = unknown>(
+		entityType: string,
+		entityId: string,
+		fieldPath: string[],
+		store: SnapshotStore,
+		dispatcher: ActionDispatcher,
+		enumName?: string,
+		columnType?: string,
+	): FieldHandle<T> {
+		return new FieldHandle<T>(entityType, entityId, fieldPath, store, dispatcher, enumName, columnType)
+	}
+
+	static wrapProxy<T>(handle: FieldHandle<T>): FieldHandle<T> {
+		return createAliasProxy(handle)
+	}
+
 	/**
 	 * JSX field reference metadata for collection phase.
 	 * Implements FieldRef interface.
