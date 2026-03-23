@@ -3,23 +3,18 @@ import { ContemberBindxProvider } from '@contember/bindx-react'
 import { GraphQlClient } from '@contember/graphql-client'
 import { UploaderClientContext, S3UploadClient, createContentApiS3Signer } from '@contember/bindx-uploader'
 import { schemaNames } from './generated/names.js'
-import {
-	ArticleEditor,
-	ArticleView,
-	AuthorListExample,
-	TagListExample,
-	ArticleWithAuthorSelectExample,
-	LocationSelectExample,
-	UndoDemo,
-	RichTextEditorExample,
-	BlockEditorExample,
-	SimpleBlockEditorExample,
-	DataGridExample,
-	HasManyDataGridExample,
-	HeadlessBlockRepeaterExample,
-	StyledBlockRepeaterExample,
-	DualModeBlockRepeaterExample,
-} from './components/index.js'
+import { DataGridPage } from './pages/datagrid.js'
+import { HasManyDataGridPage } from './pages/hasmany-datagrid.js'
+import { ArticleViewPage } from './pages/article-view.js'
+import { EntityListsPage } from './pages/entity-lists.js'
+import { ArticleEditorPage } from './pages/article-editor.js'
+import { AuthorSelectPage } from './pages/author-select.js'
+import { LocationPickerPage } from './pages/location-picker.js'
+import { EditorsPage } from './pages/editors.js'
+import { BlockRepeaterPage } from './pages/block-repeater.js'
+import { UndoPage } from './pages/undo.js'
+import { JsxShowcaseFullPage } from './pages/jsx-showcase.js'
+import { ComponentsPage } from './pages/components.js'
 
 const client = new GraphQlClient({
 	url: `${import.meta.env['VITE_CONTEMBER_API_URL']}/content/example/live`,
@@ -46,84 +41,65 @@ function AppProvider({ children }: { children: ReactNode }): ReactNode {
 // ============================================================================
 
 const pages: Record<string, { title: string; description: string; content: ReactNode }> = {
+	'jsx-showcase': {
+		title: 'JSX Showcase',
+		description: 'Entity, Field, HasMany, HasOne, If, Show — all JSX components in action.',
+		content: <JsxShowcaseFullPage authorId="00000000-0000-0000-0000-000000000a01" articleId="00000000-0000-0000-0000-000000000e01" />,
+	},
+	components: {
+		title: 'createComponent Patterns',
+		description: 'Reusable fragment components with createComponent, explicit vs implicit selection, mergeFragments.',
+		content: <ComponentsPage authorId="00000000-0000-0000-0000-000000000a01" articleId="00000000-0000-0000-0000-000000000e01" />,
+	},
 	datagrid: {
 		title: 'DataGrid',
 		description: 'Data grid with filtering, sorting, and pagination.',
-		content: <DataGridExample />,
+		content: <DataGridPage />,
 	},
-	undo: {
-		title: 'Undo/Redo Demo',
-		description: 'Edit fields and use Undo/Redo. Changes are auto-grouped when typing rapidly.',
-		content: <UndoDemo id="00000000-0000-0000-0000-000000000e01" />,
+	'article-editor': {
+		title: 'Article Editor',
+		description: 'Full article editor with Entity JSX, SelectField, MultiSelectField, and persistence.',
+		content: <ArticleEditorPage id="00000000-0000-0000-0000-000000000e01" />,
+	},
+	'article-view': {
+		title: 'Article View',
+		description: 'Simple read-only view using Entity JSX with implicit selection.',
+		content: <ArticleViewPage id="00000000-0000-0000-0000-000000000e02" />,
+	},
+	'entity-lists': {
+		title: 'Entity Lists',
+		description: 'Display entities using EntityList JSX component.',
+		content: <EntityListsPage articleId="00000000-0000-0000-0000-000000000e02" />,
+	},
+	'author-select': {
+		title: 'Article with Author Select',
+		description: 'Entity JSX with SelectField for relation editing.',
+		content: <AuthorSelectPage id="00000000-0000-0000-0000-000000000e01" />,
+	},
+	'location-picker': {
+		title: 'Location Picker',
+		description: 'EntityList with local state for selection.',
+		content: <LocationPickerPage />,
 	},
 	editors: {
 		title: 'Rich Text & Block Editors',
 		description: 'Rich text editing with formatting and structured block editors.',
-		content: (
-			<>
-				<h3>Rich Text Editor</h3>
-				<RichTextEditorExample id="00000000-0000-0000-0000-000000000e01" />
-				<hr className="my-6" />
-				<h3>Block Editor (with references)</h3>
-				<BlockEditorExample id="00000000-0000-0000-0000-000000000e01" />
-				<hr className="my-6" />
-				<h3>Block Editor (simple)</h3>
-				<SimpleBlockEditorExample id="00000000-0000-0000-0000-000000000e02" />
-			</>
-		),
+		content: <EditorsPage id1="00000000-0000-0000-0000-000000000e01" id2="00000000-0000-0000-0000-000000000e02" />,
 	},
-	'article-editor': {
-		title: 'Article Editor',
-		description: 'Full article editor using reusable fragments for author, location, and tags.',
-		content: <ArticleEditor id="00000000-0000-0000-0000-000000000e01" />,
-	},
-	'article-view': {
-		title: 'Article View',
-		description: 'Simple read-only view using inline fragment definition.',
-		content: <ArticleView id="00000000-0000-0000-0000-000000000e02" />,
-	},
-	'entity-lists': {
-		title: 'Entity Lists',
-		description: 'Display entities from the database using useEntityList.',
-		content: (
-			<>
-				<ArticleView id="00000000-0000-0000-0000-000000000e02" />
-				<hr className="my-6" />
-				<h3>Author List</h3>
-				<AuthorListExample />
-				<hr className="my-6" />
-				<h3>Tag List</h3>
-				<TagListExample />
-			</>
-		),
-	},
-	'author-select': {
-		title: 'Article with Author Select',
-		description: 'Combining useEntity for form data with useEntityList for select options.',
-		content: <ArticleWithAuthorSelectExample id="00000000-0000-0000-0000-000000000e01" />,
-	},
-	'location-picker': {
-		title: 'Location Picker',
-		description: 'Standalone location select using useEntityList.',
-		content: <LocationSelectExample />,
+	undo: {
+		title: 'Undo/Redo Demo',
+		description: 'Edit fields and use Undo/Redo. Changes are auto-grouped when typing rapidly.',
+		content: <UndoPage id="00000000-0000-0000-0000-000000000e01" />,
 	},
 	'block-repeater': {
 		title: 'Block Repeater',
 		description: 'Repeater with type discrimination — each block renders differently based on its type.',
-		content: (
-			<>
-				<HeadlessBlockRepeaterExample id="00000000-0000-0000-0000-000000000e01" />
-				<hr className="my-4" />
-				<StyledBlockRepeaterExample id="00000000-0000-0000-0000-000000000e01" />
-				<hr className="my-4" />
-				<DualModeBlockRepeaterExample id="00000000-0000-0000-0000-000000000e01" />
-			</>
-		),
+		content: <BlockRepeaterPage id="00000000-0000-0000-0000-000000000e01" />,
 	},
 	'hasmany-datagrid': {
 		title: 'HasMany DataGrid',
 		description: 'Data grid for a has-many relation field (Author → Articles).',
-		content: <HasManyDataGridExample id="00000000-0000-0000-0000-000000000a01" />,
+		content: <HasManyDataGridPage id="00000000-0000-0000-0000-000000000a01" />,
 	},
 }
 
@@ -153,7 +129,7 @@ export function App(): ReactNode {
 			<div className="app" data-testid="app">
 				<header>
 					<h1><a href="#" className="no-underline text-inherit">Bindx Demo</a></h1>
-					<p>Examples of data binding patterns with fragments and entity lists</p>
+					<p>Examples of data binding patterns with JSX components and createComponent</p>
 				</header>
 
 				{page ? (

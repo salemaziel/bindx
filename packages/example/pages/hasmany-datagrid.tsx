@@ -1,3 +1,4 @@
+import type { ReactElement, ReactNode } from 'react'
 import { DataGridToolbarContent } from '@contember/bindx-dataview'
 import {
 	DefaultHasManyDataGrid,
@@ -7,8 +8,7 @@ import {
 	FieldLabelFormatterProvider,
 } from '@contember/bindx-ui'
 import { Entity, Field } from '@contember/bindx-react'
-import { schema } from '../../generated/index.js'
-import type { ReactElement, ReactNode } from 'react'
+import { schema } from '../generated/index.js'
 
 const fieldLabels: Record<string, Record<string, string>> = {
 	Article: {
@@ -22,7 +22,14 @@ function labelFormatter(entityName: string, fieldName: string): ReactNode | null
 	return fieldLabels[entityName]?.[fieldName] ?? null
 }
 
-export function HasManyDataGridExample({ id }: { id: string }): ReactElement {
+/**
+ * DataGrid for a has-many relation (Author → Articles).
+ *
+ * Demonstrates:
+ * - Entity JSX wrapping a DefaultHasManyDataGrid
+ * - Nested relation data grid
+ */
+export function HasManyDataGridPage({ id }: { id: string }): ReactElement {
 	return (
 		<Entity entity={schema.Author} by={{ id }}>
 			{author => (

@@ -1,7 +1,5 @@
-import {
-	DataGridToolbarContent,
-	DataGridLayout,
-} from '@contember/bindx-dataview'
+import type { ReactElement, ReactNode } from 'react'
+import { DataGridToolbarContent, DataGridLayout } from '@contember/bindx-dataview'
 import {
 	DefaultDataGrid,
 	DataGridTextColumn,
@@ -13,8 +11,7 @@ import {
 	FieldLabelFormatterProvider,
 } from '@contember/bindx-ui'
 import { Field, HasOne } from '@contember/bindx-react'
-import { schema } from '../../generated/index.js'
-import type { ReactElement, ReactNode } from 'react'
+import { schema } from '../generated/index.js'
 
 const fieldLabels: Record<string, Record<string, string>> = {
 	Article: {
@@ -39,15 +36,15 @@ function labelFormatter(entityName: string, fieldName: string): ReactNode | null
 }
 
 /**
- * Example: Styled DataGrid with filtering, sorting, and pagination.
+ * DataGrid with filtering, sorting, pagination, and multiple layouts.
  *
- * - Table layout auto-renders from column metadata (DataGridAutoTable)
- * - Grid layout uses the DataGridLayout marker with JSX components (Field, HasOne)
- * - Rows layout demonstrates a second custom layout
- * - Toolbar content uses the DataGridToolbarContent marker
- * - No extra children needed — DefaultDataGrid handles everything
+ * Demonstrates:
+ * - DefaultDataGrid with marker-based columns
+ * - Table layout (auto-rendered from column metadata)
+ * - Grid and rows custom layouts via DataGridLayout marker
+ * - Toolbar content with filters
  */
-export function DataGridExample(): ReactElement {
+export function DataGridPage(): ReactElement {
 	return (
 		<div data-testid="datagrid-example">
 			<FieldLabelFormatterProvider formatter={labelFormatter}>
@@ -79,7 +76,7 @@ export function DataGridExample(): ReactElement {
 										</div>
 										<div className="text-xs text-gray-500 mt-1" data-testid="tile-author">
 											<HasOne field={item.author}>
-												{(author) => <Field field={author.name} />}
+												{author => <Field field={author.name} />}
 											</HasOne>
 										</div>
 									</div>
@@ -95,7 +92,7 @@ export function DataGridExample(): ReactElement {
 										<span className="font-medium"><Field field={item.title} /></span>
 										<span className="text-sm text-gray-500">
 											<HasOne field={item.author}>
-												{(author) => <Field field={author.name} />}
+												{author => <Field field={author.name} />}
 											</HasOne>
 										</span>
 									</div>
