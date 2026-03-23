@@ -21,11 +21,9 @@ export {
 export {
 	useEntity,
 	type UseEntityOptions,
-	type LoadingEntityAccessor,
-	type ErrorEntityAccessor,
-	type NotFoundEntityAccessor,
-	type ReadyEntityAccessor,
-	type EntityAccessorResult,
+	type PendingEntityResult,
+	type ReadyEntityResult,
+	type UseEntityResult,
 } from './useEntity.js'
 
 export {

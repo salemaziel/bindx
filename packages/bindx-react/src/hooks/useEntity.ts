@@ -12,6 +12,7 @@ import type {
 	CommonEntity,
 	EntityForRoles,
 	RoleNames,
+	EntityAccessor,
 } from '@contember/bindx'
 import {
 	EntityHandle,
@@ -51,165 +52,41 @@ export interface UseEntityOptions {
 // ============================================================================
 
 /**
- * Loading state for entity accessor
+ * Common properties on every UseEntityResult state.
+ * All prefixed with $ to avoid collision with entity field names.
  */
-export interface LoadingEntityAccessor {
-	readonly status: 'loading'
-	readonly isLoading: true
-	readonly isError: false
-	readonly isNotFound: false
-	readonly isPersisting: false
-	readonly isDirty: false
-	readonly id: string
-	readonly fields: never
-	readonly data: never
-	persist(): Promise<void>
-	reset(): void
+interface UseEntityResultBase {
+	readonly $isLoading: boolean
+	readonly $isError: boolean
+	readonly $isNotFound: boolean
+	readonly $error: FieldError | null
+	$persist(): Promise<void>
+	$reset(): void
 }
 
 /**
- * Error state for entity accessor
+ * Loading/error/not_found state — field access throws.
  */
-export interface ErrorEntityAccessor {
-	readonly status: 'error'
-	readonly isLoading: false
-	readonly isError: true
-	readonly isNotFound: false
-	readonly error: FieldError
-	readonly isPersisting: false
-	readonly isDirty: false
+export type PendingEntityResult = UseEntityResultBase & {
+	readonly $status: 'loading' | 'error' | 'not_found'
 	readonly id: string
-	readonly fields: never
-	readonly data: never
-	persist(): Promise<void>
-	reset(): void
 }
 
 /**
- * Not found state for entity accessor
+ * Ready state — full EntityAccessor with status metadata.
  */
-export interface NotFoundEntityAccessor {
-	readonly status: 'not_found'
-	readonly isLoading: false
-	readonly isError: false
-	readonly isNotFound: true
-	readonly isPersisting: false
-	readonly isDirty: false
-	readonly id: string
-	readonly fields: never
-	readonly data: never
-	persist(): Promise<void>
-	reset(): void
-}
-
-/**
- * Ready state base interface for entity accessor
- */
-export interface ReadyEntityAccessorBase<TEntity extends object, TSelected extends object = TEntity> {
-	readonly status: 'ready'
-	readonly isLoading: false
-	readonly isError: false
-	readonly isNotFound: false
-	readonly isPersisting: boolean
-	readonly isDirty: boolean
-	readonly id: string
-	readonly fields: SelectedEntityFields<TEntity, TSelected>
-	readonly data: TSelected
-	persist(): Promise<void>
-	reset(): void
-}
-
-/**
- * Ready state for entity accessor with direct field access via Proxy.
- */
-export type ReadyEntityAccessor<TEntity extends object, TSelected extends object = TEntity> =
-	ReadyEntityAccessorBase<TEntity, TSelected> & SelectedEntityFields<TEntity, TSelected>
-
-/**
- * Union of all entity accessor states
- */
-export type EntityAccessorResult<TEntity extends object, TSelected extends object = TEntity> =
-	| LoadingEntityAccessor
-	| ErrorEntityAccessor
-	| NotFoundEntityAccessor
-	| ReadyEntityAccessor<TEntity, TSelected>
-
-// ============================================================================
-// Internal helpers
-// ============================================================================
-
-function createLoadingAccessor(id: string): LoadingEntityAccessor {
-	return {
-		status: 'loading',
-		isLoading: true,
-		isError: false,
-		isNotFound: false,
-		isPersisting: false,
-		isDirty: false,
-		id,
-		get fields(): never {
-			throw new Error('Cannot access fields while loading')
-		},
-		get data(): never {
-			throw new Error('Cannot access data while loading')
-		},
-		async persist() {
-			// No-op while loading
-		},
-		reset() {
-			// No-op while loading
-		},
+export type ReadyEntityResult<TEntity extends object, TSelected extends object = TEntity> =
+	UseEntityResultBase & EntityAccessor<TEntity, TSelected> & {
+		readonly $status: 'ready'
 	}
-}
 
-function createErrorAccessor(id: string, error: FieldError): ErrorEntityAccessor {
-	return {
-		status: 'error',
-		isLoading: false,
-		isError: true,
-		isNotFound: false,
-		error,
-		isPersisting: false,
-		isDirty: false,
-		id,
-		get fields(): never {
-			throw new Error('Cannot access fields after error')
-		},
-		get data(): never {
-			throw new Error('Cannot access data after error')
-		},
-		async persist() {
-			// No-op after error
-		},
-		reset() {
-			// No-op after error
-		},
-	}
-}
-
-function createNotFoundAccessor(id: string): NotFoundEntityAccessor {
-	return {
-		status: 'not_found',
-		isLoading: false,
-		isError: false,
-		isNotFound: true,
-		isPersisting: false,
-		isDirty: false,
-		id,
-		get fields(): never {
-			throw new Error('Cannot access fields — entity not found')
-		},
-		get data(): never {
-			throw new Error('Cannot access data — entity not found')
-		},
-		async persist() {
-			// No-op for not found
-		},
-		reset() {
-			// No-op for not found
-		},
-	}
-}
+/**
+ * Union of all useEntity return states.
+ * Discriminated on $status.
+ */
+export type UseEntityResult<TEntity extends object, TSelected extends object = TEntity> =
+	| PendingEntityResult
+	| ReadyEntityResult<TEntity, TSelected>
 
 // ============================================================================
 // Hook overloads
@@ -217,11 +94,6 @@ function createNotFoundAccessor(id: string): NotFoundEntityAccessor {
 
 /**
  * Hook to fetch and manage a single entity with role-expanded type inference.
- *
- * @example
- * ```tsx
- * const article = useEntity(schema.Article, { by: { id }, roles: ['admin'] }, e => e.title().internalNotes())
- * ```
  */
 export function useEntity<
 	TRoleMap extends Record<string, object>,
@@ -231,16 +103,15 @@ export function useEntity<
 	entity: EntityDef<TRoleMap>,
 	options: UseEntityOptions & { roles: readonly TRoles[] },
 	definer: SelectionInput<EntityForRoles<TRoleMap, TRoles>, TResult>,
-): EntityAccessorResult<EntityForRoles<TRoleMap, TRoles>, TResult>
+): UseEntityResult<EntityForRoles<TRoleMap, TRoles>, TResult>
 
 /**
  * Hook to fetch and manage a single entity with full type inference.
- * Uses the common (narrowest) entity type when no roles are specified.
  *
  * @example
  * ```tsx
  * const article = useEntity(schema.Article, { by: { id } }, e => e.title().content())
- * if (article.status !== 'ready') return <Loading />
+ * if (article.$status !== 'ready') return <Loading />
  * return <input value={article.title.value} onChange={...} />
  * ```
  */
@@ -248,31 +119,26 @@ export function useEntity<TRoleMap extends Record<string, object>, TResult exten
 	entity: EntityDef<TRoleMap>,
 	options: UseEntityOptions,
 	definer: SelectionInput<CommonEntity<TRoleMap>, TResult>,
-): EntityAccessorResult<CommonEntity<TRoleMap>, TResult>
+): UseEntityResult<CommonEntity<TRoleMap>, TResult>
 
 /**
  * Hook to fetch and manage a single entity with pre-resolved selection.
- *
  * Used internally by Entity component that collects selection from JSX.
  */
 export function useEntity(
 	entity: EntityDef,
 	options: UseEntityOptions & { selection: SelectionMeta },
-): EntityAccessorResult<object, object>
+): UseEntityResult<object, object>
 
 // ============================================================================
 // Implementation
 // ============================================================================
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function useEntity(
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	entity: EntityDef<any>,
 	options: UseEntityOptions,
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	definer?: SelectionInput<any, any>,
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-): EntityAccessorResult<any, any> {
+): UseEntityResult<any, any> {
 	const schemaRegistry = useSchemaRegistry()
 	const entityType = entity.$name
 	const { store, dispatcher, batcher, batchPersister } = useBindxContext()
@@ -409,8 +275,6 @@ export function useEntity(
 	}, [entityType, id, byKey, effectiveQueryKey, options.cache, batcher, store, dispatcher, selectionMeta])
 
 	// --- EntityHandle ---
-	// Include snapshot in deps so handle reference changes when entity data changes.
-	// This ensures memo-wrapped children that receive individual field handles re-render.
 	const handle = useMemo(
 		() => EntityHandle.create(id, entityType, store, dispatcher, schemaRegistry as SchemaRegistry<Record<string, object>>),
 		[id, entityType, store, dispatcher, schemaRegistry, snapshot],
@@ -422,68 +286,102 @@ export function useEntity(
 		}
 	}, [handle])
 
-	// --- Build accessor ---
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const accessor = useMemo((): EntityAccessorResult<any, any> => {
-		if (!loadState || loadState.status === 'loading') {
-			return createLoadingAccessor(id)
+	// --- Persist & reset callbacks ---
+	const persist = useCallback(async () => {
+		await batchPersister.persist(entityType, id)
+	}, [batchPersister, entityType, id])
+
+	const reset = useCallback(() => {
+		handle.$reset()
+	}, [handle])
+
+	// --- Build result ---
+	const result = useMemo((): UseEntityResult<any, any> => {
+		const status = !loadState || loadState.status === 'loading'
+			? 'loading' as const
+			: loadState.status === 'error'
+				? 'error' as const
+				: loadState.status === 'not_found'
+					? 'not_found' as const
+					: !snapshot
+						? 'loading' as const
+						: 'ready' as const
+
+		const error = loadState?.status === 'error' ? loadState.error! : null
+
+		if (status !== 'ready') {
+			return createPendingResult(status, id, error, persist, reset)
 		}
 
-		if (loadState.status === 'error') {
-			return createErrorAccessor(id, loadState.error!)
-		}
+		// Ready — return the EntityHandle (which is already a proxy with field access)
+		// plus $status and result metadata
+		return createReadyResult(handle, error, isPersisting, persist, reset)
+	}, [snapshot, loadState, isPersisting, id, handle, persist, reset])
 
-		if (loadState.status === 'not_found') {
-			return createNotFoundAccessor(id)
-		}
+	return result
+}
 
-		if (!snapshot) {
-			return createLoadingAccessor(id)
-		}
+// ============================================================================
+// Result factories
+// ============================================================================
 
-		// Ready state
-		const realId = (snapshot.data as Record<string, unknown>)?.['id'] as string | undefined ?? id
+function createPendingResult(
+	status: 'loading' | 'error' | 'not_found',
+	id: string,
+	error: FieldError | null,
+	persist: () => Promise<void>,
+	reset: () => void,
+): PendingEntityResult {
+	return {
+		$status: status,
+		$isLoading: status === 'loading',
+		$isError: status === 'error',
+		$isNotFound: status === 'not_found',
+		$error: error,
+		id,
+		$persist: persist,
+		$reset: reset,
+	}
+}
 
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const baseAccessor: ReadyEntityAccessorBase<any, any> = {
-			status: 'ready',
-			isLoading: false,
-			isError: false,
-			isNotFound: false,
-			isPersisting,
-			get isDirty() {
-				return handle.$isDirty
-			},
-			id: realId,
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			fields: handle.$fields as any,
-			data: snapshot.data,
-			async persist() {
-				await batchPersister.persist(entityType, realId)
-			},
-			reset() {
-				handle.reset()
-			},
-		}
+function createReadyResult(
+	handle: EntityHandle<any, any>,
+	error: FieldError | null,
+	isPersisting: boolean,
+	persist: () => Promise<void>,
+	reset: () => void,
+): ReadyEntityResult<any, any> {
+	// The handle IS already a proxied EntityAccessor.
+	// We need to layer $status/$isLoading/etc. on top without breaking field access.
+	// Use a Proxy that checks our metadata properties first, then delegates to handle.
+	const meta = {
+		$status: 'ready' as const,
+		$isLoading: false,
+		$isError: false,
+		$isNotFound: false,
+		$error: error,
+		$persist: persist,
+		$reset: reset,
+	}
 
-		// Wrap in Proxy for direct field access
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		return new Proxy(baseAccessor as any, {
-			get(target: Record<string, unknown>, prop: string | symbol, receiver: unknown) {
-				if (prop in target) {
-					return Reflect.get(target, prop, receiver)
-				}
-				if (typeof prop === 'string') {
-					const fields = target['fields'] as Record<string, unknown>
-					const fieldValue = fields[prop]
-					if (fieldValue !== undefined) {
-						return fieldValue
-					}
-				}
-				return undefined
-			},
-		})
-	}, [snapshot, loadState, isPersisting, id, handle, batchPersister, entityType])
-
-	return accessor
+	return new Proxy(handle as any, {
+		get(target, prop, receiver) {
+			// Check metadata properties first
+			if (typeof prop === 'string' && prop in meta) {
+				return (meta as any)[prop]
+			}
+			// isPersisting override — handle may have stale value
+			if (prop === '$isPersisting') {
+				return isPersisting
+			}
+			// Everything else delegates to handle (which already has field access proxy)
+			return Reflect.get(target, prop, receiver)
+		},
+		has(target, prop) {
+			if (typeof prop === 'string' && prop in meta) {
+				return true
+			}
+			return Reflect.has(target, prop)
+		},
+	}) as any
 }
