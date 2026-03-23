@@ -149,6 +149,27 @@ const defaultTypeHandlers: Partial<Record<ColumnType, HandlerFactory>> = {
 }
 
 /**
+ * Maps Contember DB column types (lowercase) to ColumnType (PascalCase).
+ * Handles both formats so the handler works with schema-provided types.
+ */
+const columnTypeAliases: Record<string, ColumnType> = {
+	text: 'String',
+	integer: 'Integer',
+	double: 'Double',
+	date: 'Date',
+	timestamptz: 'DateTime',
+	time: 'Time',
+	bool: 'Bool',
+	uuid: 'Uuid',
+	jsonb: 'Json',
+}
+
+function resolveColumnType(columnType: string | undefined): ColumnType | undefined {
+	if (!columnType) return undefined
+	return (columnTypeAliases[columnType] ?? columnType) as ColumnType
+}
+
+/**
  * Options for useFormInputHandler hook
  */
 export interface UseFormInputHandlerOptions {
@@ -169,7 +190,8 @@ export function useFormInputHandler(options: UseFormInputHandlerOptions = {}): F
 
 	return useMemo(() => {
 		// Get base handler from column type or default to string
-		const factory = (columnType && defaultTypeHandlers[columnType]) || createStringHandler
+		const resolved = resolveColumnType(columnType)
+		const factory = (resolved && defaultTypeHandlers[resolved]) || createStringHandler
 		const baseHandler = factory()
 
 		return {

@@ -45,6 +45,7 @@ export function FormInput<T>({
 	const handler = useFormInputHandler({
 		formatValue: formatValueProp as ((value: unknown) => string) | undefined,
 		parseValue: parseValueProp as ((value: string) => unknown) | undefined,
+		columnType: formState?.field?.columnType as import('../types.js').ColumnType | undefined,
 	})
 
 	// Get validation handler for HTML5 validation + touch tracking

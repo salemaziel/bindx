@@ -17,11 +17,12 @@ export function schemaNamesToDef(schemaNames: SchemaNames): SchemaDefinition<Rec
 		for (const [fieldName, fieldDef] of Object.entries(entity.fields)) {
 			if (fieldDef.type === 'column') {
 				const enumName = (fieldDef as { enumName?: string }).enumName
+				const columnType = (fieldDef as { columnType?: string }).columnType
 				const enumValues = enumName ? enumsMap[enumName] : undefined
 				if (enumName && enumValues) {
 					fields[fieldName] = { type: 'enum', enumName, values: enumValues }
 				} else {
-					fields[fieldName] = { type: 'scalar' }
+					fields[fieldName] = { type: 'scalar', columnType }
 				}
 			} else if (fieldDef.type === 'one') {
 				fields[fieldName] = { type: 'hasOne', target: fieldDef.entity }
