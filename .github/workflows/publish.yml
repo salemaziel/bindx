@@ -1,0 +1,49 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - '**'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install deps
+        run: bun install --frozen-lockfile
+
+      - name: Extract version
+        id: versions
+        uses: ./.github/actions/extract-version
+        with:
+          version: ${{ github.ref }}
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Test
+        run: bun run test
+
+      - name: Build
+        run: bun run build
+
+      - name: Publish NPM
+        run: bash ./scripts/npm-publish/run.sh
+        env:
+          NPM_TAG: ${{ steps.versions.outputs.npmTag }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -20,5 +20,10 @@
 		"@contember/client-content": "^2.1.0-alpha.30",
 		"@contember/graphql-builder": "^2.1.0-alpha.30",
 		"@contember/graphql-client": "^2.1.0-alpha.30"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/contember/bindx.git",
+		"directory": "packages/bindx"
 	}
 }
