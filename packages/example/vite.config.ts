@@ -14,6 +14,6 @@ export default defineConfig({
 		alias: {
 			'../src/index.js': path.resolve(__dirname, '../src/index.ts'),
 		},
-		dedupe: ['react', 'react-dom'],
+		dedupe: ['react', 'react-dom', '@contember/bindx', '@contember/bindx-react', '@contember/bindx-dataview', '@contember/bindx-form'],
 	},
 })

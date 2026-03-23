@@ -1,7 +1,7 @@
 import React from 'react'
 import { useUndo, useEntity } from '@contember/bindx-react'
 import { schema } from '../generated/index.js'
-import { TextInput } from './inputs/index.js'
+import { InputField, TextareaField, Button } from '@contember/bindx-ui'
 
 /**
  * Demo component showcasing undo/redo functionality.
@@ -19,7 +19,7 @@ export function UndoDemo({ id }: { id: string }): React.ReactElement {
 		return <div className="error">Error: {article.error?.message}</div>
 	}
 
-	const handleBulkUpdate = () => {
+	const handleBulkUpdate = (): void => {
 		const groupId = beginGroup('Bulk update')
 		article.fields.title.setValue('Bulk Updated Title')
 		article.fields.content.setValue('Bulk Updated Content - this is a single undo operation!')
@@ -29,38 +29,29 @@ export function UndoDemo({ id }: { id: string }): React.ReactElement {
 	return (
 		<div className="undo-demo" data-testid="undo-demo">
 			<div className="undo-toolbar">
-				<button onClick={undo} disabled={!canUndo} title="Undo (Ctrl+Z)" data-testid="undo-button">
-					↩ Undo ({undoCount})
-				</button>
-				<button onClick={redo} disabled={!canRedo} title="Redo (Ctrl+Y)" data-testid="redo-button">
-					↪ Redo ({redoCount})
-				</button>
-				<button onClick={handleBulkUpdate} className="bulk-btn" data-testid="bulk-update-button">
+				<Button variant="outline" size="sm" onClick={undo} disabled={!canUndo} title="Undo (Ctrl+Z)" data-testid="undo-button">
+					Undo ({undoCount})
+				</Button>
+				<Button variant="outline" size="sm" onClick={redo} disabled={!canRedo} title="Redo (Ctrl+Y)" data-testid="redo-button">
+					Redo ({redoCount})
+				</Button>
+				<Button variant="secondary" size="sm" onClick={handleBulkUpdate} data-testid="bulk-update-button">
 					Bulk Update (grouped)
-				</button>
+				</Button>
 			</div>
 
 			<div className="form-fields">
-				<div className="field">
-					<label>Title:</label>
-					<TextInput
-						field={article.fields.title}
-						label=""
-						testId="undo-title-input"
-					/>
-					{article.fields.title.isDirty && <span className="dirty-indicator">*</span>}
-				</div>
+				<InputField
+					field={article.fields.title}
+					label="Title"
+					inputProps={{ 'data-testid': 'undo-title-input' }}
+				/>
 
-				<div className="field">
-					<label>Content:</label>
-					<textarea
-						value={article.fields.content.value ?? ''}
-						onChange={e => article.fields.content.setValue(e.target.value)}
-						rows={4}
-						data-testid="undo-content-input"
-					/>
-					{article.fields.content.isDirty && <span className="dirty-indicator">*</span>}
-				</div>
+				<TextareaField
+					field={article.fields.content}
+					label="Content"
+					inputProps={{ 'data-testid': 'undo-content-input', rows: 4 }}
+				/>
 			</div>
 
 			<div className="hint">
@@ -87,46 +78,10 @@ export function UndoDemo({ id }: { id: string }): React.ReactElement {
 					padding-bottom: 1rem;
 					border-bottom: 1px solid #eee;
 				}
-				.undo-toolbar button {
-					padding: 0.5rem 1rem;
-					border: 1px solid #ccc;
-					border-radius: 4px;
-					background: #f5f5f5;
-					cursor: pointer;
-				}
-				.undo-toolbar button:disabled {
-					opacity: 0.5;
-					cursor: not-allowed;
-				}
-				.undo-toolbar button:not(:disabled):hover {
-					background: #e5e5e5;
-				}
-				.bulk-btn {
-					margin-left: auto;
-					background: #e3f2fd !important;
-					border-color: #90caf9 !important;
-				}
 				.form-fields {
 					display: flex;
 					flex-direction: column;
 					gap: 1rem;
-				}
-				.field {
-					display: flex;
-					flex-direction: column;
-					gap: 0.25rem;
-				}
-				.field label {
-					font-weight: 500;
-				}
-				.field input, .field textarea {
-					padding: 0.5rem;
-					border: 1px solid #ccc;
-					border-radius: 4px;
-				}
-				.dirty-indicator {
-					color: #f57c00;
-					font-weight: bold;
 				}
 				.hint {
 					margin-top: 1rem;

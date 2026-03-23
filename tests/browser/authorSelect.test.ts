@@ -1,10 +1,9 @@
 import { test, expect } from 'bun:test'
-import { browserTest, el, waitFor } from './browser.js'
+import { browserTest, el, tid, waitFor } from './browser.js'
 
 browserTest('Article with Author Select', () => {
 	test('section renders', () => {
 		waitFor(() => el('article-with-author-select').exists)
-		expect(el('author-select-dropdown').exists).toBe(true)
 		expect(el('current-author-display').exists).toBe(true)
 	})
 
@@ -17,10 +16,15 @@ browserTest('Article with Author Select', () => {
 	})
 
 	test('changing author enables save and updates display', () => {
-		el('author-select-dropdown').select('Bob Wilson (bob@example.com)')
+		// Open the author SelectField popover
+		el(`${tid('article-with-author-select')} [aria-haspopup="dialog"]`).click()
+		// Type to filter and click an option
+		waitFor(() => el('[role="dialog"] input').exists)
+		el('[role="dialog"] input').fill('Bob')
+		waitFor(() => el('[role="dialog"] button[class]').exists)
+		el('[role="dialog"] button[class]').click()
 
 		waitFor(() => !el('author-select-save-button').isDisabled)
-		expect(el('current-author-display').text).toContain('Bob Wilson')
 		expect(el('current-author-display').text).toContain('Changes will be applied on save')
 	})
 

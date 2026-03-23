@@ -1,5 +1,6 @@
 import type { EntityRef, EntityListAccessorResult } from '@contember/bindx-react'
-import { TextInput } from '../inputs/index.js'
+import { InputField } from '@contember/bindx-ui'
+import { Button } from '@contember/bindx-ui'
 
 interface TagData {
 	id: string
@@ -13,8 +14,8 @@ interface TagData {
 export function TagEditor({ tag }: { tag: EntityRef<TagData> }) {
 	return (
 		<div className="tag-editor">
-			<TextInput field={tag.$fields.name} label="Tag Name" />
-			<TextInput field={tag.$fields.color} label="Color" />
+			<InputField field={tag.$fields.name} label="Tag Name" />
+			<InputField field={tag.$fields.color} label="Color" />
 		</div>
 	)
 }
@@ -42,11 +43,11 @@ export function TagListEditor({
 			{tags.items.map(item => (
 				<div key={item.id} className="tag-item">
 					<TagEditor tag={item} />
-					<button onClick={() => tags.remove(item.id)}>Remove</button>
+					<Button variant="destructive" size="sm" onClick={() => tags.remove(item.id)}>Remove</Button>
 				</div>
 			))}
 
-			<button onClick={() => tags.add({ name: '', color: '#000000' })}>Add Tag</button>
+			<Button variant="outline" size="sm" onClick={() => tags.add({ name: '', color: '#000000' })}>Add Tag</Button>
 		</div>
 	)
 }

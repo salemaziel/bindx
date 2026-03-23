@@ -1,8 +1,5 @@
-// Input components (model-unaware)
-export { TextInput, NumberInput, CoordinatePicker, Select } from './inputs/index.js'
-
 // Editor components (model-aware fragments)
-export { AuthorEditor, LocationEditor, TagEditor, TagListEditor, AuthorSelect, AuthorSelectWithEmail } from './editors/index.js'
+export { AuthorEditor, LocationEditor, TagEditor, TagListEditor } from './editors/index.js'
 
 // Article components
 export { ArticleEditor, ArticleView } from './articles/index.js'
