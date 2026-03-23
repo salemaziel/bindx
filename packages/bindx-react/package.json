@@ -1,6 +1,6 @@
 {
 	"name": "@contember/bindx-react",
-	"version": "0.1.6",
+	"version": "0.1.7",
 	"description": "Type-safe React data binding framework",
 	"type": "module",
 	"main": "./src/index.ts",
