@@ -34,106 +34,66 @@ export interface UseEntityListOptions {
 // Result types
 // ============================================================================
 
-/**
- * Loading state for entity list accessor
- */
-export interface LoadingEntityListAccessor {
-	readonly status: 'loading'
-	readonly isLoading: true
-	readonly isError: false
-	readonly isDirty: false
-	readonly items: never
-	readonly length: 0
-	add(data?: unknown): string
-	remove(key: string): void
-	move(fromIndex: number, toIndex: number): void
+interface EntityListResultBase {
+	$add(data?: unknown): string
+	$remove(key: string): void
+	$move(fromIndex: number, toIndex: number): void
 }
 
-/**
- * Error state for entity list accessor
- */
-export interface ErrorEntityListAccessor {
-	readonly status: 'error'
-	readonly isLoading: false
-	readonly isError: true
-	readonly error: FieldError
-	readonly isDirty: false
-	readonly items: never
-	readonly length: 0
-	add(data?: unknown): string
-	remove(key: string): void
-	move(fromIndex: number, toIndex: number): void
+export type LoadingEntityListResult = EntityListResultBase & {
+	readonly $status: 'loading'
+	readonly $isLoading: true
+	readonly $isError: false
+	readonly $error: null
 }
 
-/**
- * Ready state for entity list accessor
- */
-export interface ReadyEntityListAccessor<T extends object> {
-	readonly status: 'ready'
-	readonly isLoading: false
-	readonly isError: false
-	readonly isDirty: boolean
+export type ErrorEntityListResult = EntityListResultBase & {
+	readonly $status: 'error'
+	readonly $isLoading: false
+	readonly $isError: true
+	readonly $error: FieldError
+}
+
+export type ReadyEntityListResult<T extends object> = EntityListResultBase & {
+	readonly $status: 'ready'
+	readonly $isLoading: false
+	readonly $isError: false
+	readonly $error: null
+	readonly $isDirty: boolean
 	readonly items: Array<EntityAccessor<T>>
 	readonly length: number
-	add(data?: Partial<T>): string
-	remove(key: string): void
-	move(fromIndex: number, toIndex: number): void
 }
 
-/**
- * Union of all entity list accessor states
- */
-export type EntityListAccessorResult<T extends object> =
-	| LoadingEntityListAccessor
-	| ErrorEntityListAccessor
-	| ReadyEntityListAccessor<T>
+export type UseEntityListResult<T extends object> =
+	| LoadingEntityListResult
+	| ErrorEntityListResult
+	| ReadyEntityListResult<T>
 
 // ============================================================================
 // Internal helpers
 // ============================================================================
 
-function createLoadingListAccessor(): LoadingEntityListAccessor {
+function createLoadingListResult(): LoadingEntityListResult {
 	return {
-		status: 'loading',
-		isLoading: true,
-		isError: false,
-		isDirty: false,
-		get items(): never {
-			throw new Error('Cannot access items while loading')
-		},
-		length: 0,
-		add() {
-			throw new Error('Cannot add items while loading')
-		},
-		remove() {
-			throw new Error('Cannot remove items while loading')
-		},
-		move() {
-			throw new Error('Cannot move items while loading')
-		},
+		$status: 'loading',
+		$isLoading: true,
+		$isError: false,
+		$error: null,
+		$add() { throw new Error('Cannot add items while loading') },
+		$remove() { throw new Error('Cannot remove items while loading') },
+		$move() { throw new Error('Cannot move items while loading') },
 	}
 }
 
-function createErrorListAccessor(error: FieldError): ErrorEntityListAccessor {
+function createErrorListResult(error: FieldError): ErrorEntityListResult {
 	return {
-		status: 'error',
-		isLoading: false,
-		isError: true,
-		error,
-		isDirty: false,
-		get items(): never {
-			throw new Error('Cannot access items after error')
-		},
-		length: 0,
-		add() {
-			throw new Error('Cannot add items after error')
-		},
-		remove() {
-			throw new Error('Cannot remove items after error')
-		},
-		move() {
-			throw new Error('Cannot move items after error')
-		},
+		$status: 'error',
+		$isLoading: false,
+		$isError: true,
+		$error: error,
+		$add() { throw new Error('Cannot add items after error') },
+		$remove() { throw new Error('Cannot remove items after error') },
+		$move() { throw new Error('Cannot move items after error') },
 	}
 }
 
@@ -157,7 +117,7 @@ export function useEntityList<
 	entity: EntityDef<TRoleMap>,
 	options: UseEntityListOptions & { roles: readonly TRoles[] },
 	definer: SelectionInput<EntityForRoles<TRoleMap, TRoles>, TResult>,
-): EntityListAccessorResult<TResult>
+): UseEntityListResult<TResult>
 
 /**
  * Hook to fetch and manage a list of entities with full type inference.
@@ -174,7 +134,7 @@ export function useEntityList<TRoleMap extends Record<string, object>, TResult e
 	entity: EntityDef<TRoleMap>,
 	options: UseEntityListOptions,
 	definer: SelectionInput<CommonEntity<TRoleMap>, TResult>,
-): EntityListAccessorResult<TResult>
+): UseEntityListResult<TResult>
 
 /**
  * Hook to fetch and manage a list of entities with pre-resolved selection.
@@ -185,7 +145,7 @@ export function useEntityList<TRoleMap extends Record<string, object>, TResult e
 export function useEntityList(
 	entity: EntityDef,
 	options: UseEntityListOptions & { selection: SelectionMeta },
-): EntityListAccessorResult<object>
+): UseEntityListResult<object>
 
 // ============================================================================
 // Implementation
@@ -197,7 +157,7 @@ export function useEntityList(
 	options: UseEntityListOptions,
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	definer?: SelectionInput<any, any>,
-): EntityListAccessorResult<any> {
+): UseEntityListResult<any> {
 	const schemaRegistry = useSchemaRegistry()
 	const entityType = entity.$name
 	const { store, dispatcher, batcher } = useBindxContext()
@@ -250,7 +210,7 @@ export function useEntityList(
 		version: number
 		storeVersion: number
 		status: string
-		result: EntityListAccessorResult<object>
+		result: UseEntityListResult<any>
 	} | null>(null)
 
 	// --- Store subscription ---
@@ -310,7 +270,7 @@ export function useEntityList(
 	)
 
 	// --- Snapshot ---
-	const getSnapshot = useCallback((): EntityListAccessorResult<object> => {
+	const getSnapshot = useCallback((): UseEntityListResult<any> => {
 		const state = listStateRef.current
 		const version = versionRef.current
 		const storeVersion = store.getVersion()
@@ -320,12 +280,12 @@ export function useEntityList(
 			return cache.result
 		}
 
-		let result: EntityListAccessorResult<object>
+		let result: UseEntityListResult<any>
 
 		if (state.status === 'loading') {
-			result = createLoadingListAccessor()
+			result = createLoadingListResult()
 		} else if (state.status === 'error') {
-			result = createErrorListAccessor(state.error!)
+			result = createErrorListResult(state.error!)
 		} else {
 			const items = state.items.map((item) => {
 				return EntityHandle.create<object>(
@@ -334,19 +294,20 @@ export function useEntityList(
 					store,
 					dispatcher,
 					schemaRegistry as SchemaRegistry<Record<string, object>>,
-				) as unknown as EntityAccessor<object>
+				) as unknown as EntityAccessor<any>
 			})
 
 			result = {
-				status: 'ready',
-				isLoading: false,
-				isError: false,
-				isDirty: false,
+				$status: 'ready',
+				$isLoading: false,
+				$isError: false,
+				$error: null,
+				$isDirty: false,
 				items,
 				length: items.length,
-				add: addItem,
-				remove: removeItem,
-				move: moveItem,
+				$add: addItem,
+				$remove: removeItem,
+				$move: moveItem,
 			}
 		}
 
@@ -361,7 +322,7 @@ export function useEntityList(
 	}, [entityType, store, dispatcher, schemaRegistry, addItem, removeItem, moveItem])
 
 	const isEqual = useCallback(
-		(a: EntityListAccessorResult<object>, b: EntityListAccessorResult<object>): boolean => {
+		(a: UseEntityListResult<any>, b: UseEntityListResult<any>): boolean => {
 			return a === b
 		},
 		[],

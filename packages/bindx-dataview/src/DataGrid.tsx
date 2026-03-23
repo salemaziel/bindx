@@ -105,27 +105,27 @@ function DataGridImpl<TRoleMap extends Record<string, object>>({
 		queryKey: setup.queryKey,
 	})
 
-	const items = result.status === 'ready' ? result.items : []
+	const items = result.$status === 'ready' ? result.items : []
 	const itemCount = items.length
 
 	// Update loader state
 	useEffect(() => {
-		if (result.status === 'ready') {
+		if (result.$status === 'ready') {
 			hasLoadedOnce.current = true
 			setLoaderState('loaded')
-		} else if (result.status === 'error') {
+		} else if (result.$status === 'error') {
 			setLoaderState('failed')
-		} else if (result.status === 'loading') {
+		} else if (result.$status === 'loading') {
 			setLoaderState(hasLoadedOnce.current ? 'refreshing' : 'initial')
 		}
-	}, [result.status])
+	}, [result.$status])
 
 	// Update total count when data is ready
 	useEffect(() => {
-		if (result.status === 'ready' && setup.paging.queryLimit !== undefined && setup.paging.queryOffset !== undefined && itemCount < setup.paging.queryLimit) {
+		if (result.$status === 'ready' && setup.paging.queryLimit !== undefined && setup.paging.queryOffset !== undefined && itemCount < setup.paging.queryLimit) {
 			setup.paging.setTotalCount(setup.paging.queryOffset + itemCount)
 		}
-	}, [result.status, itemCount, setup.paging.queryLimit, setup.paging.queryOffset, setup.paging.setTotalCount])
+	}, [result.$status, itemCount, setup.paging.queryLimit, setup.paging.queryOffset, setup.paging.setTotalCount])
 
 	// ---- Reload ----
 	const [, setReloadCounter] = useState(0)

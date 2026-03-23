@@ -56,19 +56,34 @@ export interface UseEntityOptions {
  * All prefixed with $ to avoid collision with entity field names.
  */
 interface UseEntityResultBase {
-	readonly $isLoading: boolean
-	readonly $isError: boolean
-	readonly $isNotFound: boolean
-	readonly $error: FieldError | null
 	$persist(): Promise<void>
 	$reset(): void
 }
 
-/**
- * Loading/error/not_found state — field access throws.
- */
-export type PendingEntityResult = UseEntityResultBase & {
-	readonly $status: 'loading' | 'error' | 'not_found'
+export type LoadingEntityResult = UseEntityResultBase & {
+	readonly $status: 'loading'
+	readonly $isLoading: true
+	readonly $isError: false
+	readonly $isNotFound: false
+	readonly $error: null
+	readonly id: string
+}
+
+export type ErrorEntityResult = UseEntityResultBase & {
+	readonly $status: 'error'
+	readonly $isLoading: false
+	readonly $isError: true
+	readonly $isNotFound: false
+	readonly $error: FieldError
+	readonly id: string
+}
+
+export type NotFoundEntityResult = UseEntityResultBase & {
+	readonly $status: 'not_found'
+	readonly $isLoading: false
+	readonly $isError: false
+	readonly $isNotFound: true
+	readonly $error: null
 	readonly id: string
 }
 
@@ -78,6 +93,10 @@ export type PendingEntityResult = UseEntityResultBase & {
 export type ReadyEntityResult<TEntity extends object, TSelected extends object = TEntity> =
 	UseEntityResultBase & EntityAccessor<TEntity, TSelected> & {
 		readonly $status: 'ready'
+		readonly $isLoading: false
+		readonly $isError: false
+		readonly $isNotFound: false
+		readonly $error: null
 	}
 
 /**
@@ -85,7 +104,9 @@ export type ReadyEntityResult<TEntity extends object, TSelected extends object =
  * Discriminated on $status.
  */
 export type UseEntityResult<TEntity extends object, TSelected extends object = TEntity> =
-	| PendingEntityResult
+	| LoadingEntityResult
+	| ErrorEntityResult
+	| NotFoundEntityResult
 	| ReadyEntityResult<TEntity, TSelected>
 
 // ============================================================================
@@ -282,7 +303,7 @@ export function useEntity(
 
 	useEffect(() => {
 		return () => {
-			handle.dispose()
+			handle.$dispose()
 		}
 	}, [handle])
 
@@ -297,25 +318,20 @@ export function useEntity(
 
 	// --- Build result ---
 	const result = useMemo((): UseEntityResult<any, any> => {
-		const status = !loadState || loadState.status === 'loading'
-			? 'loading' as const
-			: loadState.status === 'error'
-				? 'error' as const
-				: loadState.status === 'not_found'
-					? 'not_found' as const
-					: !snapshot
-						? 'loading' as const
-						: 'ready' as const
-
-		const error = loadState?.status === 'error' ? loadState.error! : null
-
-		if (status !== 'ready') {
-			return createPendingResult(status, id, error, persist, reset)
+		if (!loadState || loadState.status === 'loading' || (!snapshot && loadState.status === 'success')) {
+			return { $status: 'loading', $isLoading: true, $isError: false, $isNotFound: false, $error: null, id, $persist: persist, $reset: reset }
 		}
 
-		// Ready — return the EntityHandle (which is already a proxy with field access)
-		// plus $status and result metadata
-		return createReadyResult(handle, error, isPersisting, persist, reset)
+		if (loadState.status === 'error') {
+			return { $status: 'error', $isLoading: false, $isError: true, $isNotFound: false, $error: loadState.error!, id, $persist: persist, $reset: reset }
+		}
+
+		if (loadState.status === 'not_found') {
+			return { $status: 'not_found', $isLoading: false, $isError: false, $isNotFound: true, $error: null, id, $persist: persist, $reset: reset }
+		}
+
+		// Ready — layer status metadata on top of EntityHandle proxy
+		return createReadyResult(handle, persist, reset)
 	}, [snapshot, loadState, isPersisting, id, handle, persist, reset])
 
 	return result
@@ -325,56 +341,26 @@ export function useEntity(
 // Result factories
 // ============================================================================
 
-function createPendingResult(
-	status: 'loading' | 'error' | 'not_found',
-	id: string,
-	error: FieldError | null,
-	persist: () => Promise<void>,
-	reset: () => void,
-): PendingEntityResult {
-	return {
-		$status: status,
-		$isLoading: status === 'loading',
-		$isError: status === 'error',
-		$isNotFound: status === 'not_found',
-		$error: error,
-		id,
-		$persist: persist,
-		$reset: reset,
-	}
-}
-
 function createReadyResult(
 	handle: EntityHandle<any, any>,
-	error: FieldError | null,
-	isPersisting: boolean,
 	persist: () => Promise<void>,
 	reset: () => void,
 ): ReadyEntityResult<any, any> {
-	// The handle IS already a proxied EntityAccessor.
-	// We need to layer $status/$isLoading/etc. on top without breaking field access.
-	// Use a Proxy that checks our metadata properties first, then delegates to handle.
 	const meta = {
 		$status: 'ready' as const,
-		$isLoading: false,
-		$isError: false,
-		$isNotFound: false,
-		$error: error,
+		$isLoading: false as const,
+		$isError: false as const,
+		$isNotFound: false as const,
+		$error: null,
 		$persist: persist,
 		$reset: reset,
 	}
 
 	return new Proxy(handle as any, {
 		get(target, prop, receiver) {
-			// Check metadata properties first
 			if (typeof prop === 'string' && prop in meta) {
 				return (meta as any)[prop]
 			}
-			// isPersisting override — handle may have stale value
-			if (prop === '$isPersisting') {
-				return isPersisting
-			}
-			// Everything else delegates to handle (which already has field access proxy)
 			return Reflect.get(target, prop, receiver)
 		},
 		has(target, prop) {

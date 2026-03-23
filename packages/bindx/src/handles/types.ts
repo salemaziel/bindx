@@ -396,6 +396,9 @@ export interface HasOneRefBase<
 	/** Whether this entity is new */
 	readonly $isNew: boolean
 
+	/** Whether entity is currently being persisted */
+	readonly $isPersisting: boolean
+
 	/** Server-assigned ID after persistence */
 	readonly $persistedId: string | null
 
@@ -538,6 +541,9 @@ export interface EntityRefBase<
 
 	/** Whether entity is dirty */
 	readonly $isDirty: boolean
+
+	/** Whether entity is currently being persisted */
+	readonly $isPersisting: boolean
 
 	/** Server-assigned ID after persistence */
 	readonly $persistedId: string | null

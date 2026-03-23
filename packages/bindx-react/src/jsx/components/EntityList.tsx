@@ -86,15 +86,15 @@ function EntityListComponent<TRoleMap extends Record<string, object>>({
 	})
 
 	// Render based on status
-	if (result.status === 'loading') {
+	if (result.$status === 'loading') {
 		return <>{loading ?? <DefaultLoading />}</>
 	}
 
-	if (result.status === 'error') {
+	if (result.$status === 'error') {
 		if (errorFallback) {
-			return <>{errorFallback(result.error)}</>
+			return <>{errorFallback(result.$error)}</>
 		}
-		return <DefaultError error={result.error} />
+		return <DefaultError error={result.$error} />
 	}
 
 	// Empty state
@@ -103,7 +103,7 @@ function EntityListComponent<TRoleMap extends Record<string, object>>({
 	}
 
 	// Phase 3: Runtime render — items are already EntityAccessors from the hook
-	const items = result.items.map((item, index) => {
+	const items = result.items.map((item: (typeof result.items)[number], index: number) => {
 		return (
 			<React.Fragment key={item.id}>
 				{children(item as unknown as EntityAccessor<CommonEntity<TRoleMap>>, index)}

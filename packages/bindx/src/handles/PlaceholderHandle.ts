@@ -47,6 +47,7 @@ export class PlaceholderHandle<TEntity extends object = object, TSelected = TEnt
 	declare readonly $persistedId: null
 	declare readonly $isNew: boolean
 	declare readonly $errors: readonly FieldError[]
+	declare readonly $isPersisting: boolean
 	declare readonly $hasError: boolean
 	declare $addError: (error: ErrorInput) => void
 	declare $clearErrors: () => void
@@ -113,6 +114,13 @@ export class PlaceholderHandle<TEntity extends object = object, TSelected = TEnt
 			this.fieldName,
 		)
 		return relation ? Object.keys(relation.placeholderData).length > 0 : false
+	}
+
+	/**
+	 * Placeholder entities are never being persisted.
+	 */
+	get isPersisting(): boolean {
+		return false
 	}
 
 	/**

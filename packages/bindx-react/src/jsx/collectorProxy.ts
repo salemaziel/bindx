@@ -47,6 +47,7 @@ export function createCollectorProxy<T>(
 		$fields: fieldsProxy,
 		$data: null,
 		$isDirty: false,
+		$isPersisting: false,
 		$persistedId: null,
 		$isNew: true,
 		__entityType: undefined as unknown as T,
@@ -226,6 +227,7 @@ function createCollectorFieldRef(
 		// EntityRef-compatible properties (for HasOneAccessor = EntityAccessor compatibility)
 		id: placeholderId,
 		$data: null,
+		$isPersisting: false,
 		$isNew: false,
 		$persistedId: null,
 		__entityName: targetEntityName ?? '',

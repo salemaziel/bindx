@@ -28,7 +28,8 @@ import { createAliasProxy } from './proxyFactory.js'
  * @typeParam TSelected - The selected subset of fields (defaults to TEntity for backwards compatibility)
  */
 export class HasManyListHandle<TEntity extends object = object, TSelected = TEntity> extends EntityRelatedHandle implements HasManyRef<TEntity, TSelected> {
-	private itemHandleCache = new Map<string, EntityHandle<TEntity, TSelected>>()
+	private itemHandleCacheRaw = new Map<string, EntityHandle<TEntity, TSelected>>()
+	private itemHandleCacheProxy = new Map<string, EntityHandle<TEntity, TSelected>>()
 
 	/** Runtime brand symbols for validation */
 	readonly __brands?: Set<symbol>
@@ -221,10 +222,10 @@ export class HasManyListHandle<TEntity extends object = object, TSelected = TEnt
 	 * Returns selection-aware EntityAccessor that supports direct field access.
 	 */
 	getItemHandle(itemId: string): EntityAccessor<TEntity, TSelected> {
-		let handle = this.itemHandleCache.get(itemId)
+		let proxy = this.itemHandleCacheProxy.get(itemId)
 
-		if (!handle) {
-			handle = EntityHandle.create<TEntity, TSelected>(
+		if (!proxy) {
+			const raw = EntityHandle.createRaw<TEntity, TSelected>(
 				itemId,
 				this.itemType,
 				this.store,
@@ -233,11 +234,12 @@ export class HasManyListHandle<TEntity extends object = object, TSelected = TEnt
 				this.__brands,
 				this.selection,
 			)
-			this.itemHandleCache.set(itemId, handle)
+			proxy = EntityHandle.wrapProxy(raw)
+			this.itemHandleCacheRaw.set(itemId, raw)
+			this.itemHandleCacheProxy.set(itemId, proxy)
 		}
 
-		// EntityHandle constructor returns a Proxy that implements EntityAccessor
-		return handle as unknown as EntityAccessor<TEntity, TSelected>
+		return proxy as unknown as EntityAccessor<TEntity, TSelected>
 	}
 
 	/**
@@ -391,10 +393,11 @@ export class HasManyListHandle<TEntity extends object = object, TSelected = TEnt
 	override dispose(): void {
 		super.dispose()
 
-		for (const handle of this.itemHandleCache.values()) {
+		for (const handle of this.itemHandleCacheRaw.values()) {
 			handle.dispose()
 		}
-		this.itemHandleCache.clear()
+		this.itemHandleCacheRaw.clear()
+		this.itemHandleCacheProxy.clear()
 	}
 
 	/**

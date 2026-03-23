@@ -75,6 +75,22 @@ export class EntityHandle<T extends object = object, TSelected = T> extends Enti
 	declare readonly $isNew: boolean
 	declare readonly $errors: readonly FieldError[]
 	declare readonly $hasError: boolean
+	declare readonly $entityType: string
+	declare readonly $serverData: T | undefined
+	declare readonly $isLoaded: boolean
+	declare readonly $isLoading: boolean
+	declare readonly $isError: boolean
+	declare readonly $error: FieldError | undefined
+	declare readonly $isPersisting: boolean
+	declare readonly $__entityName: string
+	declare $getSnapshot: () => EntitySnapshot<T> | undefined
+	declare $getDirtyFields: () => readonly string[]
+	declare $field: <K extends keyof T>(fieldName: K) => FieldHandle<T[K]>
+	declare $hasOne: <TRelated extends object>(fieldName: string, nestedSelection?: SelectionMeta) => HasOneHandle<TRelated>
+	declare $hasMany: <TItem extends object>(fieldName: string, alias?: string, nestedSelection?: SelectionMeta) => HasManyListHandle<TItem>
+	declare $reset: () => void
+	declare $commit: () => void
+	declare $dispose: () => void
 	declare $addError: (error: ErrorInput) => void
 	declare $clearErrors: () => void
 	declare $clearAllErrors: () => void
@@ -105,7 +121,23 @@ export class EntityHandle<T extends object = object, TSelected = T> extends Enti
 		brands?: Set<symbol>,
 		selection?: SelectionMeta,
 	): EntityHandle<T, TSelected> {
-		return createHandleProxy(new EntityHandle<T, TSelected>(id, entityType, store, dispatcher, schema, brands, selection), (target) => target.fields)
+		return EntityHandle.wrapProxy(new EntityHandle<T, TSelected>(id, entityType, store, dispatcher, schema, brands, selection))
+	}
+
+	static createRaw<T extends object = object, TSelected = T>(
+		id: string,
+		entityType: string,
+		store: SnapshotStore,
+		dispatcher: ActionDispatcher,
+		schema: SchemaRegistry,
+		brands?: Set<symbol>,
+		selection?: SelectionMeta,
+	): EntityHandle<T, TSelected> {
+		return new EntityHandle<T, TSelected>(id, entityType, store, dispatcher, schema, brands, selection)
+	}
+
+	static wrapProxy<T extends object, TSelected>(handle: EntityHandle<T, TSelected>): EntityHandle<T, TSelected> {
+		return createHandleProxy(handle, (target) => target.fields)
 	}
 
 	/**
@@ -343,8 +375,8 @@ export class EntityHandle<T extends object = object, TSelected = T> extends Enti
 		this.dispatcher.dispatch(resetEntity(this.entityType, this.entityId))
 
 		// Reset all cached relation handles
-		for (const handle of this.relationHandleCache.values()) {
-			handle.reset()
+		for (const { raw } of this.relationHandleCache.values()) {
+			raw.reset()
 		}
 	}
 

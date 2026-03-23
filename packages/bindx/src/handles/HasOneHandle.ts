@@ -45,7 +45,8 @@ import { createHandleProxy } from './proxyFactory.js'
  * @typeParam TSelected - The selected subset of fields (defaults to TEntity for backwards compatibility)
  */
 export class HasOneHandle<TEntity extends object = object, TSelected = TEntity> extends EntityRelatedHandle implements HasOneRef<TEntity, TSelected> {
-	private entityHandleCache: EntityHandle<TEntity, TSelected> | null = null
+	private entityHandleCacheRaw: EntityHandle<TEntity, TSelected> | null = null
+	private entityHandleCacheProxy: EntityHandle<TEntity, TSelected> | null = null
 	private placeholderCache: PlaceholderHandle<TEntity, TSelected> | null = null
 
 	/** Runtime brand symbols for validation */
@@ -57,11 +58,14 @@ export class HasOneHandle<TEntity extends object = object, TSelected = TEntity> 
 	// $ aliases - handled by proxy at runtime, declared for TypeScript
 	declare readonly $id: string
 	declare readonly $isDirty: boolean
+	declare readonly $isPersisting: boolean
 	declare readonly $state: 'connected' | 'disconnected' | 'deleted' | 'creating'
 	declare readonly $fields: SelectedEntityFields<TEntity, TSelected>
 	declare readonly $entity: EntityAccessor<TEntity, TSelected>
 	declare readonly $errors: readonly FieldError[]
 	declare readonly $hasError: boolean
+	declare readonly $relatedId: string | null
+	declare readonly $__entityName: string
 	declare $connect: (id: string) => void
 	declare $disconnect: () => void
 	declare $delete: () => void
@@ -226,8 +230,8 @@ export class HasOneHandle<TEntity extends object = object, TSelected = TEntity> 
 			this.ensureRelatedEntitySnapshot(id)
 
 			// Connected - return real entity handle
-			if (!this.entityHandleCache || this.entityHandleCache.id !== id) {
-				this.entityHandleCache = EntityHandle.create<TEntity, TSelected>(
+			if (!this.entityHandleCacheRaw || this.entityHandleCacheRaw.id !== id) {
+				this.entityHandleCacheRaw = EntityHandle.createRaw<TEntity, TSelected>(
 					id,
 					this.targetType,
 					this.store,
@@ -236,9 +240,9 @@ export class HasOneHandle<TEntity extends object = object, TSelected = TEntity> 
 					this.__brands,
 					this.selection,
 				)
+				this.entityHandleCacheProxy = EntityHandle.wrapProxy(this.entityHandleCacheRaw)
 			}
-			// EntityHandle constructor returns a Proxy that implements EntityAccessor
-			return this.entityHandleCache as unknown as EntityAccessor<TEntity, TSelected>
+			return this.entityHandleCacheProxy as unknown as EntityAccessor<TEntity, TSelected>
 		}
 
 		// Disconnected - return placeholder handle
@@ -304,6 +308,15 @@ export class HasOneHandle<TEntity extends object = object, TSelected = TEntity> 
 	}
 
 	/**
+	 * Checks if the related entity is currently being persisted.
+	 */
+	get isPersisting(): boolean {
+		const id = this.relatedId
+		if (!id) return false
+		return this.store.isPersisting(this.targetType, id)
+	}
+
+	/**
 	 * Checks if the relation is dirty.
 	 */
 	get isDirty(): boolean {
@@ -364,8 +377,9 @@ export class HasOneHandle<TEntity extends object = object, TSelected = TEntity> 
 	 */
 	override dispose(): void {
 		super.dispose()
-		this.entityHandleCache?.dispose()
-		this.entityHandleCache = null
+		this.entityHandleCacheRaw?.dispose()
+		this.entityHandleCacheRaw = null
+		this.entityHandleCacheProxy = null
 	}
 
 	/**

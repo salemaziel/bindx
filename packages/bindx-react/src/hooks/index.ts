@@ -21,7 +21,9 @@ export {
 export {
 	useEntity,
 	type UseEntityOptions,
-	type PendingEntityResult,
+	type LoadingEntityResult,
+	type ErrorEntityResult,
+	type NotFoundEntityResult,
 	type ReadyEntityResult,
 	type UseEntityResult,
 } from './useEntity.js'
@@ -29,10 +31,10 @@ export {
 export {
 	useEntityList,
 	type UseEntityListOptions,
-	type LoadingEntityListAccessor,
-	type ErrorEntityListAccessor,
-	type ReadyEntityListAccessor,
-	type EntityListAccessorResult,
+	type LoadingEntityListResult,
+	type ErrorEntityListResult,
+	type ReadyEntityListResult,
+	type UseEntityListResult,
 } from './useEntityList.js'
 
 export {

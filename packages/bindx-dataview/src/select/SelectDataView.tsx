@@ -162,27 +162,27 @@ function SelectDataViewImpl({
 		queryKey,
 	})
 
-	const items = result.status === 'ready' ? result.items : []
+	const items = result.$status === 'ready' ? result.items : []
 	const itemCount = items.length
 
 	// Update loader state
 	useEffect(() => {
-		if (result.status === 'ready') {
+		if (result.$status === 'ready') {
 			hasLoadedOnce.current = true
 			setLoaderState('loaded')
-		} else if (result.status === 'error') {
+		} else if (result.$status === 'error') {
 			setLoaderState('failed')
-		} else if (result.status === 'loading') {
+		} else if (result.$status === 'loading') {
 			setLoaderState(hasLoadedOnce.current ? 'refreshing' : 'initial')
 		}
-	}, [result.status])
+	}, [result.$status])
 
 	// Update total count for paging
 	useEffect(() => {
-		if (result.status === 'ready' && paging.queryLimit !== undefined && paging.queryOffset !== undefined && itemCount < paging.queryLimit) {
+		if (result.$status === 'ready' && paging.queryLimit !== undefined && paging.queryOffset !== undefined && itemCount < paging.queryLimit) {
 			paging.setTotalCount(paging.queryOffset + itemCount)
 		}
-	}, [result.status, itemCount, paging.queryLimit, paging.queryOffset, paging.setTotalCount])
+	}, [result.$status, itemCount, paging.queryLimit, paging.queryOffset, paging.setTotalCount])
 
 	// ---- Reload ----
 	const [, setReloadCounter] = useState(0)

@@ -106,18 +106,19 @@ function EntityByMode({
 	})
 
 	// Render based on status
-	if (result.status === 'loading') {
+	if (result.$status === 'loading') {
 		return <>{loading ?? <DefaultLoading />}</>
 	}
 
-	if (result.status === 'error') {
+	if (result.$status === 'error') {
+		const error: FieldError = result.$error ?? { source: 'load', message: 'Unknown error', category: 'unknown', retryable: false }
 		if (errorFallback) {
-			return <>{errorFallback(result.error)}</>
+			return <>{errorFallback(error)}</>
 		}
-		return <DefaultError error={result.error} />
+		return <DefaultError error={error} />
 	}
 
-	if (result.status === 'not_found') {
+	if (result.$status === 'not_found') {
 		return <>{notFound ?? <DefaultNotFound entityType={entityType} by={by} />}</>
 	}
 
@@ -276,7 +277,7 @@ function EntityHandleRenderer({
 		[entityId, entityType, store, dispatcher, schemaRegistry, selection, version],
 	)
 
-	useEffect(() => () => { handle.dispose() }, [handle])
+	useEffect(() => () => { handle.$dispose() }, [handle])
 
 	return <>{children(handle as unknown as EntityAccessor<unknown>)}</>
 }

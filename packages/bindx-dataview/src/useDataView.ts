@@ -134,11 +134,11 @@ export function useDataView(
 		selection,
 	})
 
-	const items = result.status === 'ready' ? result.items : []
+	const items = result.$status === 'ready' ? result.items : []
 
 	return {
-		status: result.status,
-		error: result.status === 'error' ? result.error : undefined,
+		status: result.$status,
+		error: result.$status === 'error' ? result.$error : undefined,
 		items,
 		filtering,
 		sorting,
