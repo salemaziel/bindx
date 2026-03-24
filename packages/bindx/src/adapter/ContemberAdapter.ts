@@ -65,15 +65,17 @@ export class ContemberAdapter implements BackendAdapter {
 			signal: options?.signal,
 		})
 
-		// Map results back to QueryResult array
+		// Map results back to QueryResult array, unwrapping paginate format
 		return queries.map((q, i) => {
 			const key = `q${i}`
 			const data = (results as Record<string, unknown>)[key]
 
 			if (q.type === 'get') {
-				return { type: 'get' as const, data: data as Record<string, unknown> | null }
+				const unwrapped = data ? unwrapPaginateFields(data as Record<string, unknown>, q.spec) : null
+				return { type: 'get' as const, data: unwrapped }
 			} else {
-				return { type: 'list' as const, data: (data ?? []) as readonly Record<string, unknown>[] }
+				const items = (data ?? []) as readonly Record<string, unknown>[]
+				return { type: 'list' as const, data: items.map(item => unwrapPaginateFields(item, q.spec)) }
 			}
 		})
 	}
@@ -242,4 +244,66 @@ export class ContemberAdapter implements BackendAdapter {
 			resolveRelationTarget: (entity, field) => this.schemaRegistry.getRelationTarget(entity, field),
 		}
 	}
+}
+
+/**
+ * Recursively unwraps paginate connection format in entity data.
+ *
+ * The GraphQL layer uses `paginateFieldName { edges { node { ... } } }` for has-many relations,
+ * but the store expects flat arrays keyed by the original field name.
+ * This function uses the QuerySpec to identify which fields need unwrapping.
+ */
+function unwrapPaginateFields(data: Record<string, unknown>, spec: QuerySpec): Record<string, unknown> {
+	const result: Record<string, unknown> = {}
+
+	// Copy all fields from data first
+	const handledKeys = new Set<string>()
+
+	for (const field of spec.fields) {
+		const fieldName = field.sourcePath[0]
+		if (!fieldName) continue
+
+		if (field.isArray && field.nested) {
+			// Has-many field — look for paginate key or alias
+			const paginateKey = `paginate${fieldName.charAt(0).toUpperCase()}${fieldName.slice(1)}`
+			const alias = field.name !== fieldName ? field.name : null
+			const lookupKey = alias ?? paginateKey
+
+			const value = data[lookupKey]
+			handledKeys.add(lookupKey)
+
+			if (value && typeof value === 'object' && 'edges' in value) {
+				const connection = value as { edges: { node: unknown }[]; pageInfo?: { totalCount: number } }
+				const items = unwrapPaginateResult(connection, !!field.totalCount) as Record<string, unknown>[]
+				result[field.name] = items.map(item => unwrapPaginateFields(item, field.nested!))
+			} else {
+				result[field.name] = value
+			}
+		} else if (field.nested) {
+			// Has-one relation — recurse into nested
+			const lookupKey = field.name !== fieldName ? field.name : fieldName
+			const value = data[lookupKey]
+			handledKeys.add(lookupKey)
+
+			if (value && typeof value === 'object') {
+				result[field.name] = unwrapPaginateFields(value as Record<string, unknown>, field.nested)
+			} else {
+				result[field.name] = value
+			}
+		} else {
+			// Scalar field
+			const lookupKey = field.name !== fieldName ? field.name : fieldName
+			handledKeys.add(lookupKey)
+			result[field.name] = data[lookupKey]
+		}
+	}
+
+	// Preserve any extra fields not in the spec (e.g. 'id' returned by API)
+	for (const key of Object.keys(data)) {
+		if (!handledKeys.has(key) && !(key in result)) {
+			result[key] = data[key]
+		}
+	}
+
+	return result
 }
