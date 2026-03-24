@@ -6,6 +6,7 @@ import {
 	HasOneHandle,
 	SchemaRegistry,
 	type SchemaDefinition,
+	type HasOneAccessor,
 } from '@contember/bindx'
 import { createTestDispatcher } from '../shared/unitTestHelpers.js'
 
@@ -61,8 +62,20 @@ describe('HasOneHandle', () => {
 		schema = new SchemaRegistry(testSchemaDefinition)
 	})
 
-	function createHasOneHandle(): HasOneHandle<TestAuthor> {
+	function createHasOneHandle(): HasOneAccessor<TestAuthor> {
 		return HasOneHandle.create<TestAuthor>(
+			'Article',
+			'a-1',
+			'author',
+			'Author',
+			store,
+			dispatcher,
+			schema,
+		)
+	}
+
+	function createHasOneHandleRaw(): HasOneHandle<TestAuthor> {
+		return HasOneHandle.createRaw<TestAuthor>(
 			'Article',
 			'a-1',
 			'author',
@@ -118,9 +131,9 @@ describe('HasOneHandle', () => {
 				currentId: 'auth-1',
 				state: 'connected',
 			})
-			const handle = createHasOneHandle()
+			const handle = createHasOneHandleRaw()
 
-			expect(handle.$relatedId).toBe('auth-1')
+			expect(handle.relatedId).toBe('auth-1')
 		})
 
 		test('should return related ID from embedded data when no relation state', () => {
@@ -129,16 +142,16 @@ describe('HasOneHandle', () => {
 				title: 'Test',
 				author: { id: 'auth-1', name: 'John' },
 			}, true)
-			const handle = createHasOneHandle()
+			const handle = createHasOneHandleRaw()
 
-			expect(handle.$relatedId).toBe('auth-1')
+			expect(handle.relatedId).toBe('auth-1')
 		})
 
 		test('should return null when no relation', () => {
 			store.setEntityData('Article', 'a-1', { id: 'a-1', title: 'Test' }, true)
-			const handle = createHasOneHandle()
+			const handle = createHasOneHandleRaw()
 
-			expect(handle.$relatedId).toBeNull()
+			expect(handle.relatedId).toBeNull()
 		})
 	})
 
@@ -443,9 +456,9 @@ describe('HasOneHandle', () => {
 	describe('Type Brands', () => {
 		test('should return target entity name via __entityName', () => {
 			store.setEntityData('Article', 'a-1', { id: 'a-1', title: 'Test' }, true)
-			const handle = createHasOneHandle()
+			const handle = createHasOneHandleRaw()
 
-			expect(handle.$__entityName).toBe('Author')
+			expect(handle.__entityName).toBe('Author')
 		})
 	})
 })

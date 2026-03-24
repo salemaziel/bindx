@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, mock } from 'bun:test'
-import { SnapshotStore, ActionDispatcher, EventEmitter, FieldHandle, createServerError } from '@contember/bindx'
+import { SnapshotStore, ActionDispatcher, EventEmitter, FieldHandle, createServerError, FIELD_REF_META, type FieldRef } from '@contember/bindx'
 import { createTestDispatcher } from '../shared/unitTestHelpers.js'
 
 describe('FieldHandle', () => {
@@ -14,8 +14,12 @@ describe('FieldHandle', () => {
 		eventEmitter = setup.eventEmitter
 	})
 
-	function createFieldHandle<T>(fieldPath: string[]): FieldHandle<T> {
+	function createFieldHandle<T>(fieldPath: string[]): FieldRef<T> {
 		return FieldHandle.create<T>('Article', 'a-1', fieldPath, store, dispatcher)
+	}
+
+	function createFieldHandleRaw<T>(fieldPath: string[]): FieldHandle<T> {
+		return FieldHandle.createRaw<T>('Article', 'a-1', fieldPath, store, dispatcher)
 	}
 
 	// ==================== Value Access ====================
@@ -218,7 +222,7 @@ describe('FieldHandle', () => {
 				meta: { views: 100 },
 			}, true)
 
-			const metaHandle = createFieldHandle<{ views: number }>(['meta'])
+			const metaHandle = createFieldHandleRaw<{ views: number }>(['meta'])
 			const viewsHandle = metaHandle.nested('views')
 
 			expect(viewsHandle.value).toBe(100)
@@ -230,7 +234,7 @@ describe('FieldHandle', () => {
 				meta: { views: 100 },
 			}, true)
 
-			const metaHandle = createFieldHandle<{ views: number }>(['meta'])
+			const metaHandle = createFieldHandleRaw<{ views: number }>(['meta'])
 			const viewsHandle = metaHandle.nested('views')
 
 			viewsHandle.setValue(200)
@@ -246,7 +250,7 @@ describe('FieldHandle', () => {
 			store.setEntityData('Article', 'a-1', { id: 'a-1', title: 'Test' }, true)
 			const handle = createFieldHandle<string>(['title'])
 
-			expect(handle.fieldName).toBe('title')
+			expect(handle[FIELD_REF_META].fieldName).toBe('title')
 		})
 
 		test('should return field path', () => {
@@ -255,10 +259,10 @@ describe('FieldHandle', () => {
 				meta: { views: 100 },
 			}, true)
 
-			const metaHandle = createFieldHandle<{ views: number }>(['meta'])
+			const metaHandle = createFieldHandleRaw<{ views: number }>(['meta'])
 			const viewsHandle = metaHandle.nested('views')
 
-			expect(viewsHandle.path).toEqual(['meta', 'views'])
+			expect(viewsHandle[FIELD_REF_META].path).toEqual(['meta', 'views'])
 		})
 	})
 

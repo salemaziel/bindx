@@ -6,6 +6,7 @@ import {
 	HasManyListHandle,
 	SchemaRegistry,
 	type SchemaDefinition,
+	type HasManyRef,
 	generateHasManyAlias,
 } from '@contember/bindx'
 import { createTestDispatcher } from '../shared/unitTestHelpers.js'
@@ -64,7 +65,7 @@ describe('HasMany with Alias Support', () => {
 		schema = new SchemaRegistry(testSchemaDefinition)
 	})
 
-	function createHasManyHandle(alias?: string): HasManyListHandle<TestTag> {
+	function createHasManyHandle(alias?: string): HasManyRef<TestTag> {
 		return HasManyListHandle.create<TestTag>(
 			'Article',
 			'a-1',

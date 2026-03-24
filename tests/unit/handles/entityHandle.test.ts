@@ -7,6 +7,7 @@ import {
 	SchemaRegistry,
 	createLoadError,
 	type SchemaDefinition,
+	type EntityAccessor,
 } from '@contember/bindx'
 import { createTestDispatcher } from '../shared/unitTestHelpers.js'
 
@@ -78,8 +79,12 @@ describe('EntityHandle', () => {
 		schema = new SchemaRegistry(testSchemaDefinition)
 	})
 
-	function createEntityHandle(id: string = 'a-1'): EntityHandle<TestArticle> {
+	function createEntityHandle(id: string = 'a-1'): EntityAccessor<TestArticle> {
 		return EntityHandle.create<TestArticle>(id, 'Article', store, dispatcher, schema)
+	}
+
+	function createEntityHandleRaw(id: string = 'a-1'): EntityHandle<TestArticle> {
+		return EntityHandle.createRaw<TestArticle>(id, 'Article', store, dispatcher, schema)
 	}
 
 	// ==================== Identity ====================
@@ -87,12 +92,12 @@ describe('EntityHandle', () => {
 	describe('Identity', () => {
 		test('should return entity ID', () => {
 			const handle = createEntityHandle('a-1')
-			expect(handle.id).toBe('a-1')
+			expect(handle.id as string).toBe('a-1')
 		})
 
 		test('should return entity type', () => {
-			const handle = createEntityHandle('a-1')
-			expect(handle.$entityType).toBe('Article')
+			const handle = createEntityHandleRaw('a-1')
+			expect(handle.__entityName).toBe('Article')
 		})
 	})
 
@@ -115,16 +120,16 @@ describe('EntityHandle', () => {
 			store.setEntityData('Article', 'a-1', { id: 'a-1', title: 'Original' }, true)
 			store.setFieldValue('Article', 'a-1', ['title'], 'Modified')
 
-			const handle = createEntityHandle()
+			const handle = createEntityHandleRaw()
 
-			expect(handle.$serverData).toEqual({ id: 'a-1', title: 'Original' })
+			expect(handle.serverData).toEqual({ id: 'a-1', title: 'Original' })
 		})
 
 		test('should return snapshot', () => {
 			store.setEntityData('Article', 'a-1', { id: 'a-1', title: 'Test' }, true)
-			const handle = createEntityHandle()
+			const handle = createEntityHandleRaw()
 
-			const snapshot = handle.$getSnapshot()
+			const snapshot = handle.getSnapshot()
 			expect(snapshot).toBeDefined()
 			expect(snapshot?.id).toBe('a-1')
 		})
@@ -134,26 +139,26 @@ describe('EntityHandle', () => {
 
 	describe('Load State', () => {
 		test('should check if entity is loaded', () => {
-			const handle = createEntityHandle()
-			expect(handle.$isLoaded).toBe(false)
+			const handle = createEntityHandleRaw()
+			expect(handle.isLoaded).toBe(false)
 
 			store.setEntityData('Article', 'a-1', { id: 'a-1', title: 'Test' }, true)
-			expect(handle.$isLoaded).toBe(true)
+			expect(handle.isLoaded).toBe(true)
 		})
 
 		test('should check if entity is loading', () => {
 			store.setLoadState('Article', 'a-1', 'loading')
-			const handle = createEntityHandle()
+			const handle = createEntityHandleRaw()
 
-			expect(handle.$isLoading).toBe(true)
+			expect(handle.isLoading).toBe(true)
 		})
 
 		test('should check if entity has error', () => {
 			store.setLoadState('Article', 'a-1', 'error', createLoadError(new Error('Network error')))
-			const handle = createEntityHandle()
+			const handle = createEntityHandleRaw()
 
-			expect(handle.$isError).toBe(true)
-			expect(handle.$error?.message).toBe('Network error')
+			expect(handle.isError).toBe(true)
+			expect(handle.error?.message).toBe('Network error')
 		})
 	})
 
@@ -185,10 +190,10 @@ describe('EntityHandle', () => {
 			store.setEntityData('Article', 'a-1', { id: 'a-1', title: 'Original', content: 'Content' }, true)
 			store.setFieldValue('Article', 'a-1', ['title'], 'Modified')
 
-			const handle = createEntityHandle()
+			const handle = createEntityHandleRaw()
 
-			expect(handle.$getDirtyFields()).toContain('title')
-			expect(handle.$getDirtyFields()).not.toContain('content')
+			expect(handle.getDirtyFields()).toContain('title')
+			expect(handle.getDirtyFields()).not.toContain('content')
 		})
 	})
 
@@ -245,18 +250,18 @@ describe('EntityHandle', () => {
 	describe('Field Access', () => {
 		test('should get field handle via field()', () => {
 			store.setEntityData('Article', 'a-1', { id: 'a-1', title: 'Test' }, true)
-			const handle = createEntityHandle()
+			const handle = createEntityHandleRaw()
 
-			const titleField = handle.$field('title')
+			const titleField = handle.field('title')
 			expect(titleField.value).toBe('Test')
 		})
 
 		test('should cache field handles', () => {
 			store.setEntityData('Article', 'a-1', { id: 'a-1', title: 'Test' }, true)
-			const handle = createEntityHandle()
+			const handle = createEntityHandleRaw()
 
-			const field1 = handle.$field('title')
-			const field2 = handle.$field('title')
+			const field1 = handle.field('title')
+			const field2 = handle.field('title')
 
 			expect(field1).toBe(field2)
 		})
@@ -274,18 +279,18 @@ describe('EntityHandle', () => {
 	describe('Relation Access', () => {
 		test('should get hasOne handle', () => {
 			store.setEntityData('Article', 'a-1', { id: 'a-1', title: 'Test', author: { id: 'auth-1', name: 'John' } }, true)
-			const handle = createEntityHandle()
+			const handle = createEntityHandleRaw()
 
-			const authorHandle = handle.$hasOne('author')
+			const authorHandle = handle.hasOne('author')
 			expect(authorHandle).toBeDefined()
 		})
 
 		test('should cache hasOne handles', () => {
 			store.setEntityData('Article', 'a-1', { id: 'a-1', title: 'Test' }, true)
-			const handle = createEntityHandle()
+			const handle = createEntityHandleRaw()
 
-			const handle1 = handle.$hasOne('author')
-			const handle2 = handle.$hasOne('author')
+			const handle1 = handle.hasOne('author')
+			const handle2 = handle.hasOne('author')
 
 			expect(handle1).toBe(handle2)
 		})
@@ -296,17 +301,17 @@ describe('EntityHandle', () => {
 				title: 'Test',
 				tags: [{ id: 't-1', name: 'Tag 1' }],
 			}, true)
-			const handle = createEntityHandle()
+			const handle = createEntityHandleRaw()
 
-			const tagsHandle = handle.$hasMany('tags')
+			const tagsHandle = handle.hasMany('tags')
 			expect(tagsHandle).toBeDefined()
 		})
 
 		test('should throw for non-existent relation', () => {
 			store.setEntityData('Article', 'a-1', { id: 'a-1', title: 'Test' }, true)
-			const handle = createEntityHandle()
+			const handle = createEntityHandleRaw()
 
-			expect(() => handle.$hasOne('nonExistent')).toThrow()
+			expect(() => handle.hasOne('nonExistent')).toThrow()
 		})
 	})
 
@@ -317,8 +322,8 @@ describe('EntityHandle', () => {
 			store.setEntityData('Article', 'a-1', { id: 'a-1', title: 'Original' }, true)
 			store.setFieldValue('Article', 'a-1', ['title'], 'Modified')
 
-			const handle = createEntityHandle()
-			handle.$reset()
+			const handle = createEntityHandleRaw()
+			handle.reset()
 
 			expect(store.getEntitySnapshot('Article', 'a-1')?.data).toHaveProperty('title', 'Original')
 		})
@@ -327,8 +332,8 @@ describe('EntityHandle', () => {
 			store.setEntityData('Article', 'a-1', { id: 'a-1', title: 'Original' }, true)
 			store.setFieldValue('Article', 'a-1', ['title'], 'Modified')
 
-			const handle = createEntityHandle()
-			handle.$commit()
+			const handle = createEntityHandleRaw()
+			handle.commit()
 
 			expect(store.getEntitySnapshot('Article', 'a-1')?.serverData).toHaveProperty('title', 'Modified')
 		})
@@ -398,7 +403,7 @@ describe('EntityHandle', () => {
 			const listener = mock(() => {})
 			handle.$on('field:changed', listener)
 
-			handle.$field('title').setValue('Updated')
+			handle.$fields.title.setValue('Updated')
 
 			expect(listener).toHaveBeenCalledTimes(1)
 		})
@@ -418,7 +423,7 @@ describe('EntityHandle', () => {
 			})
 
 			expect(result).toBe(false)
-			expect(handle.$field('title').value).toBe('Original')
+			expect(handle.$fields.title.value).toBe('Original')
 		})
 	})
 
@@ -426,8 +431,8 @@ describe('EntityHandle', () => {
 
 	describe('Type Brands', () => {
 		test('should return entity type name via __entityName', () => {
-			const handle = createEntityHandle()
-			expect(handle.$__entityName).toBe('Article')
+			const handle = createEntityHandleRaw()
+			expect(handle.__entityName).toBe('Article')
 		})
 
 	})
@@ -437,16 +442,16 @@ describe('EntityHandle', () => {
 	describe('Dispose', () => {
 		test('should dispose handle and clear caches', () => {
 			store.setEntityData('Article', 'a-1', { id: 'a-1', title: 'Test' }, true)
-			const handle = createEntityHandle()
+			const handle = createEntityHandleRaw()
 
 			// Access some fields to populate cache
-			handle.$field('title')
-			handle.$hasOne('author')
+			handle.field('title')
+			handle.hasOne('author')
 
-			handle.$dispose()
+			handle.dispose()
 
 			// After dispose, handle should throw on operations
-			expect(() => handle.$reset()).toThrow()
+			expect(() => handle.reset()).toThrow()
 		})
 	})
 })

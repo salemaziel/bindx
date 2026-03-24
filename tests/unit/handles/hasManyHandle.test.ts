@@ -6,6 +6,7 @@ import {
 	HasManyListHandle,
 	SchemaRegistry,
 	type SchemaDefinition,
+	type HasManyRef,
 	isTempId,
 } from '@contember/bindx'
 import { createTestDispatcher } from '../shared/unitTestHelpers.js'
@@ -62,7 +63,7 @@ describe('HasManyListHandle', () => {
 		schema = new SchemaRegistry(testSchemaDefinition)
 	})
 
-	function createHasManyHandle(): HasManyListHandle<TestTag> {
+	function createHasManyHandle(): HasManyRef<TestTag> {
 		return HasManyListHandle.create<TestTag>(
 			'Article',
 			'a-1',
@@ -410,7 +411,7 @@ describe('HasManyListHandle', () => {
 			}, true)
 
 			const handle = createHasManyHandle()
-			const itemHandle = handle.getItemHandle('t-1')
+			const itemHandle = handle.getById('t-1')
 
 			expect(itemHandle.id as string).toBe('t-1')
 		})
@@ -423,8 +424,8 @@ describe('HasManyListHandle', () => {
 			}, true)
 
 			const handle = createHasManyHandle()
-			const handle1 = handle.getItemHandle('t-1')
-			const handle2 = handle.getItemHandle('t-1')
+			const handle1 = handle.getById('t-1')
+			const handle2 = handle.getById('t-1')
 
 			expect(handle1).toBe(handle2)
 		})
