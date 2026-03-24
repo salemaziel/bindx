@@ -30,8 +30,8 @@ describe('FormLabel', () => {
 		function TestComponent() {
 			const article = useEntity(entityDefs.Article, { by: { id: 'article-1' } }, e => e.title())
 
-			if (article.isLoading) return <div>Loading...</div>
-			if (article.isError) return <div>Error</div>
+			if (article.$isLoading) return <div>Loading...</div>
+			if (article.$isError) return <div>Error</div>
 
 			return (
 				<FormFieldScope field={article.title}>
@@ -96,8 +96,8 @@ describe('FormLabel', () => {
 		function TestComponent() {
 			const article = useEntity(entityDefs.Article, { by: { id: 'article-1' } }, e => e.title())
 
-			if (article.isLoading) return <div>Loading...</div>
-			if (article.isError) return <div>Error</div>
+			if (article.$isLoading) return <div>Loading...</div>
+			if (article.$isError) return <div>Error</div>
 
 			return (
 				<div>

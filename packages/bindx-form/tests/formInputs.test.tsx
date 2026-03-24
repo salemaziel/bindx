@@ -31,8 +31,8 @@ describe('FormInput', () => {
 		function TestComponent() {
 			const article = useEntity(entityDefs.Article, { by: { id: 'article-1' } }, e => e.title())
 
-			if (article.isLoading) return <div>Loading...</div>
-			if (article.isError) return <div>Error</div>
+			if (article.$isLoading) return <div>Loading...</div>
+			if (article.$isError) return <div>Error</div>
 
 			return (
 				<FormFieldScope field={article.title}>
@@ -63,8 +63,8 @@ describe('FormInput', () => {
 		function TestComponent() {
 			const article = useEntity(entityDefs.Article, { by: { id: 'article-1' } }, e => e.title())
 
-			if (article.isLoading) return <div>Loading...</div>
-			if (article.isError) return <div>Error</div>
+			if (article.$isLoading) return <div>Loading...</div>
+			if (article.$isError) return <div>Error</div>
 
 			return (
 				<div>
@@ -101,8 +101,8 @@ describe('FormInput', () => {
 			const article = useEntity(entityDefs.Article, { by: { id: 'article-1' } }, e => e.title())
 			const [hasError, setHasError] = React.useState(false)
 
-			if (article.isLoading) return <div>Loading...</div>
-			if (article.isError) return <div>Error</div>
+			if (article.$isLoading) return <div>Loading...</div>
+			if (article.$isError) return <div>Error</div>
 
 			const errors = hasError ? [createClientError('Too short')] : []
 
@@ -147,8 +147,8 @@ describe('FormInput', () => {
 		function TestComponent() {
 			const article = useEntity(entityDefs.Article, { by: { id: 'article-1' } }, e => e.title())
 
-			if (article.isLoading) return <div>Loading...</div>
-			if (article.isError) return <div>Error</div>
+			if (article.$isLoading) return <div>Loading...</div>
+			if (article.$isError) return <div>Error</div>
 
 			return (
 				<FormFieldScope field={article.title}>
@@ -183,8 +183,8 @@ describe('FormInput', () => {
 		function TestComponent() {
 			const article = useEntity(entityDefs.Article, { by: { id: 'article-1' } }, e => e.title())
 
-			if (article.isLoading) return <div>Loading...</div>
-			if (article.isError) return <div>Error</div>
+			if (article.$isLoading) return <div>Loading...</div>
+			if (article.$isError) return <div>Error</div>
 
 			return (
 				<FormFieldScope field={article.title} required={true}>
@@ -216,8 +216,8 @@ describe('FormInput', () => {
 		function TestComponent() {
 			const article = useEntity(entityDefs.Article, { by: { id: 'article-1' } }, e => e.title())
 
-			if (article.isLoading) return <div>Loading...</div>
-			if (article.isError) return <div>Error</div>
+			if (article.$isLoading) return <div>Loading...</div>
+			if (article.$isError) return <div>Error</div>
 
 			return (
 				<div>
@@ -258,8 +258,8 @@ describe('FormInput', () => {
 		function TestComponent() {
 			const article = useEntity(entityDefs.Article, { by: { id: 'article-1' } }, e => e.title())
 
-			if (article.isLoading) return <div>Loading...</div>
-			if (article.isError) return <div>Error</div>
+			if (article.$isLoading) return <div>Loading...</div>
+			if (article.$isError) return <div>Error</div>
 
 			return (
 				<div>
@@ -297,8 +297,8 @@ describe('FormCheckbox', () => {
 		function TestComponent() {
 			const article = useEntity(entityDefs.Article, { by: { id: 'article-1' } }, e => e.published())
 
-			if (article.isLoading) return <div>Loading...</div>
-			if (article.isError) return <div>Error</div>
+			if (article.$isLoading) return <div>Loading...</div>
+			if (article.$isError) return <div>Error</div>
 
 			return (
 				<FormFieldScope field={article.published}>
@@ -332,8 +332,8 @@ describe('FormCheckbox', () => {
 		function TestComponent() {
 			const article = useEntity(entityDefs.Article, { by: { id: 'article-1' } }, e => e.published())
 
-			if (article.isLoading) return <div>Loading...</div>
-			if (article.isError) return <div>Error</div>
+			if (article.$isLoading) return <div>Loading...</div>
+			if (article.$isError) return <div>Error</div>
 
 			return (
 				<FormFieldScope field={article.published}>
@@ -365,8 +365,8 @@ describe('FormCheckbox', () => {
 		function TestComponent() {
 			const article = useEntity(entityDefs.Article, { by: { id: 'article-2' } }, e => e.published())
 
-			if (article.isLoading) return <div>Loading...</div>
-			if (article.isError) return <div>Error</div>
+			if (article.$isLoading) return <div>Loading...</div>
+			if (article.$isError) return <div>Error</div>
 
 			return (
 				<FormFieldScope field={article.published}>
@@ -400,8 +400,8 @@ describe('FormCheckbox', () => {
 		function TestComponent() {
 			const article = useEntity(entityDefs.Article, { by: { id: 'article-1' } }, e => e.published())
 
-			if (article.isLoading) return <div>Loading...</div>
-			if (article.isError) return <div>Error</div>
+			if (article.$isLoading) return <div>Loading...</div>
+			if (article.$isError) return <div>Error</div>
 
 			return (
 				<div>
@@ -439,8 +439,8 @@ describe('FormCheckbox', () => {
 		function TestComponent() {
 			const article = useEntity(entityDefs.Article, { by: { id: 'article-1' } }, e => e.published())
 
-			if (article.isLoading) return <div>Loading...</div>
-			if (article.isError) return <div>Error</div>
+			if (article.$isLoading) return <div>Loading...</div>
+			if (article.$isError) return <div>Error</div>
 
 			return (
 				<div>
@@ -487,8 +487,8 @@ describe('FormRadioInput', () => {
 		function TestComponent() {
 			const article = useEntity(entityDefs.Article, { by: { id: 'article-1' } }, e => e.title())
 
-			if (article.isLoading) return <div>Loading...</div>
-			if (article.isError) return <div>Error</div>
+			if (article.$isLoading) return <div>Loading...</div>
+			if (article.$isError) return <div>Error</div>
 
 			return (
 				<FormFieldScope field={article.title}>
@@ -525,8 +525,8 @@ describe('FormRadioInput', () => {
 		function TestComponent() {
 			const article = useEntity(entityDefs.Article, { by: { id: 'article-1' } }, e => e.title())
 
-			if (article.isLoading) return <div>Loading...</div>
-			if (article.isError) return <div>Error</div>
+			if (article.$isLoading) return <div>Loading...</div>
+			if (article.$isError) return <div>Error</div>
 
 			return (
 				<div>
@@ -567,8 +567,8 @@ describe('FormRadioInput', () => {
 		function TestComponent() {
 			const article = useEntity(entityDefs.Article, { by: { id: 'article-1' } }, e => e.title())
 
-			if (article.isLoading) return <div>Loading...</div>
-			if (article.isError) return <div>Error</div>
+			if (article.$isLoading) return <div>Loading...</div>
+			if (article.$isError) return <div>Error</div>
 
 			return (
 				<FormFieldScope field={article.title}>
@@ -605,8 +605,8 @@ describe('FormRadioInput', () => {
 		function TestComponent() {
 			const article = useEntity(entityDefs.Article, { by: { id: 'article-1' } }, e => e.title())
 
-			if (article.isLoading) return <div>Loading...</div>
-			if (article.isError) return <div>Error</div>
+			if (article.$isLoading) return <div>Loading...</div>
+			if (article.$isError) return <div>Error</div>
 
 			return (
 				<FormFieldScope field={article.title}>

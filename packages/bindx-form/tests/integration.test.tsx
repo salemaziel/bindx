@@ -34,8 +34,8 @@ describe('Form components integration', () => {
 				e => e.title().published(),
 			)
 
-			if (article.isLoading) return <div>Loading...</div>
-			if (article.isError) return <div>Error</div>
+			if (article.$isLoading) return <div>Loading...</div>
+			if (article.$isError) return <div>Error</div>
 
 			return (
 				<div>
@@ -116,8 +116,8 @@ describe('Form components integration', () => {
 			)
 			const [ready, setReady] = React.useState(false)
 
-			if (article.isLoading) return <div>Loading...</div>
-			if (article.isError) return <div>Error</div>
+			if (article.$isLoading) return <div>Loading...</div>
+			if (article.$isError) return <div>Error</div>
 
 			return (
 				<div>
@@ -194,8 +194,8 @@ describe('Form components integration', () => {
 				e => e.title(),
 			)
 
-			if (article.isLoading) return <div>Loading...</div>
-			if (article.isError) return <div>Error</div>
+			if (article.$isLoading) return <div>Loading...</div>
+			if (article.$isError) return <div>Error</div>
 
 			return (
 				<div>

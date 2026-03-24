@@ -34,8 +34,8 @@ describe('FormHasOneRelationScope', () => {
 				e => e.author(a => a.id().name()),
 			)
 
-			if (article.isLoading) return <div>Loading...</div>
-			if (article.isError) return <div>Error</div>
+			if (article.$isLoading) return <div>Loading...</div>
+			if (article.$isError) return <div>Error</div>
 
 			return (
 				<FormHasOneRelationScope relation={article.author}>
@@ -78,8 +78,8 @@ describe('FormHasManyRelationScope', () => {
 				e => e.tags(t => t.id().name()),
 			)
 
-			if (article.isLoading) return <div>Loading...</div>
-			if (article.isError) return <div>Error</div>
+			if (article.$isLoading) return <div>Loading...</div>
+			if (article.$isError) return <div>Error</div>
 
 			return (
 				<FormHasManyRelationScope relation={article.tags}>
@@ -118,8 +118,8 @@ describe('FormHasManyRelationScope', () => {
 				e => e.tags(t => t.id().name()),
 			)
 
-			if (article.isLoading) return <div>Loading...</div>
-			if (article.isError) return <div>Error</div>
+			if (article.$isLoading) return <div>Loading...</div>
+			if (article.$isError) return <div>Error</div>
 
 			return (
 				<div>
