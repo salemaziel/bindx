@@ -250,20 +250,27 @@ function createCollectorFieldRef(
 	// This works for all field types:
 	// - Scalar fields: Accessing ref.value works (exists on target, passes through)
 	// - Has-many fields: Accessing ref.items/length works (exists on target, passes through)
-	// - Has-one with schema: Direct field access proxies to $fields
+	// - Has-one with schema: Direct field access proxies to $fields (isHasOneRelation=true)
 	// - Has-one without schema: Same - direct field access proxies to $fields
 	// The hasOneFieldsProxy creates nested collector refs which properly track selection.
-	return wrapCollectorRefWithFieldAccessProxy(refObject, hasOneFieldsProxy)
+	return wrapCollectorRefWithFieldAccessProxy(refObject, hasOneFieldsProxy, isHasOneRelation)
 }
 
 /**
  * Wraps a collector ref in a Proxy that supports direct field access for hasOne relations.
  * - `ref.fieldName` is equivalent to `ref.$fields.fieldName`
  * - Known ref properties pass through to the target
+ *
+ * When `isHasOneRelation` is true, matches runtime EntityHandle proxy behavior:
+ * only `id`, `$`-prefixed, and `__`-prefixed properties pass through;
+ * everything else is delegated to `fieldsProxy` as field access on the related entity.
+ * This prevents built-in ref properties (like `items`, `value`, `map`) from
+ * shadowing entity field names on the has-one target.
  */
 function wrapCollectorRefWithFieldAccessProxy(
 	ref: CollectorRef,
 	fieldsProxy: EntityFields<unknown>,
+	isHasOneRelation: boolean,
 ): CollectorRef {
 	return new Proxy(ref, {
 		get(target, prop) {
@@ -272,7 +279,17 @@ function wrapCollectorRefWithFieldAccessProxy(
 				return Reflect.get(target, prop)
 			}
 
-			// Check if property exists on target - if so, pass through
+			if (isHasOneRelation) {
+				// For has-one relations, match runtime EntityHandle proxy behavior:
+				// Only pass through id, $-prefixed, and __-prefixed properties.
+				// Everything else is field access on the related entity.
+				if (prop === 'id' || prop.startsWith('$') || prop.startsWith('__')) {
+					return Reflect.get(target, prop)
+				}
+				return fieldsProxy[prop as keyof EntityFields<unknown>]
+			}
+
+			// For has-many/scalar/unknown: existing behavior
 			if (prop in target) {
 				return Reflect.get(target, prop)
 			}
