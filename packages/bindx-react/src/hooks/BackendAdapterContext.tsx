@@ -9,6 +9,14 @@ import { UndoManager } from '@contember/bindx'
 import { QueryBatcher } from '../batching/QueryBatcher.js'
 
 /**
+ * Minimal GraphQL client interface exposed through bindx context.
+ * Avoids coupling to concrete GraphQlClient class across package boundaries.
+ */
+export interface BindxGraphQlClient {
+	execute<T = unknown>(query: string, options?: { variables?: Record<string, unknown> }): Promise<T>
+}
+
+/**
  * Context value containing all bindx services
  */
 export interface BindxContextValue {
@@ -26,6 +34,8 @@ export interface BindxContextValue {
 	schema: SchemaRegistry
 	/** Undo manager (if enabled) */
 	undoManager: UndoManager | null
+	/** GraphQL client (available when using ContemberBindxProvider) */
+	graphQlClient: BindxGraphQlClient | null
 	/** Whether debug logging is enabled */
 	debug: boolean
 }
@@ -122,6 +132,7 @@ export function BindxProvider({
 			batchPersister,
 			schema: schemaRegistry,
 			undoManager,
+			graphQlClient: null,
 			debug,
 		}
 	}, [adapter, customStore, schemaDefinition, customMutationCollector, enableUndo, undoConfig, defaultUpdateMode, debug])

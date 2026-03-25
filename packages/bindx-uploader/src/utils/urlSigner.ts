@@ -1,4 +1,4 @@
-import type { GraphQlClient } from '@contember/graphql-client'
+import type { BindxGraphQlClient } from '@contember/bindx-react'
 import type { S3FileParameters, S3SignedUrlResponse } from '../uploadClient/types.js'
 
 /**
@@ -6,7 +6,7 @@ import type { S3FileParameters, S3SignedUrlResponse } from '../uploadClient/type
  * Uses microtask scheduling to batch concurrent signing requests into a single GraphQL mutation.
  */
 export const createContentApiS3Signer = (
-	client: GraphQlClient,
+	client: BindxGraphQlClient,
 ): ((parameters: S3FileParameters) => Promise<S3SignedUrlResponse>) => {
 	let uploadUrlBatchParameters: S3FileParameters[] = []
 	let uploadUrlBatchResult: null | Promise<Record<string, S3SignedUrlResponse>> = null

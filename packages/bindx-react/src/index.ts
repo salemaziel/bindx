@@ -184,6 +184,7 @@ export {
 export type {
 	BindxProviderProps,
 	BindxContextValue,
+	BindxGraphQlClient,
 	UseEntityOptions,
 	UseEntityListOptions,
 	LoadingEntityResult,

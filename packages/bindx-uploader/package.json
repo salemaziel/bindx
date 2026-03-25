@@ -18,7 +18,6 @@
 		"@contember/bindx": "workspace:*",
 		"@contember/bindx-react": "workspace:*",
 		"@contember/bindx-repeater": "workspace:*",
-		"@contember/graphql-client": "*",
 		"@radix-ui/react-slot": "^1.2.3",
 		"react-dropzone": "^14.3.8"
 	},

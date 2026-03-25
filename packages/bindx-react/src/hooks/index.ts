@@ -8,6 +8,7 @@ export {
 	useSchemaRegistry,
 	type BindxProviderProps,
 	type BindxContextValue,
+	type BindxGraphQlClient,
 } from './BackendAdapterContext.js'
 
 export {

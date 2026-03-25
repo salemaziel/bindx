@@ -140,6 +140,7 @@ export const ContemberBindxProvider = memo(function ContemberBindxProvider({
 			batchPersister,
 			schema: schemaRegistry,
 			undoManager,
+			graphQlClient,
 			debug,
 		}
 	}, [schema, customStore, undoManagerProp, undoConfig, defaultUpdateMode, debug])
