@@ -3,11 +3,7 @@
 	"version": "0.1.11",
 	"type": "module",
 	"exports": {
-		".": {
-			"types": "./dist/types/index.d.ts",
-			"development": "./src/index.ts",
-			"default": "./dist/production/index.js"
-		}
+		".": "./src/index.ts"
 	},
 	"scripts": {
 		"build": "vite build",
