@@ -1,5 +1,5 @@
 /**
- * Shared layout for DefaultDataGrid and DefaultHasManyDataGrid.
+ * Shared layout for DataGrid and HasManyDataGrid.
  * Renders toolbar, loader, table/custom layouts, pagination.
  */
 import React, { type ReactElement } from 'react'
@@ -17,15 +17,15 @@ import { DataGridContainer } from '#bindx-ui/datagrid/table'
 import { DataGridAutoTable } from '#bindx-ui/datagrid/auto-table'
 import { DataGridNoResults } from '#bindx-ui/datagrid/empty'
 
-export interface DefaultDataGridLayoutProps {
+export interface DataGridLayoutProps {
 	stickyToolbar?: boolean
 	stickyPagination?: boolean
 }
 
-export function DefaultDataGridLayout({
+export function DataGridLayout({
 	stickyToolbar,
 	stickyPagination,
-}: DefaultDataGridLayoutProps): ReactElement {
+}: DataGridLayoutProps): ReactElement {
 	const { toolbarContent, layoutRenders } = useDataViewContext()
 
 	return (

@@ -29,14 +29,14 @@ import { FormContainer } from '#bindx-ui/form/container'
 import { Popover, PopoverTrigger } from '#bindx-ui/ui/popover'
 import { Button } from '#bindx-ui/ui/button'
 import { ChevronDownIcon, XIcon } from 'lucide-react'
-import { DefaultSelectDataView } from '#bindx-ui/select/list'
+import { SelectDataView } from '#bindx-ui/select/list'
 import {
 	SelectDefaultPlaceholderUI,
 	SelectInputActionsUI,
 	SelectInputUI,
 	SelectInputWrapperUI,
-	SelectPopoverContent,
-} from '#bindx-ui/select/ui'
+} from '#bindx-ui/select/input-ui'
+import { SelectPopoverContent } from '#bindx-ui/select/popover-ui'
 
 /** Extract the target entity type from a HasOneRef */
 type RelationTarget<F> = F extends HasOneRef<infer TEntity, any> ? TEntity : object
@@ -127,13 +127,13 @@ export const SelectField = withCollector(function SelectField<F extends HasOneRe
 							</PopoverTrigger>
 						</SelectInputWrapperUI>
 						<SelectPopoverContent>
-							<DefaultSelectDataView
+							<SelectDataView
 								queryField={queryField}
 								initialSorting={initialSorting}
 								filter={filter}
 							>
 								{children as (it: EntityRef<object>) => ReactNode}
-							</DefaultSelectDataView>
+							</SelectDataView>
 						</SelectPopoverContent>
 					</Popover>
 				</div>

@@ -3,8 +3,8 @@
  */
 
 // Re-export all styled primitives
-export { DefaultDataGrid, type DefaultDataGridProps, DefaultHasManyDataGrid, type DefaultHasManyDataGridProps } from '#bindx-ui/datagrid/default-grid'
-export { DefaultDataGridLayout, type DefaultDataGridLayoutProps } from '#bindx-ui/datagrid/default-layout'
+export { DataGrid, type DataGridProps, HasManyDataGrid, type HasManyDataGridProps } from '#bindx-ui/datagrid/datagrid'
+export { DataGridLayout, type DataGridLayoutProps } from '#bindx-ui/datagrid/layout'
 export { DataGridToolbarUI, type DataGridToolbarUIProps } from '#bindx-ui/datagrid/toolbar'
 export { DataGridPaginationUI, type DataGridPaginationUIProps, DataGridPerPageSelector } from '#bindx-ui/datagrid/pagination'
 export { DataGridColumnHeaderUI, type DataGridColumnHeaderUIProps } from '#bindx-ui/datagrid/column-header'
@@ -48,15 +48,15 @@ export {
 
 // Cells
 export {
-	DataGridEnumCell,
-	type DataGridEnumCellProps,
-	DataGridEnumListCell,
-	type DataGridEnumListCellProps,
-	DataGridHasOneCell,
-	type DataGridHasOneCellProps,
-	DataGridHasManyCell,
-	type DataGridHasManyCellProps,
-} from '#bindx-ui/datagrid/cells'
+	EnumCell,
+	type EnumCellProps,
+	EnumListCell,
+	type EnumListCellProps,
+	HasOneCell,
+	type HasOneCellProps,
+	HasManyCell,
+	type HasManyCellProps,
+} from '#bindx-ui/datagrid/cells/index'
 
 // Tooltips
 export {
@@ -110,17 +110,17 @@ export {
 
 // Styled columns (with inline filter UI)
 export {
-	DataGridTextColumn,
-	DataGridNumberColumn,
-	DataGridDateColumn,
-	DataGridDateTimeColumn,
-	DataGridBooleanColumn,
-	DataGridEnumColumn,
-	DataGridEnumListColumn,
-	DataGridUuidColumn,
-	DataGridIsDefinedColumn,
-	DataGridHasOneColumn,
-	DataGridHasManyColumn,
+	TextColumn,
+	NumberColumn,
+	DateColumn,
+	DateTimeColumn,
+	BooleanColumn,
+	EnumColumn,
+	EnumListColumn,
+	UuidColumn,
+	IsDefinedColumn,
+	HasOneColumn,
+	HasManyColumn,
 	DataGridActionColumn,
 	DataGridColumn,
 	type DataGridTextColumnProps,
@@ -136,4 +136,4 @@ export {
 	type DataGridHasManyColumnProps,
 	type DataGridActionColumnProps,
 	type DataGridColumnProps,
-} from '#bindx-ui/datagrid/columns'
+} from '#bindx-ui/datagrid/columns/index'

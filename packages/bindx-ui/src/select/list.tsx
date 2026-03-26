@@ -1,5 +1,5 @@
 /**
- * DefaultSelectDataView — pre-configured select options list with search,
+ * SelectDataView — pre-configured select options list with search,
  * infinite scroll, and keyboard navigation.
  */
 
@@ -7,7 +7,7 @@ import React, { type ReactNode } from 'react'
 import type { EntityAccessor, OrderDirection } from '@contember/bindx'
 import type { FieldRef } from '@contember/bindx'
 import {
-	SelectDataView,
+	SelectDataView as SelectDataViewCore,
 	SelectOption,
 	SelectItemTrigger,
 	DataViewInfiniteLoadProvider,
@@ -25,7 +25,7 @@ import { ArrowBigDownDash } from 'lucide-react'
 import { SelectDefaultFilter } from '#bindx-ui/select/filter'
 import { SelectListItemUI } from '#bindx-ui/select/ui'
 
-export interface DefaultSelectDataViewProps {
+export interface SelectDataViewProps {
 	/** Per-item render function */
 	children: (it: EntityAccessor<object>) => ReactNode
 	/** Field(s) to search across */
@@ -36,14 +36,14 @@ export interface DefaultSelectDataViewProps {
 	filter?: Record<string, unknown>
 }
 
-export function DefaultSelectDataView({
+export function SelectDataView({
 	children,
 	queryField,
 	initialSorting,
 	filter,
-}: DefaultSelectDataViewProps): ReactNode {
+}: SelectDataViewProps): ReactNode {
 	return (
-		<SelectDataView
+		<SelectDataViewCore
 			queryField={queryField}
 			initialSorting={initialSorting}
 			filter={filter}
@@ -52,7 +52,7 @@ export function DefaultSelectDataView({
 			<SelectListInner>
 				{children}
 			</SelectListInner>
-		</SelectDataView>
+		</SelectDataViewCore>
 	)
 }
 
