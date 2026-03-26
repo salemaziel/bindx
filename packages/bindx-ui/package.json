@@ -5,7 +5,8 @@
 	"exports": {
 		".": "./src/index.ts",
 		"./vite-plugin": "./src/vite-plugin.ts",
-		"./_internal/*": "./src/components/*.ts"
+		"./utils": "./src/utils/index.ts",
+		"./_internal/*": "./src/*"
 	},
 	"scripts": {
 		"build": "vite build",
