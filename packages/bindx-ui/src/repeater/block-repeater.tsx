@@ -1,6 +1,6 @@
 import React, { type ReactNode } from 'react'
 import type { EntityAccessor, HasManyRef, AnyBrand } from '@contember/bindx'
-import { HasMany, withCollector } from '@contember/bindx-react'
+import { withCollector } from '@contember/bindx-react'
 import {
 	BlockRepeater as BlockRepeaterCore,
 	type BlockDefinition,
@@ -11,7 +11,6 @@ import {
 	RepeaterWrapperUI,
 	RepeaterEmptyUI,
 } from '#bindx-ui/repeater/repeater-ui'
-import { collectionItemInfo } from '#bindx-ui/repeater/repeater'
 import { dict } from '../dict.js'
 import { BlockItem } from '#bindx-ui/repeater/block-repeater-item'
 import { SortableBlockList } from '#bindx-ui/repeater/block-repeater-sortable'
@@ -122,28 +121,12 @@ export const BlockRepeater = withCollector(function BlockRepeater<
 		</BlockRepeaterCore>
 	)
 }, (props) => (
-	<HasMany field={props.field}>
-		{item => {
-			const blockCollectionInfo: BlockRepeaterItemInfo = {
-				...collectionItemInfo,
-				blockType: null,
-				block: undefined,
-			}
-			return (
-				<>
-					{Object.values<BlockRenderDefinition<object, unknown>>(props.blocks).map((blockDef, i) => {
-						const info = { ...blockCollectionInfo, index: i }
-						return (
-							<React.Fragment key={i}>
-								{blockDef.render(item as EntityAccessor<object, unknown>, info)}
-								{blockDef.form?.(item as EntityAccessor<object, unknown>, info)}
-							</React.Fragment>
-						)
-					})}
-				</>
-			)
-		}}
-	</HasMany>
+	<BlockRepeaterCore
+		field={props.field}
+		discriminationField={props.discriminationField}
+		sortableBy={props.sortableBy}
+		blocks={props.blocks}
+	/>
 ))
 
 interface PlainBlockListProps<TEntity, TSelected, TBrand extends AnyBrand, TEntityName extends string, TSchema extends Record<string, object>, TBlockNames extends string> {

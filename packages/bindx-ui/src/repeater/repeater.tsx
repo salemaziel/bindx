@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import type { EntityRef, HasManyRef, AnyBrand } from '@contember/bindx'
-import { HasMany, withCollector } from '@contember/bindx-react'
+import { withCollector } from '@contember/bindx-react'
 import { Repeater as RepeaterCore, type RepeaterItemInfo } from '@contember/bindx-repeater'
 import { PlusCircleIcon, Trash2Icon } from 'lucide-react'
 import { Button } from '#bindx-ui/ui/button'
@@ -100,9 +100,9 @@ export const Repeater = withCollector(function Repeater<
 		</RepeaterCore>
 	)
 }, (props) => (
-	<HasMany field={props.field}>
-		{item => props.children(item, collectionItemInfo)}
-	</HasMany>
+	<RepeaterCore field={props.field} sortableBy={props.sortableBy}>
+		{(items) => <>{items.map((entity, info) => props.children(entity, info))}</>}
+	</RepeaterCore>
 ))
 
 function AddButton({ children, onClick }: { children?: ReactNode; onClick: () => void }): ReactNode {
