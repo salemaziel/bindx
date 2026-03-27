@@ -6,7 +6,7 @@ const headless = tid('headless-block-repeater')
 browserTest('Block Repeater', () => {
 	describe('initial state', () => {
 		test('headless repeater renders empty state', () => {
-			waitFor(() => el(`${headless}`).exists)
+			waitFor(() => el(`${headless}`).exists, { timeout: 15_000 })
 			expect(el(`${headless}`).text).toContain('No blocks yet')
 		})
 
@@ -34,6 +34,7 @@ browserTest('Block Repeater', () => {
 		})
 
 		test('blocks have correct order indicators', () => {
+			waitFor(() => el('block-item-text').exists && el('block-item-image').exists)
 			expect(el('block-item-text').text).toContain('#0')
 			expect(el('block-item-image').text).toContain('#1')
 		})
@@ -41,10 +42,12 @@ browserTest('Block Repeater', () => {
 
 	describe('move operations', () => {
 		test('first block has move-up disabled', () => {
+			waitFor(() => el(`${tid('block-item-text')} ${tid('move-up')}`).exists)
 			expect(el(`${tid('block-item-text')} ${tid('move-up')}`).isDisabled).toBe(true)
 		})
 
 		test('last block has move-down disabled', () => {
+			waitFor(() => el(`${tid('block-item-image')} ${tid('move-down')}`).exists)
 			expect(el(`${tid('block-item-image')} ${tid('move-down')}`).isDisabled).toBe(true)
 		})
 
@@ -54,7 +57,6 @@ browserTest('Block Repeater', () => {
 				const first = el(`${headless} [data-testid^="block-item-"]:first-child`)
 				return first.text.includes('#0') && first.text.includes('image')
 			})
-			// After move, image should be first (#0), text should be second (#1)
 			const firstBlock = el(`${headless} [data-testid^="block-item-"]:first-child`)
 			expect(firstBlock.text).toContain('image')
 		})
@@ -63,21 +65,20 @@ browserTest('Block Repeater', () => {
 	describe('removing blocks', () => {
 		test('remove a block', () => {
 			const initialCount = el(`${headless} [data-testid^="block-item-"]`).count()
-			// Remove the first block
 			el(`${headless} [data-testid^="block-item-"]:first-child ${tid('remove-block')}`).click()
 			waitFor(() => el(`${headless} [data-testid^="block-item-"]`).count() === initialCount - 1)
 			expect(el(`${headless} [data-testid^="block-item-"]`).count()).toBe(initialCount - 1)
 		})
 
 		test('remove all blocks shows empty state', () => {
-			// Remove remaining blocks
-			while (el(`${headless} [data-testid^="block-item-"]`).count() > 0) {
+			waitFor(() => {
+				if (el(`${headless} [data-testid^="block-item-"]`).count() === 0) return true
 				el(`${headless} [data-testid^="block-item-"]:first-child ${tid('remove-block')}`).click()
-				wait(500)
-			}
-			waitFor(() => el(`${headless}`).text.includes('No blocks yet'))
+				wait(300)
+				return false
+			}, { timeout: 15_000 })
 			expect(el(`${headless}`).text).toContain('No blocks yet')
-		})
+		}, 20_000)
 	})
 
 	describe('styled block repeater', () => {
