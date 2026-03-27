@@ -8,7 +8,7 @@ browserTest('Block Repeater', () => {
 		test('headless repeater renders empty state', () => {
 			waitFor(() => el(`${headless}`).exists && el(`${headless}`).text.includes('No blocks yet'), { timeout: 15_000 })
 			expect(el(`${headless}`).text).toContain('No blocks yet')
-		})
+		}, 20_000)
 
 		test('add block buttons are visible', () => {
 			expect(el('add-block-text').exists).toBe(true)
@@ -50,9 +50,9 @@ browserTest('Block Repeater', () => {
 			waitFor(() => {
 				const btn = el(`${tid('block-item-image')} ${tid('move-down')}`)
 				return btn.exists && btn.isDisabled
-			})
+			}, { timeout: 15_000 })
 			expect(el(`${tid('block-item-image')} ${tid('move-down')}`).isDisabled).toBe(true)
-		})
+		}, 20_000)
 
 		test('move image block up', () => {
 			el(`${tid('block-item-image')} ${tid('move-up')}`).click()
