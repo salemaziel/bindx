@@ -215,6 +215,12 @@ export class PlaceholderHandle<TEntity extends object = object, TSelected = TEnt
 					onChange: setValue,
 				}
 			},
+			touch(): void {
+				// Placeholder fields are not persisted yet, so touch is a no-op
+			},
+			get isTouched(): boolean {
+				return false
+			},
 			path: [fieldName],
 			fieldName,
 			// Error properties for FieldRef interface
