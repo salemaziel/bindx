@@ -10,7 +10,7 @@ import {
 	useDataViewRelationFilterFactory,
 	type UseDataViewRelationFilterResult,
 } from '@contember/bindx-dataview'
-import type { FieldRefBase } from '@contember/bindx'
+import type { FieldRef } from '@contember/bindx'
 import { useDefaultFieldLabel } from '../labels.js'
 import { Popover, PopoverContent, PopoverTrigger } from '../../ui/popover.js'
 import {
@@ -39,7 +39,7 @@ export interface RelationFilterItem {
 // ============================================================================
 
 export interface DataGridHasOneFilterUIProps<T> {
-	field: FieldRefBase<T>
+	field: FieldRef<T>
 	name?: string
 	label?: ReactNode
 	items: readonly RelationFilterItem[]
@@ -64,7 +64,7 @@ export function DataGridHasOneFilterUI<T>({ label, items, ...props }: DataGridHa
 // ============================================================================
 
 export interface DataGridHasManyFilterUIProps<T> {
-	field: FieldRefBase<T>
+	field: FieldRef<T>
 	name?: string
 	label?: ReactNode
 	items: readonly RelationFilterItem[]

@@ -5,7 +5,7 @@
  * They compose existing <HasOne>, <HasMany>, <Field> with tooltip components.
  */
 import type { ReactElement, ReactNode } from 'react'
-import type { FieldRefBase } from '@contember/bindx'
+import type { FieldRef } from '@contember/bindx'
 import { DataGridTooltipLabel } from './ui.js'
 import { DataGridEnumFieldTooltip, DataGridHasOneTooltip, DataGridHasManyTooltip } from './tooltips.js'
 
@@ -14,7 +14,7 @@ import { DataGridEnumFieldTooltip, DataGridHasOneTooltip, DataGridHasManyTooltip
 // ============================================================================
 
 export interface DataGridEnumCellProps<T> {
-	field: FieldRefBase<T>
+	field: FieldRef<T>
 	filterName?: string
 	value: string | null
 	options?: Record<string, ReactNode>
@@ -50,7 +50,7 @@ export function DataGridEnumCell<T>({ field, filterName, value, options, tooltip
 // ============================================================================
 
 export interface DataGridEnumListCellProps<T> {
-	field: FieldRefBase<T>
+	field: FieldRef<T>
 	filterName?: string
 	values: readonly string[] | null
 	options?: Record<string, ReactNode>
@@ -81,7 +81,7 @@ export function DataGridEnumListCell<T>({ field, filterName, values, options, to
 // ============================================================================
 
 export interface DataGridHasOneCellProps<T> {
-	field: FieldRefBase<T>
+	field: FieldRef<T>
 	filterName?: string
 	id: string | null
 	children: ReactNode
@@ -121,7 +121,7 @@ export function DataGridHasOneCell<T>({ field, filterName, id, children, tooltip
 // ============================================================================
 
 export interface DataGridHasManyCellProps<T> {
-	field: FieldRefBase<T>
+	field: FieldRef<T>
 	filterName?: string
 	id: string
 	children: ReactNode

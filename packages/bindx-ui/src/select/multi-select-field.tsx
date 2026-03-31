@@ -21,7 +21,7 @@
 import React, { type ReactNode, useMemo } from 'react'
 import type { EntityAccessor, HasManyRef, OrderDirection } from '@contember/bindx'
 import { entityDef, FIELD_REF_META } from '@contember/bindx'
-import type { FieldRefBase } from '@contember/bindx'
+import type { FieldRef } from '@contember/bindx'
 import { HasMany, withCollector } from '@contember/bindx-react'
 import { MultiSelect, SelectEachValue, SelectPlaceholder } from '@contember/bindx-dataview'
 import { FormHasManyRelationScope } from '@contember/bindx-form'
@@ -55,7 +55,7 @@ export interface MultiSelectFieldProps<F extends HasManyRef<any> = HasManyRef<ob
 	/** Placeholder when nothing is selected */
 	placeholder?: ReactNode
 	/** Field(s) to search across. Auto-derived from children if omitted. */
-	queryField?: FieldRefBase<unknown> | FieldRefBase<unknown>[] | string[]
+	queryField?: FieldRef<unknown> | FieldRef<unknown>[] | string[]
 	/** Initial sort order */
 	initialSorting?: Partial<Record<ScalarKeys<HasManyTarget<F>>, OrderDirection>>
 	/** Filter for the options list */

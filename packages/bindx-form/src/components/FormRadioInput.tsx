@@ -2,6 +2,7 @@ import { useCallback, type ChangeEventHandler, type ReactElement } from 'react'
 import { SlotInput } from './SlotInput.js'
 import { useFormFieldState } from '../contexts.js'
 import type { FormRadioInputProps } from '../types.js'
+import { useField } from '@contember/bindx-react'
 
 /**
  * Helper to set data attribute only when true
@@ -38,10 +39,12 @@ export function FormRadioInput<T>({
 	const formState = useFormFieldState()
 	const id = formState?.htmlId
 
+	const accessor = useField(field)
+
 	// Compute derived state
 	const hasErrors = (formState?.errors.length ?? field.errors.length) > 0
-	const dirty = formState?.dirty ?? field.isDirty
-	const isChecked = field.value === value
+	const dirty = formState?.dirty ?? accessor.isDirty
+	const isChecked = accessor.value === value
 
 	// Handle radio change
 	const handleChange = useCallback<ChangeEventHandler<HTMLInputElement>>(

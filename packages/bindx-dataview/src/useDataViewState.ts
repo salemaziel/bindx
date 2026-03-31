@@ -18,7 +18,7 @@ import type {
 	DataViewLayout,
 	SelectionValues,
 	SelectionState,
-	FieldRefBase,
+	FieldRef,
 } from '@contember/bindx'
 import { FIELD_REF_META } from '@contember/bindx'
 import { useStoredState, type StateStorageOrName } from './stateStorage.js'
@@ -144,9 +144,9 @@ export interface UseSortingOptions {
 
 export interface SortingStateResult {
 	readonly state: SortingState
-	setOrderBy<T>(field: FieldRefBase<T>, action: SortingDirectionAction, append?: boolean): void
+	setOrderBy<T>(field: FieldRef<T>, action: SortingDirectionAction, append?: boolean): void
 	clear(): void
-	directionOf<T>(field: FieldRefBase<T>): OrderDirection | null
+	directionOf<T>(field: FieldRef<T>): OrderDirection | null
 	readonly resolvedOrderBy: readonly Record<string, unknown>[] | undefined
 }
 
@@ -182,7 +182,7 @@ export function useSortingState(options: UseSortingOptions): SortingStateResult 
 	const state = useMemo((): SortingState => ({ directions }), [directions])
 
 	const setOrderBy = useCallback(
-		<T>(field: FieldRefBase<T>, action: SortingDirectionAction, append?: boolean): void => {
+		<T>(field: FieldRef<T>, action: SortingDirectionAction, append?: boolean): void => {
 			const fieldName = field[FIELD_REF_META].fieldName
 			if (!sortableFields.has(fieldName)) return
 			const currentDir = directions[fieldName] ?? null
@@ -210,7 +210,7 @@ export function useSortingState(options: UseSortingOptions): SortingStateResult 
 	}, [setDirections])
 
 	const directionOf = useCallback(
-		<T>(field: FieldRefBase<T>): OrderDirection | null => directions[field[FIELD_REF_META].fieldName] ?? null,
+		<T>(field: FieldRef<T>): OrderDirection | null => directions[field[FIELD_REF_META].fieldName] ?? null,
 		[directions],
 	)
 

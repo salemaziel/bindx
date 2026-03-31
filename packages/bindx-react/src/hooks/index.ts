@@ -56,6 +56,10 @@ export {
 
 export { useEntityBeforePersist } from './useEntityBeforePersist.js'
 
+export { useField } from './useField.js'
+export { useHasMany } from './useHasMany.js'
+export { useHasOne } from './useHasOne.js'
+
 export {
 	useEntityErrors,
 	type EntityErrorsState,

@@ -20,9 +20,10 @@
 import React, { type ReactNode, useMemo, useState } from 'react'
 import type { EntityAccessor, HasOneRef, OrderDirection } from '@contember/bindx'
 import { entityDef, isPlaceholderId, FIELD_REF_META } from '@contember/bindx'
-import type { FieldRefBase } from '@contember/bindx'
+import type { FieldRef } from '@contember/bindx'
 import { HasOne, withCollector } from '@contember/bindx-react'
 import { Select, SelectEachValue, SelectPlaceholder } from '@contember/bindx-dataview'
+import { useHasOne } from '@contember/bindx-react'
 import { FormHasOneRelationScope } from '@contember/bindx-form'
 import { FormContainer } from '../form/container.js'
 import { Popover, PopoverTrigger } from '../ui/popover.js'
@@ -43,7 +44,7 @@ type RelationTarget<F> = F extends HasOneRef<infer TEntity, any> ? TEntity : obj
 /** Scalar field keys of an entity (for filter/sorting) */
 type ScalarKeys<T> = { [K in keyof T]: T[K] extends (object | object[] | null) ? never : K }[keyof T] & string
 
-export interface SelectFieldProps<F extends HasOneRef<any> = HasOneRef<object>> {
+export interface SelectFieldProps<F extends HasOneRef<any> = HasOneRef<any>> {
 	/** Has-one relation field */
 	field: F
 	/** Per-item render function */
@@ -51,7 +52,7 @@ export interface SelectFieldProps<F extends HasOneRef<any> = HasOneRef<object>> 
 	/** Placeholder when nothing is selected */
 	placeholder?: ReactNode
 	/** Field(s) to search across. Auto-derived from children if omitted. */
-	queryField?: FieldRefBase<unknown> | FieldRefBase<unknown>[] | string[]
+	queryField?: FieldRef<unknown> | FieldRef<unknown>[] | string[]
 	/** Initial sort order — keys are typed to the target entity's scalar fields */
 	initialSorting?: Partial<Record<ScalarKeys<RelationTarget<F>>, OrderDirection>>
 	/** Filter for the options list — typed to the target entity */
@@ -75,6 +76,7 @@ export const SelectField = withCollector(function SelectField<F extends HasOneRe
 	description,
 	required,
 }: SelectFieldProps<F>): ReactNode {
+	const fieldAccessor = useHasOne(field)
 	const [open, setOpen] = useState(false)
 
 	const options = useMemo(() => {
@@ -107,7 +109,7 @@ export const SelectField = withCollector(function SelectField<F extends HasOneRe
 										{entity => children(entity as EntityAccessor<RelationTarget<F>>)}
 									</SelectEachValue>
 									<SelectInputActionsUI>
-										{!isPlaceholderId(field.$entity.id) && (
+										{!isPlaceholderId(fieldAccessor.$entity.id) && (
 											<Button
 												size="xs"
 												variant="ghost"

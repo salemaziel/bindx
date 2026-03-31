@@ -3,7 +3,7 @@ import type { SnapshotStore } from '../store/SnapshotStore.js'
 import { generatePlaceholderId } from '../store/SnapshotStore.js'
 import {
 	FIELD_REF_META,
-	type SelectedEntityFields,
+	type EntityFieldsAccessor,
 	type FieldRefMeta,
 	type Unsubscribe,
 	type EntityAccessor,
@@ -138,8 +138,8 @@ export class PlaceholderHandle<TEntity extends object = object, TSelected = TEnt
 	/**
 	 * Gets field accessors that read/write placeholder data.
 	 */
-	get fields(): SelectedEntityFields<TEntity, TSelected> {
-		return new Proxy({} as SelectedEntityFields<TEntity, TSelected>, {
+	get fields(): EntityFieldsAccessor<TEntity, TSelected> {
+		return new Proxy({} as EntityFieldsAccessor<TEntity, TSelected>, {
 			get: (_, fieldName: string) => {
 				return this.createPlaceholderFieldHandle(fieldName)
 			},

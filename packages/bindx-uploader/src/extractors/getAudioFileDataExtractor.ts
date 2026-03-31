@@ -33,7 +33,7 @@ export const getAudioFileDataExtractor = <TEntity extends Record<string, unknown
 		})
 
 		return ({ entity }) => {
-			const fields = (entity as { $fields: Record<string, FieldRef<unknown>> }).$fields
+			const fields = ((entity as unknown) as { $fields: Record<string, FieldRef<unknown>> }).$fields
 
 			if (durationField) {
 				// Round duration for integer fields

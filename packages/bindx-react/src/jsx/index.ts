@@ -4,24 +4,20 @@ export {
 	FIELD_REF_META,
 	SCOPE_REF,
 	type FieldRefMeta,
-	// Full types
+	// Ref types (pointer, no data access)
 	type FieldRef,
 	type HasManyRef,
 	type HasOneRef,
-	type HasOneAccessor,
 	type EntityRef,
+	// Accessor types (live data access, extends Ref)
+	type FieldAccessor,
+	type HasManyAccessor,
+	type HasOneAccessor,
 	type EntityAccessor,
-	// Base types
-	type FieldRefBase,
-	type HasManyRefBase,
-	type HasOneRefBase,
-	type HasOneAccessorBase,
-	type EntityRefBase,
-	type EntityAccessorBase,
 	// Field mapping types
 	type EntityFields,
-	type SelectedEntityFields,
-	type SelectedEntityFieldsBase,
+	type EntityFieldsAccessor,
+	type EntityFieldsRef,
 	// Component props
 	type FieldProps,
 	type HasManyProps,

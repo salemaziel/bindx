@@ -7,22 +7,16 @@ import type {
 	ScalarKeys,
 	HasManyKeys,
 	HasOneKeys,
-	SelectedEntityFields,
-	SelectedEntityFieldsBase,
-	// Full types
+	EntityFieldsAccessor,
+	EntityFieldsRef,
 	FieldRef,
+	FieldAccessor,
 	HasManyRef,
+	HasManyAccessor,
 	HasOneRef,
 	HasOneAccessor,
 	EntityRef,
 	EntityAccessor,
-	// Base types (for component props - accept both)
-	FieldRefBase,
-	HasManyRefBase,
-	HasOneRefBase,
-	HasOneAccessorBase,
-	EntityRefBase,
-	EntityAccessorBase,
 	AnyBrand,
 } from '@contember/bindx'
 import { Condition } from './conditions.js'
@@ -38,22 +32,16 @@ export type {
 	ScalarKeys,
 	HasManyKeys,
 	HasOneKeys,
-	SelectedEntityFields,
-	SelectedEntityFieldsBase,
-	// Full types
+	EntityFieldsAccessor,
+	EntityFieldsRef,
 	FieldRef,
+	FieldAccessor,
 	HasManyRef,
+	HasManyAccessor,
 	HasOneRef,
 	HasOneAccessor,
 	EntityRef,
 	EntityAccessor,
-	// Base types
-	FieldRefBase,
-	HasManyRefBase,
-	HasOneRefBase,
-	HasOneAccessorBase,
-	EntityRefBase,
-	EntityAccessorBase,
 	AnyBrand,
 }
 
@@ -72,11 +60,11 @@ export const SCOPE_REF = Symbol('SCOPE_REF')
 
 /**
  * Props for Field component.
- * Accepts FieldRefBase, so both FieldRef (explicit) and FieldRefBase (implicit) work.
+ * Accepts FieldRef (pointer, no .value). The component uses useField() to get FieldAccessor.
  */
 export interface FieldProps<T> {
-	field: FieldRefBase<T>
-	children?: (accessor: FieldRef<T>) => ReactNode
+	field: FieldRef<T>
+	children?: (accessor: FieldAccessor<T>) => ReactNode
 	format?: (value: T | null) => ReactNode
 }
 
@@ -93,7 +81,7 @@ export interface HasManyComponentOptions {
 /**
  * Props for HasMany component.
  * Selection-aware: children callback receives EntityAccessor with direct field access.
- * Accepts HasManyRefBase, so both HasManyRef (explicit) and HasManyRefBase (implicit) work.
+ * Accepts HasManyRef (pointer, no .items/.length/.map). The component uses useHasMany() to get HasManyAccessor.
  *
  * @typeParam TEntity - The full entity type
  * @typeParam TSelected - The selected subset of fields (defaults to TEntity for backwards compatibility)
@@ -108,7 +96,7 @@ export interface HasManyProps<
 	TEntityName extends string = string,
 	TSchema extends Record<string, object> = Record<string, object>,
 > {
-	field: HasManyRefBase<TEntity, TSelected, TBrand, TEntityName, TSchema>
+	field: HasManyRef<TEntity, TSelected, TBrand, TEntityName, TSchema>
 	children: (item: EntityAccessor<TEntity, TSelected, TBrand, TEntityName, TSchema>, index: number) => ReactNode
 	filter?: unknown
 	orderBy?: unknown
@@ -119,7 +107,7 @@ export interface HasManyProps<
 /**
  * Props for HasOne component.
  * Selection-aware: children callback receives EntityAccessor with direct field access.
- * Accepts HasOneRefBase, so both HasOneRef (explicit) and HasOneRefBase (implicit) work.
+ * Accepts HasOneRef (pointer). The component uses useHasOne() to get HasOneAccessor.
  *
  * @typeParam TEntity - The full entity type
  * @typeParam TSelected - The selected subset of fields (defaults to TEntity for backwards compatibility)
@@ -134,7 +122,7 @@ export interface HasOneProps<
 	TEntityName extends string = string,
 	TSchema extends Record<string, object> = Record<string, object>,
 > {
-	field: HasOneRefBase<TEntity, TSelected, TBrand, TEntityName, TSchema>
+	field: HasOneRef<TEntity, TSelected, TBrand, TEntityName, TSchema>
 	children: (entity: EntityAccessor<TEntity, TSelected, TBrand, TEntityName, TSchema>) => ReactNode
 }
 

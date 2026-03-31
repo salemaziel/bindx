@@ -8,7 +8,7 @@ import {
 	addRelationError,
 	clearRelationErrors,
 } from '../core/actions.js'
-import { FIELD_REF_META, type HasManyRef, type FieldRefMeta, type EntityAccessor, type Unsubscribe } from './types.js'
+import { FIELD_REF_META, type HasManyAccessor, type FieldRefMeta, type EntityAccessor, type Unsubscribe } from './types.js'
 import { createClientError, type ErrorInput, type FieldError } from '../errors/types.js'
 import type {
 	EventListener,
@@ -85,8 +85,8 @@ export class HasManyListHandle<TEntity extends object = object, TSelected = TEnt
 		brands?: Set<symbol>,
 		alias?: string,
 		selection?: SelectionMeta,
-	): HasManyRef<TEntity, TSelected> {
-		return createAliasProxy<HasManyListHandle<TEntity, TSelected>, HasManyRef<TEntity, TSelected>>(new HasManyListHandle<TEntity, TSelected>(parentEntityType, parentEntityId, fieldName, itemType, store, dispatcher, schema, brands, alias, selection))
+	): HasManyAccessor<TEntity, TSelected> {
+		return createAliasProxy<HasManyListHandle<TEntity, TSelected>, HasManyAccessor<TEntity, TSelected>>(new HasManyListHandle<TEntity, TSelected>(parentEntityType, parentEntityId, fieldName, itemType, store, dispatcher, schema, brands, alias, selection))
 	}
 
 	/**

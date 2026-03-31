@@ -8,7 +8,7 @@ import type {
 	FieldRef,
 } from '@contember/bindx'
 import { SelectionScope, FIELD_REF_META } from '@contember/bindx'
-import { createCollectorProxy, mergeSelections, BINDX_COMPONENT, SCOPE_REF, type SelectionProvider } from '@contember/bindx-react'
+import { createCollectorProxy, mergeSelections, BINDX_COMPONENT, SCOPE_REF, type SelectionProvider, useHasMany, useField } from '@contember/bindx-react'
 import type {
 	BlockRepeaterProps,
 	BlockRepeaterItems,
@@ -72,7 +72,8 @@ export function BlockRepeater<
 	blocks,
 	children,
 }: BlockRepeaterProps<TEntity, TSelected, TBrand, TEntityName, TSchema, TBlockNames>): ReactElement {
-	const sortedItems = useSortedItems(field, sortableBy)
+	const fieldAccessor = useHasMany(field)
+	const sortedItems = useSortedItems(fieldAccessor, sortableBy)
 
 	const items = useMemo((): BlockRepeaterItems<TEntity, TSelected, TBrand, TEntityName, TSchema> => {
 		const createItemInfo = (
@@ -82,7 +83,7 @@ export function BlockRepeater<
 			const isFirst = index === 0
 			const isLast = index === sortedItems.length - 1
 
-			const discriminationRef = (entity.$fields as Record<string, unknown>)[discriminationField] as FieldRef<string> | undefined
+			const discriminationRef = (entity.$fields as Record<string, unknown>)[discriminationField] as import('@contember/bindx').FieldAccessor<string> | undefined
 			const blockType = discriminationRef?.value ?? null
 			const blockDef = blockType !== null ? (blocks as Record<string, BlockDefinition>)[blockType] : undefined
 			const block = blockDef !== undefined && blockType !== null
@@ -91,7 +92,7 @@ export function BlockRepeater<
 
 			const remove = (): void => {
 				if (sortableBy) {
-					const items = sortEntities(field.items, sortableBy) as EntityAccessor<TEntity, TSelected>[]
+					const items = sortEntities(fieldAccessor.items, sortableBy) as EntityAccessor<TEntity, TSelected>[]
 					const currentIndex = items.findIndex(item => item.id === entity.id)
 					if (currentIndex !== -1) {
 						items.splice(currentIndex, 1)
@@ -103,7 +104,7 @@ export function BlockRepeater<
 
 			const moveUp = (): void => {
 				if (!sortableBy || isFirst) return
-				const items = sortEntities(field.items, sortableBy) as EntityAccessor<TEntity, TSelected>[]
+				const items = sortEntities(fieldAccessor.items, sortableBy) as EntityAccessor<TEntity, TSelected>[]
 				const currentIndex = items.findIndex(item => item.id === entity.id)
 				if (currentIndex === -1 || currentIndex === 0) return
 				const newItems = arrayMove(items, currentIndex, currentIndex - 1)
@@ -112,7 +113,7 @@ export function BlockRepeater<
 
 			const moveDown = (): void => {
 				if (!sortableBy || isLast) return
-				const items = sortEntities(field.items, sortableBy) as EntityAccessor<TEntity, TSelected>[]
+				const items = sortEntities(fieldAccessor.items, sortableBy) as EntityAccessor<TEntity, TSelected>[]
 				const currentIndex = items.findIndex(item => item.id === entity.id)
 				if (currentIndex === -1 || currentIndex === items.length - 1) return
 				const newItems = arrayMove(items, currentIndex, currentIndex + 1)
@@ -151,10 +152,10 @@ export function BlockRepeater<
 			if (!sortableBy) {
 				if (index === 'last' || index === undefined) {
 					const entityId = field.add()
-					const items = field.items
+					const items = fieldAccessor.items
 					const newEntity = items.find(item => item.id === entityId)
 					if (newEntity) {
-						const discriminationRef = (newEntity.$fields as Record<string, unknown>)[discriminationField] as FieldRef<string> | undefined
+						const discriminationRef = (newEntity.$fields as Record<string, unknown>)[discriminationField] as import('@contember/bindx').FieldAccessor<string> | undefined
 						discriminationRef?.setValue(type)
 					}
 					return
@@ -162,7 +163,7 @@ export function BlockRepeater<
 				throw new Error('Cannot add item at specific index without sortableBy field')
 			}
 
-			const currentItems = sortEntities(field.items, sortableBy) as EntityAccessor<TEntity, TSelected>[]
+			const currentItems = sortEntities(fieldAccessor.items, sortableBy) as EntityAccessor<TEntity, TSelected>[]
 
 			const resolvedIndex = (() => {
 				switch (index) {
@@ -177,7 +178,7 @@ export function BlockRepeater<
 			})()
 
 			const entityId = field.add()
-			const items = field.items
+			const items = fieldAccessor.items
 			const newEntity = items.find(item => item.id === entityId)
 
 			if (newEntity) {
@@ -185,14 +186,14 @@ export function BlockRepeater<
 				newSortedItems.splice(resolvedIndex, 0, newEntity as EntityAccessor<TEntity, TSelected>)
 				repairEntitiesOrder(newSortedItems, sortableBy)
 
-				const discriminationRef = (newEntity.$fields as Record<string, unknown>)[discriminationField] as FieldRef<string> | undefined
+				const discriminationRef = (newEntity.$fields as Record<string, unknown>)[discriminationField] as import('@contember/bindx').FieldAccessor<string> | undefined
 				discriminationRef?.setValue(type)
 			}
 		}
 
 		return {
 			addItem,
-			isEmpty: field.length === 0,
+			isEmpty: fieldAccessor.length === 0,
 			blockList,
 		}
 	}, [field, sortableBy, blocks, discriminationField])
@@ -246,11 +247,11 @@ blockRepeaterWithSelection.getSelection = (
 	// Collect field selections from block render/form functions
 	for (const blockDef of Object.values(props.blocks) as BlockDefinition[]) {
 		if (blockDef.render) {
-			const renderJsx = blockDef.render(collectorEntity as EntityAccessor)
+			const renderJsx = blockDef.render(collectorEntity as EntityAccessor<object>)
 			if (renderJsx) mergeSelections(scope.toSelectionMeta(), collectNested(renderJsx))
 		}
 		if (blockDef.form) {
-			const formJsx = blockDef.form(collectorEntity as EntityAccessor)
+			const formJsx = blockDef.form(collectorEntity as EntityAccessor<object>)
 			if (formJsx) mergeSelections(scope.toSelectionMeta(), collectNested(formJsx))
 		}
 	}

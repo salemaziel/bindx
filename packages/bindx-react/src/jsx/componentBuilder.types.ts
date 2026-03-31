@@ -10,7 +10,6 @@ import type { ReactNode, ComponentType } from 'react'
 import type {
 	EntityRef,
 	EntityAccessor,
-	EntityAccessorBase,
 	FluentFragment,
 	SelectionBuilder,
 	AnyBrand,
@@ -229,7 +228,7 @@ export type SetScalarProps<
  * - Allows direct field access: `entity.fieldName.value`
  * - Allows relation access: `entity.relation.length`, `entity.relation.$entity`
  *
- * For implicit selection (no selector): Returns EntityAccessorBase with restricted access
+ * For implicit selection (no selector): Returns EntityRef with restricted access
  * - Blocks direct field access to enforce declarative patterns
  * - Users must use components: `<Field field={entity.fieldName} />`
  * - Users must use condition DSL: `<If condition={cond.hasItems(entity.relation)} />`
@@ -244,14 +243,14 @@ export type BuildEntityProps<
 		infer TIsImplicit
 	>
 		? TIsImplicit extends true
-			// Implicit selection -> restricted EntityAccessorBase (no .value, .length access)
-			? EntityAccessorBase<TEntity, TSelected, AnyBrand, string>
+			// Implicit selection -> restricted EntityRef (no .value, .length access)
+			? EntityRef<TEntity, TSelected, AnyBrand, string>
 			// Explicit selection -> full EntityAccessor (full access)
 			: EntityAccessor<TEntity, TSelected, AnyBrand, string>
 		: TEntityProps[K] extends InterfaceEntityPropConfig<infer TInterface, infer TIsImplicit>
 			? TIsImplicit extends true
 				// Implicit interface -> restricted
-				? EntityAccessorBase<TInterface, TInterface, AnyBrand, string>
+				? EntityRef<TInterface, TInterface, AnyBrand, string>
 				// Explicit interface -> full access
 				: EntityAccessor<TInterface, TInterface, AnyBrand, string>
 			: never

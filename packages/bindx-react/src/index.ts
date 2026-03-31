@@ -50,15 +50,22 @@ export type {
 	HasOneRelationState,
 	InputProps,
 	EntityFields,
-	SelectedEntityFields,
+	EntityFieldsAccessor,
+	EntityFieldsRef,
 	ScalarKeys,
 	HasManyKeys,
 	HasOneKeys,
 	FieldRefMeta,
+	// Ref types (pointer, no data access)
 	FieldRef,
 	HasManyRef,
 	HasOneRef,
 	EntityRef,
+	// Accessor types (live data access, extends Ref)
+	FieldAccessor,
+	HasManyAccessor,
+	HasOneAccessor,
+	EntityAccessor,
 	// Type extraction helpers
 	ExtractHasOneEntityName,
 	ExtractHasManyEntityName,
@@ -218,8 +225,6 @@ export type {
 
 // JSX types
 export type {
-	EntityAccessor,
-	FieldRefBase,
 	FieldProps,
 	HasManyProps,
 	HasOneProps,
@@ -291,6 +296,10 @@ export {
 	useIntercept,
 	useInterceptEntity,
 	useInterceptField,
+	// Ref → Accessor hooks
+	useField,
+	useHasMany,
+	useHasOne,
 	// Contember
 	ContemberBindxProvider,
 	schemaNamesToDef,

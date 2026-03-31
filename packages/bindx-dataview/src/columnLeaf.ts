@@ -8,7 +8,7 @@
  */
 
 import React from 'react'
-import type { FieldRefBase, FilterHandler, FilterArtifact, EntityAccessor } from '@contember/bindx'
+import type { FieldRef, FilterHandler, FilterArtifact, EntityAccessor } from '@contember/bindx'
 
 // ============================================================================
 // ColumnLeaf Props — the new ColumnMeta
@@ -25,7 +25,7 @@ export interface ColumnLeafProps {
 	// ── Core ──
 	readonly name: string
 	readonly fieldName: string | null
-	readonly fieldRef: FieldRefBase<unknown> | null
+	readonly fieldRef: FieldRef<unknown> | null
 	readonly sortingField: string | null
 	readonly filterName: string | null
 	readonly filterHandler: FilterHandler<FilterArtifact> | undefined

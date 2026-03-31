@@ -11,7 +11,7 @@ import {
 	clearEntityErrors,
 	clearAllErrors as clearAllErrorsAction,
 } from '../core/actions.js'
-import { type FieldRef, type HasOneAccessor, type HasManyRef, type SelectedEntityFields, type Unsubscribe, type EntityAccessor } from './types.js'
+import { type FieldAccessor, type HasOneAccessor, type HasManyAccessor, type EntityFieldsAccessor, type Unsubscribe, type EntityAccessor } from './types.js'
 import { deepEqual } from '../utils/deepEqual.js'
 import { createClientError, type ErrorInput, type FieldError } from '../errors/types.js'
 import type {
@@ -38,12 +38,12 @@ interface RelationHandleRaw {
 
 interface CachedFieldHandle {
 	readonly raw: FieldHandle<unknown>
-	readonly proxy: FieldRef<unknown>
+	readonly proxy: FieldAccessor<unknown>
 }
 
 interface CachedRelationHandle {
 	readonly raw: RelationHandleRaw
-	readonly proxy: HasOneAccessor<object> | HasManyRef<object>
+	readonly proxy: HasOneAccessor<object> | HasManyAccessor<object>
 }
 
 /**
@@ -241,12 +241,12 @@ export class EntityHandle<T extends object = object, TSelected = T> extends Enti
 	 * Gets a field handle for a specific field.
 	 * Returns cached handle to ensure stable identity.
 	 */
-	field<K extends keyof T>(fieldName: K): FieldRef<T[K]> {
+	field<K extends keyof T>(fieldName: K): FieldAccessor<T[K]> {
 		const cacheKey = String(fieldName)
 		const cached = this.fieldHandleCache.get(cacheKey)
 
 		if (cached) {
-			return cached.proxy as FieldRef<T[K]>
+			return cached.proxy as FieldAccessor<T[K]>
 		}
 
 		const enumName = this.schema.getEnumName(this.entityType, cacheKey)
@@ -307,13 +307,13 @@ export class EntityHandle<T extends object = object, TSelected = T> extends Enti
 	 * @param alias - Optional alias for the relation. When the same field is used multiple times
 	 *                with different parameters (filter, orderBy, limit), each needs a unique alias.
 	 */
-	hasMany<TItem extends object>(fieldName: string, alias?: string, nestedSelection?: SelectionMeta): HasManyRef<TItem> {
+	hasMany<TItem extends object>(fieldName: string, alias?: string, nestedSelection?: SelectionMeta): HasManyAccessor<TItem> {
 		const effectiveAlias = alias ?? fieldName
 		const cacheKey = `hasMany:${effectiveAlias}`
 		const cached = this.relationHandleCache.get(cacheKey)
 
 		if (cached) {
-			return cached.proxy as HasManyRef<TItem>
+			return cached.proxy as HasManyAccessor<TItem>
 		}
 
 		const targetType = this.schema.getRelationTarget(this.entityType, fieldName)
@@ -380,12 +380,12 @@ export class EntityHandle<T extends object = object, TSelected = T> extends Enti
 	 * Gets a raw (unproxied) has-many relation handle from cache.
 	 * Creates the handle if not cached yet.
 	 */
-	private getHasManyHandleRaw(fieldName: string): HasManyRef<object> {
+	private getHasManyHandleRaw(fieldName: string): HasManyAccessor<object> {
 		const cacheKey = `hasMany:${fieldName}`
 		const cached = this.relationHandleCache.get(cacheKey)
 
 		if (cached) {
-			return cached.proxy as HasManyRef<object>
+			return cached.proxy as HasManyAccessor<object>
 		}
 
 		const targetType = this.schema.getRelationTarget(this.entityType, fieldName)
@@ -460,8 +460,8 @@ export class EntityHandle<T extends object = object, TSelected = T> extends Enti
 	 *
 	 * Implements EntityRef.fields - returns selection-aware field accessors.
 	 */
-	get fields(): SelectedEntityFields<T, TSelected> {
-		return new Proxy({} as SelectedEntityFields<T, TSelected>, {
+	get fields(): EntityFieldsAccessor<T, TSelected> {
+		return new Proxy({} as EntityFieldsAccessor<T, TSelected>, {
 			get: (_, fieldName: string) => {
 				// Selection validation
 				if (this.selection && !this.selection.fields.has(fieldName)) {

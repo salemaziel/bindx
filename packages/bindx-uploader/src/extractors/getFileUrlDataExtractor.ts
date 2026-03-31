@@ -13,7 +13,7 @@ export const getFileUrlDataExtractor = <TEntity extends Record<string, unknown>>
 }: FileUrlDataExtractorProps<TEntity>): FileDataExtractor<TEntity> => ({
 	getFieldNames: () => [urlField],
 	populateFields: ({ entity, result }) => {
-		const fields = (entity as { $fields: Record<string, FieldRef<unknown>> }).$fields
+		const fields = ((entity as unknown) as { $fields: Record<string, FieldRef<unknown>> }).$fields
 		const field = fields[urlField]
 		if (field) {
 			field.setValue(result.publicUrl ?? null)

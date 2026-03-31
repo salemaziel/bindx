@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, type ReactNode } from 'react'
 import type { EntityRef, HasManyRef, SelectionFieldMeta, SelectionMeta } from '@contember/bindx'
 import { FIELD_REF_META } from '@contember/bindx'
-import { BINDX_COMPONENT, type SelectionProvider, createEmptySelection } from '@contember/bindx-react'
+import { BINDX_COMPONENT, type SelectionProvider, createEmptySelection, useHasMany } from '@contember/bindx-react'
 import type { FileType, UploaderEvents } from '../types.js'
 import {
 	MultiUploaderEntityToFileStateMapContext,
@@ -54,6 +54,7 @@ export function MultiUploader<TEntity extends Record<string, unknown>>({
 	fileType,
 	children,
 }: MultiUploaderProps<TEntity>): ReactNode {
+	const fieldAccessor = useHasMany(field)
 	// Map file ID -> entity ID
 	const fileToEntityMapRef = useRef(new Map<string, string>())
 	// Map entity ID -> file ID (for reverse lookup)
@@ -63,9 +64,9 @@ export function MultiUploader<TEntity extends Record<string, unknown>>({
 		(fileId: string): EntityRef<unknown> | undefined => {
 			const entityId = fileToEntityMapRef.current.get(fileId)
 			if (!entityId) return undefined
-			return field.items.find((item: { id: string }) => item.id === entityId) as EntityRef<unknown> | undefined
+			return fieldAccessor.items.find((item: { id: string }) => item.id === entityId) as EntityRef<unknown> | undefined
 		},
-		[field.items],
+		[fieldAccessor.items],
 	)
 
 	// Create entity for file and track mapping

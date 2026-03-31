@@ -1,5 +1,4 @@
 import {
-	type EntityRef,
 	type EntityAccessor,
 	type EntityFields,
 } from './types.js'
@@ -11,18 +10,18 @@ import {
  */
 export const ENTITY_ACCESSOR_PROPERTIES = new Set([
 	'id',
-	'$fields', '$data', '$isDirty', '$persistedId', '$isNew',
+	'$fields', '$data', '$isDirty', '$isPersisting', '$persistedId', '$isNew',
 	'$errors', '$hasError', '$addError', '$clearErrors', '$clearAllErrors',
 	'$on', '$intercept', '$onPersisted', '$interceptPersisting',
-	'__entityType', '__entityName',
+	'__entityType', '__entityName', '__schema',
 ])
 
 /**
- * Wraps an EntityRef in a Proxy that supports direct field access.
+ * Wraps an object with $fields in a Proxy that supports direct field access.
  * - `entity.fieldName` is equivalent to `entity.$fields.fieldName`
  * - Known accessor properties pass through to the target
  */
-export function wrapEntityRefWithFieldAccessProxy<T>(ref: EntityRef<T>): EntityAccessor<T> {
+export function wrapEntityRefWithFieldAccessProxy<T>(ref: { $fields: EntityFields<T> } & Record<string | symbol, unknown>): EntityAccessor<T> {
 	return new Proxy(ref, {
 		get(target, prop) {
 			// Symbols - pass through
@@ -36,7 +35,7 @@ export function wrapEntityRefWithFieldAccessProxy<T>(ref: EntityRef<T>): EntityA
 			}
 
 			// Otherwise, treat as field access
-			return target.$fields[prop as keyof EntityFields<T>]
+			return (target as { $fields: EntityFields<T> }).$fields[prop as keyof EntityFields<T>]
 		},
 	}) as EntityAccessor<T>
 }

@@ -6,7 +6,7 @@ import {
 	HasManyListHandle,
 	SchemaRegistry,
 	type SchemaDefinition,
-	type HasManyRef,
+	type HasManyAccessor,
 	isTempId,
 } from '@contember/bindx'
 import { createTestDispatcher } from '../shared/unitTestHelpers.js'
@@ -63,7 +63,7 @@ describe('HasManyListHandle', () => {
 		schema = new SchemaRegistry(testSchemaDefinition)
 	})
 
-	function createHasManyHandle(): HasManyRef<TestTag> {
+	function createHasManyHandle(): HasManyAccessor<TestTag> {
 		return HasManyListHandle.create<TestTag>(
 			'Article',
 			'a-1',

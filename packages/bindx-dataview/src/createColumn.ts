@@ -7,7 +7,7 @@
  */
 
 import React from 'react'
-import type { FieldRefBase, FilterArtifact, FilterHandler, EntityAccessor } from '@contember/bindx'
+import type { FieldRef, FilterArtifact, FilterHandler, EntityAccessor } from '@contember/bindx'
 import type { ColumnTypeDef } from './columnTypes.js'
 import { ColumnLeaf, type ColumnLeafProps } from './columnLeaf.js'
 import { extractFieldName, extractEnumName } from './columns.js'
@@ -19,7 +19,7 @@ import { extractFieldName, extractEnumName } from './columns.js'
 export interface ColumnRenderProps<TValue> {
 	readonly value: TValue
 	readonly accessor: EntityAccessor<object>
-	readonly fieldRef: FieldRefBase<unknown> | null
+	readonly fieldRef: FieldRef<unknown> | null
 	readonly fieldName: string | null
 }
 
@@ -42,7 +42,7 @@ export interface CreateColumnConfig<TValue, TFilterArtifact extends FilterArtifa
 // ============================================================================
 
 export interface ColumnComponentProps<TValue = unknown> {
-	field: FieldRefBase<TValue>
+	field: FieldRef<TValue>
 	header?: React.ReactNode
 	sortable?: boolean
 	filter?: boolean
@@ -67,7 +67,7 @@ export function createColumn<TValue, TFilterArtifact extends FilterArtifact, TEx
 	}
 
 	Column.staticRender = (props: Record<string, unknown>): React.ReactNode => {
-		const fieldRef = props['field'] as FieldRefBase<unknown> | undefined
+		const fieldRef = props['field'] as FieldRef<unknown> | undefined
 		const fieldName = fieldRef ? extractFieldName(fieldRef) : null
 		const header = props['header'] as React.ReactNode | undefined
 		const sortable = (props['sortable'] as boolean | undefined) ?? columnType.defaultSortable

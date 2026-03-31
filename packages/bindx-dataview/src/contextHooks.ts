@@ -18,7 +18,7 @@ import type {
 	FilterHandler,
 	FilterArtifact,
 	DataViewLayout,
-	FieldRefBase,
+	FieldRef,
 } from '@contember/bindx'
 
 // ============================================================================
@@ -26,7 +26,7 @@ import type {
 // ============================================================================
 
 export interface DataViewSortingMethods {
-	setOrderBy<T>(field: FieldRefBase<T>, action: SortingDirectionAction, append?: boolean): void
+	setOrderBy<T>(field: FieldRef<T>, action: SortingDirectionAction, append?: boolean): void
 }
 
 export function useDataViewSortingState(): SortingState {
@@ -38,7 +38,7 @@ export function useDataViewSortingMethods(): DataViewSortingMethods {
 	return useMemo(() => ({ setOrderBy: sorting.setOrderBy }), [sorting.setOrderBy])
 }
 
-export function useDataViewSortingDirection<T>(field: FieldRefBase<T>): OrderDirection | null {
+export function useDataViewSortingDirection<T>(field: FieldRef<T>): OrderDirection | null {
 	return useDataViewContext().sorting.directionOf(field)
 }
 

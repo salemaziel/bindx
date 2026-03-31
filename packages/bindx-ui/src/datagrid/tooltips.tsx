@@ -2,7 +2,7 @@
  * Tooltip components for DataGrid cells — show filter/exclude actions on hover.
  */
 import type { ReactElement, ReactNode } from 'react'
-import type { FieldRefBase } from '@contember/bindx'
+import type { FieldRef } from '@contember/bindx'
 import {
 	DataViewEnumFilter,
 	DataViewEnumFilterTrigger,
@@ -18,7 +18,7 @@ import { DataGridExcludeActionButtonUI, DataGridFilterActionButtonUI } from './u
 // ============================================================================
 
 export interface DataGridEnumFieldTooltipProps<T> {
-	field: FieldRefBase<T>
+	field: FieldRef<T>
 	name?: string
 	value: string
 	children: ReactNode
@@ -55,7 +55,7 @@ export function DataGridEnumFieldTooltip<T>({ children, actions, value, field, n
 // ============================================================================
 
 export interface DataGridHasOneTooltipProps<T> {
-	field: FieldRefBase<T>
+	field: FieldRef<T>
 	name?: string
 	id: string
 	children: ReactNode
@@ -80,7 +80,7 @@ export function DataGridHasOneTooltip<T>({ children, actions, field, name, id }:
 // ============================================================================
 
 export interface DataGridHasManyTooltipProps<T> {
-	field: FieldRefBase<T>
+	field: FieldRef<T>
 	name?: string
 	id: string
 	children: ReactNode

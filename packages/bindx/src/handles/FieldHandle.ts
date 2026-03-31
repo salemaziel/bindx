@@ -2,7 +2,7 @@ import { EntityRelatedHandle } from './BaseHandle.js'
 import type { ActionDispatcher } from '../core/ActionDispatcher.js'
 import type { SnapshotStore } from '../store/SnapshotStore.js'
 import { addFieldError, clearFieldErrors, setField } from '../core/actions.js'
-import { FIELD_REF_META, type FieldRef, type FieldRefMeta, type InputProps, type Unsubscribe } from './types.js'
+import { FIELD_REF_META, type FieldAccessor, type FieldRefMeta, type InputProps, type Unsubscribe } from './types.js'
 import { deepEqual } from '../utils/deepEqual.js'
 import { createClientError, type ErrorInput, type FieldError } from '../errors/types.js'
 import type {
@@ -49,8 +49,8 @@ export class FieldHandle<T = unknown> extends EntityRelatedHandle {
 		dispatcher: ActionDispatcher,
 		enumName?: string,
 		columnType?: string,
-	): FieldRef<T> {
-		return createAliasProxy<FieldHandle<T>, FieldRef<T>>(new FieldHandle<T>(entityType, entityId, fieldPath, store, dispatcher, enumName, columnType))
+	): FieldAccessor<T> {
+		return createAliasProxy<FieldHandle<T>, FieldAccessor<T>>(new FieldHandle<T>(entityType, entityId, fieldPath, store, dispatcher, enumName, columnType))
 	}
 
 	static createRaw<T = unknown>(
@@ -65,8 +65,8 @@ export class FieldHandle<T = unknown> extends EntityRelatedHandle {
 		return new FieldHandle<T>(entityType, entityId, fieldPath, store, dispatcher, enumName, columnType)
 	}
 
-	static wrapProxy<T>(handle: FieldHandle<T>): FieldRef<T> {
-		return createAliasProxy<FieldHandle<T>, FieldRef<T>>(handle)
+	static wrapProxy<T>(handle: FieldHandle<T>): FieldAccessor<T> {
+		return createAliasProxy<FieldHandle<T>, FieldAccessor<T>>(handle)
 	}
 
 	/**
@@ -220,7 +220,7 @@ export class FieldHandle<T = unknown> extends EntityRelatedHandle {
 	 */
 	nested<K extends keyof NonNullable<T>>(
 		key: K,
-	): FieldRef<NonNullable<T>[K]> {
+	): FieldAccessor<NonNullable<T>[K]> {
 		return FieldHandle.create<NonNullable<T>[K]>(
 			this.entityType,
 			this.entityId,

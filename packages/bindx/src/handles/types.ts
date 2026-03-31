@@ -1,14 +1,12 @@
 /**
  * Unified type definitions for the Handle system.
  *
- * This module provides type-safe field accessor mapping that correctly
- * distinguishes between scalar fields, hasOne relations, and hasMany relations.
+ * Type hierarchy: Ref (pointer, no data access) → Accessor (live data, extends Ref).
  *
- * Type hierarchy uses inheritance for implicit/explicit selection modes:
- * - Base types (e.g., FieldRefBase) - work everywhere, no direct value access
- * - Full types (e.g., FieldRef) extend Base - add .value, .length, etc.
- *
- * Components accept Base types, so they work with both implicit and explicit selection.
+ * - FieldRef / FieldAccessor
+ * - HasManyRef / HasManyAccessor
+ * - HasOneRef / HasOneAccessor
+ * - EntityRef / EntityAccessor
  */
 
 import type { FieldHandle } from './FieldHandle.js'
@@ -17,14 +15,11 @@ import type { FieldHandle } from './FieldHandle.js'
 // Relation State Types
 // ============================================================================
 
-/**
- * State of a has-one relation.
- */
 export type HasOneRelationState =
-	| 'connected' // Points to an existing entity
-	| 'disconnected' // Explicitly set to null
-	| 'deleted' // Related entity marked for deletion
-	| 'creating' // Placeholder entity being filled for implicit create
+	| 'connected'
+	| 'disconnected'
+	| 'deleted'
+	| 'creating'
 
 import type { ComponentBrand, AnyBrand } from '../brand/ComponentBrand.js'
 import type { FieldError, ErrorInput } from '../errors/types.js'
@@ -49,17 +44,12 @@ import type {
 	Unsubscribe as UnsubscribeType,
 } from '../events/types.js'
 
-// Re-export Unsubscribe for convenience
 export type { UnsubscribeType as Unsubscribe }
 
 // ============================================================================
 // Field Type Detection Utilities
 // ============================================================================
 
-/**
- * Extracts scalar field keys from a type.
- * A field is scalar if it's not an array and not an object (except 'id' which is always scalar).
- */
 export type ScalarKeys<T> = {
 	[K in keyof T]: T[K] extends (infer _U)[]
 		? never
@@ -70,10 +60,6 @@ export type ScalarKeys<T> = {
 			: K
 }[keyof T]
 
-/**
- * Extracts has-many relation keys from a type.
- * A field is has-many if it's an array of objects.
- */
 export type HasManyKeys<T> = {
 	[K in keyof T]: T[K] extends (infer U)[]
 		? U extends object
@@ -82,10 +68,6 @@ export type HasManyKeys<T> = {
 		: never
 }[keyof T]
 
-/**
- * Extracts has-one relation keys from a type.
- * A field is has-one if it's an object (but not 'id' and not an array).
- */
 export type HasOneKeys<T> = {
 	[K in keyof T]: T[K] extends (infer _U)[]
 		? never
@@ -100,19 +82,12 @@ export type HasOneKeys<T> = {
 // Symbols
 // ============================================================================
 
-/**
- * Marker symbol for field reference metadata
- */
 export const FIELD_REF_META = Symbol('FIELD_REF_META')
 
 // ============================================================================
 // Helper Types
 // ============================================================================
 
-/**
- * Base metadata interface for all field references.
- * Used by JSX components for selection collection.
- */
 export interface FieldRefMeta<TEntityName extends string = string> {
 	readonly entityType: TEntityName
 	readonly entityId: string
@@ -120,32 +95,20 @@ export interface FieldRefMeta<TEntityName extends string = string> {
 	readonly fieldName: string
 	readonly isArray: boolean
 	readonly isRelation: boolean
-	/** For enum fields: the enum type name (e.g. 'DeploymentStatus') */
 	readonly enumName?: string
-	/** For scalar fields: the column type (e.g. 'String', 'Integer', 'Date') */
 	readonly columnType?: string
-	/** For relation fields: the target entity type name */
 	readonly targetType?: string
 }
 
-/**
- * Input props interface for form binding.
- */
 export interface InputProps<T> {
 	readonly value: T | null
 	readonly setValue: (value: T | null) => void
 	readonly onChange: (value: T | null) => void
 }
 
-/**
- * Extracts the nested selection type for a relation field.
- */
 type ExtractNestedSelection<TSelected, K extends PropertyKey> =
 	K extends keyof TSelected ? TSelected[K] : never
 
-/**
- * Reverse lookup: finds entity name (schema key) from entity type.
- */
 export type EntityNameFromType<TSchema extends Record<string, object>, TEntityType> = {
 	[K in keyof TSchema]: TSchema[K] extends TEntityType ? K : never
 }[keyof TSchema] & string
@@ -155,78 +118,29 @@ export type EntityNameFromType<TSchema extends Record<string, object>, TEntityTy
 // ============================================================================
 
 /**
- * Base interface for scalar field references.
- * Works everywhere, can be passed to components.
- * Does NOT include .value, .serverValue, .isDirty - use FieldRef for those.
- *
- * @example
- * ```tsx
- * // In implicit mode, task.title is FieldRefBase<string>
- * // Can be passed to <Field>:
- * <Field field={task.title} />
- *
- * // Can use mutations:
- * task.title.setValue('new value')
- *
- * // Cannot read value directly (use FieldRef for that):
- * // task.title.value  // ❌ type error
- * ```
+ * Pointer to a scalar field. No .value access.
+ * Safe to pass to components, returned by createComponent() implicit mode.
  */
-export interface FieldRefBase<T> {
-	/** Internal metadata for collection phase */
+export interface FieldRef<T> {
 	readonly [FIELD_REF_META]: FieldRefMeta
-
-	/** Whether field has been touched (interacted with by user) */
 	readonly isTouched: boolean
-
-	/** Mark the field as touched */
 	touch(): void
-
-	/** Update the value */
 	setValue(value: T | null): void
-
-	/** Input binding props */
 	readonly inputProps: InputProps<T>
-
-	/** List of errors on this field */
 	readonly errors: readonly FieldError[]
-
-	/** Whether this field has any errors */
 	readonly hasError: boolean
-
-	/** Add a client-side error to this field */
 	addError(error: ErrorInput): void
-
-	/** Clear all errors from this field */
 	clearErrors(): void
-
-	/** Subscribe to field value changes */
 	onChange(listener: EventListener<FieldChangedEvent>): UnsubscribeType
-
-	/** Intercept field value changes (can cancel or modify) */
 	onChanging(interceptor: Interceptor<FieldChangingEvent>): UnsubscribeType
 }
 
 /**
- * Full interface for scalar field references.
- * Extends FieldRefBase with value access properties.
- *
- * @example
- * ```tsx
- * // In explicit mode, task.title is FieldRef<string>
- * // Full access including value:
- * const title = task.title.value
- * const isDirty = task.title.isDirty
- * ```
+ * Live scalar field accessor with value access. Created by hooks (useField).
  */
-export interface FieldRef<T> extends FieldRefBase<T> {
-	/** Current value (null in collection phase, real value in runtime) */
+export interface FieldAccessor<T> extends FieldRef<T> {
 	readonly value: T | null
-
-	/** Server value for dirty tracking */
 	readonly serverValue: T | null
-
-	/** Whether value differs from server */
 	readonly isDirty: boolean
 }
 
@@ -235,95 +149,8 @@ export interface FieldRef<T> extends FieldRefBase<T> {
 // ============================================================================
 
 /**
- * Base interface for has-many relation references.
- * Works everywhere, can be passed to components.
- * Does NOT include .length, .items, .map - use HasManyRef for those.
- *
- * @example
- * ```tsx
- * // In implicit mode, task.developers is HasManyRefBase
- * // Can be passed to <HasMany>:
- * <HasMany field={task.developers}>{dev => ...}</HasMany>
- *
- * // Can use mutations:
- * task.developers.add()
- * task.developers.remove(id)
- *
- * // Cannot read length directly (use HasManyRef for that):
- * // task.developers.length  // ❌ type error
- * ```
- */
-export interface HasManyRefBase<
-	TEntity,
-	TSelected = TEntity,
-	TBrand extends AnyBrand = AnyBrand,
-	TEntityName extends string = string,
-	TSchema extends Record<string, object> = Record<string, object>,
-> {
-	/** Internal metadata for collection phase */
-	readonly [FIELD_REF_META]: FieldRefMeta<TEntityName>
-
-	/** Whether any item has been modified */
-	readonly isDirty: boolean
-
-	/** Add a new item - returns the new entity's ID (temp ID) */
-	add(data?: Partial<TEntity>): string
-
-	/** Remove item by ID */
-	remove(itemId: string): void
-
-	/** Move item from one position to another */
-	move(fromIndex: number, toIndex: number): void
-
-	/** Connect an existing entity to this has-many relation */
-	connect(itemId: string): void
-
-	/** Disconnect an entity from this has-many relation */
-	disconnect(itemId: string | null): void
-
-	/** Reset the relation to server state */
-	reset(): void
-
-	/** Type brand - ensures HasManyRef<Author> is not assignable to HasManyRef<Tag> */
-	readonly __entityType: TEntity
-
-	/** Type brand for entity name */
-	readonly __entityName: TEntityName
-
-	/** Type brand for schema */
-	readonly __schema?: TSchema & any
-
-	/** Runtime brand symbols for validation */
-	readonly __brands?: Set<symbol>
-
-	/** List of errors on this relation */
-	readonly errors: readonly FieldError[]
-
-	/** Whether this relation has any errors */
-	readonly hasError: boolean
-
-	/** Add a client-side error to this relation */
-	addError(error: ErrorInput): void
-
-	/** Clear all errors from this relation */
-	clearErrors(): void
-
-	/** Subscribe to item connected events */
-	onItemConnected(listener: EventListener<HasManyConnectedEvent>): UnsubscribeType
-
-	/** Subscribe to item disconnected events */
-	onItemDisconnected(listener: EventListener<HasManyDisconnectedEvent>): UnsubscribeType
-
-	/** Intercept item connection (can cancel) */
-	interceptItemConnecting(interceptor: Interceptor<HasManyConnectingEvent>): UnsubscribeType
-
-	/** Intercept item disconnection (can cancel) */
-	interceptItemDisconnecting(interceptor: Interceptor<HasManyDisconnectingEvent>): UnsubscribeType
-}
-
-/**
- * Full interface for has-many relation references.
- * Extends HasManyRefBase with collection access properties.
+ * Pointer to a has-many relation. No .items/.length/.map access.
+ * Safe to pass to components.
  */
 export interface HasManyRef<
 	TEntity,
@@ -331,20 +158,44 @@ export interface HasManyRef<
 	TBrand extends AnyBrand = AnyBrand,
 	TEntityName extends string = string,
 	TSchema extends Record<string, object> = Record<string, object>,
-> extends HasManyRefBase<TEntity, TSelected, TBrand, TEntityName, TSchema> {
-	/** Number of items */
+> {
+	readonly [FIELD_REF_META]: FieldRefMeta<TEntityName>
+	readonly isDirty: boolean
+	add(data?: Partial<TEntity>): string
+	remove(itemId: string): void
+	move(fromIndex: number, toIndex: number): void
+	connect(itemId: string): void
+	disconnect(itemId: string | null): void
+	reset(): void
+	readonly __entityType: TEntity
+	readonly __selected?: TSelected
+	readonly __entityName: TEntityName
+	readonly __schema?: TSchema & any
+	readonly __brands?: Set<symbol>
+	readonly errors: readonly FieldError[]
+	readonly hasError: boolean
+	addError(error: ErrorInput): void
+	clearErrors(): void
+	onItemConnected(listener: EventListener<HasManyConnectedEvent>): UnsubscribeType
+	onItemDisconnected(listener: EventListener<HasManyDisconnectedEvent>): UnsubscribeType
+	interceptItemConnecting(interceptor: Interceptor<HasManyConnectingEvent>): UnsubscribeType
+	interceptItemDisconnecting(interceptor: Interceptor<HasManyDisconnectingEvent>): UnsubscribeType
+}
+
+/**
+ * Live has-many accessor with collection access. Created by hooks (useHasMany).
+ */
+export interface HasManyAccessor<
+	TEntity,
+	TSelected = TEntity,
+	TBrand extends AnyBrand = AnyBrand,
+	TEntityName extends string = string,
+	TSchema extends Record<string, object> = Record<string, object>,
+> extends HasManyRef<TEntity, TSelected, TBrand, TEntityName, TSchema> {
 	readonly length: number
-
-	/** Total count from paginateRelation (undefined if not available) */
 	readonly totalCount: number | undefined
-
-	/** Direct access to items array */
 	readonly items: EntityAccessor<TEntity, TSelected, TBrand, TEntityName, TSchema>[]
-
-	/** Iterate over items */
 	map<R>(fn: (item: EntityAccessor<TEntity, TSelected, TBrand, TEntityName, TSchema>, index: number) => R): R[]
-
-	/** Get an item handle by entity ID */
 	getById(id: string): EntityAccessor<TEntity, TSelected, TBrand, TEntityName, TSchema>
 }
 
@@ -353,163 +204,62 @@ export interface HasManyRef<
 // ============================================================================
 
 /**
- * Base interface for has-one relation references.
- * Works everywhere, can be passed to components.
- * Does NOT include .$state, .$entity, .$fields, .$data - use HasOneRef for those.
- * DOES include direct field access (e.g., task.project.name).
- *
- * @example
- * ```tsx
- * // In implicit mode, task.project is HasOneRefBase (with direct field access)
- * // Can be passed to <HasOne>:
- * <HasOne field={task.project}>{project => ...}</HasOne>
- *
- * // Can access nested fields (they are also restricted):
- * task.project.name  // FieldRefBase<string>
- *
- * // Can use mutations:
- * task.project.$connect('project-1')
- *
- * // Cannot read state directly (use HasOneRef for that):
- * // task.project.$state  // ❌ type error
- * ```
+ * Pointer to a has-one relation with proxy field access (fields return Ref variants).
+ * Includes $connect/$disconnect/$delete but no $state/$data/$fields/$entity.
  */
-export interface HasOneRefBase<
+export interface HasOneRefInterface<
 	TEntity,
 	TSelected = TEntity,
 	TBrand extends AnyBrand = AnyBrand,
 	TEntityName extends string = string,
 	TSchema extends Record<string, object> = Record<string, object>,
 > {
-	/** Internal metadata for collection phase */
 	readonly [FIELD_REF_META]: FieldRefMeta<TEntityName>
-
-	/** Entity ID (placeholder ID if disconnected) */
 	readonly id: string
-
-	/** Entity ID (alias with $ prefix) */
 	readonly $id: string
-
-	/** Whether relation is dirty */
 	readonly $isDirty: boolean
-
-	/** Whether this entity is new */
 	readonly $isNew: boolean
-
-	/** Whether entity is currently being persisted */
 	readonly $isPersisting: boolean
-
-	/** Server-assigned ID after persistence */
 	readonly $persistedId: string | null
-
-	/** Type brand for entity name */
 	readonly __entityName: TEntityName
-
-	/** Type brand for schema */
 	readonly __schema?: TSchema & any
-
-	/** Type brand - ensures type safety */
 	readonly __entityType: TEntity
-
-	/** Runtime brand symbols for validation */
+	readonly __selected?: TSelected
 	readonly __brands?: Set<symbol>
-
-	/** Connect to existing entity */
 	$connect(id: string): void
-
-	/** Disconnect relation */
 	$disconnect(): void
-
-	/** Mark relation for deletion */
 	$delete(): void
-
-	/** Reset the relation to server state */
 	$reset(): void
-
-	/** List of errors on this relation */
 	readonly $errors: readonly FieldError[]
-
-	/** Whether this relation has any errors */
 	readonly $hasError: boolean
-
-	/** Add a client-side error to this relation */
 	$addError(error: ErrorInput): void
-
-	/** Clear all errors from this relation */
 	$clearErrors(): void
-
-	/** Clear all errors (entity-level, fields, and relations) */
 	$clearAllErrors(): void
-
-	/** Subscribe to connection events */
 	$onConnect(listener: EventListener<RelationConnectedEvent>): UnsubscribeType
-
-	/** Subscribe to disconnection events */
 	$onDisconnect(listener: EventListener<RelationDisconnectedEvent>): UnsubscribeType
-
-	/** Intercept connection (can cancel or modify target) */
 	$interceptConnect(interceptor: Interceptor<RelationConnectingEvent>): UnsubscribeType
-
-	/** Intercept disconnection (can cancel) */
 	$interceptDisconnect(interceptor: Interceptor<RelationDisconnectingEvent>): UnsubscribeType
-
-	/** Subscribe to any event on the related entity */
-	$on<E extends AfterEventTypes>(
-		eventType: E,
-		listener: EventListener<EventTypeMap[E]>,
-	): UnsubscribeType
-
-	/** Intercept any before event on the related entity */
-	$intercept<E extends BeforeEventTypes>(
-		eventType: E,
-		interceptor: Interceptor<EventTypeMap[E]>,
-	): UnsubscribeType
-
-	/** Subscribe to persist success events */
+	$on<E extends AfterEventTypes>(eventType: E, listener: EventListener<EventTypeMap[E]>): UnsubscribeType
+	$intercept<E extends BeforeEventTypes>(eventType: E, interceptor: Interceptor<EventTypeMap[E]>): UnsubscribeType
 	$onPersisted(listener: EventListener<EntityPersistedEvent>): UnsubscribeType
-
-	/** Intercept persist (can cancel) */
 	$interceptPersisting(interceptor: Interceptor<EntityPersistingEvent>): UnsubscribeType
 }
 
 /**
- * Full interface for has-one relation references.
- * Extends HasOneRefBase with state and entity access properties.
+ * HasOneRef = interface props + proxy field access returning Ref variants.
  */
-export interface HasOneRef<
+export type HasOneRef<
 	TEntity,
 	TSelected = TEntity,
 	TBrand extends AnyBrand = AnyBrand,
 	TEntityName extends string = string,
 	TSchema extends Record<string, object> = Record<string, object>,
-> extends HasOneRefBase<TEntity, TSelected, TBrand, TEntityName, TSchema> {
-	/** Raw data snapshot of the related entity */
-	readonly $data: TSelected | null
-
-	/** Relation state */
-	readonly $state: HasOneRelationState
-
-	/** Nested entity fields - only selected fields are accessible */
-	readonly $fields: SelectedEntityFields<TEntity, TSelected, TSchema>
-
-	/** Related entity accessor with direct field access */
-	readonly $entity: EntityAccessor<TEntity, TSelected, TBrand, TEntityName, TSchema>
-}
+> = HasOneRefInterface<TEntity, TSelected, TBrand, TEntityName, TSchema> &
+	EntityFieldsRef<TEntity, TSelected, TSchema>
 
 /**
- * HasOneRefBase with direct field access via Proxy (for implicit mode).
- */
-export type HasOneAccessorBase<
-	TEntity,
-	TSelected = TEntity,
-	TBrand extends AnyBrand = AnyBrand,
-	TEntityName extends string = string,
-	TSchema extends Record<string, object> = Record<string, object>,
-> = HasOneRefBase<TEntity, TSelected, TBrand, TEntityName, TSchema> &
-	SelectedEntityFieldsBase<TEntity, TSelected, TSchema>
-
-/**
- * HasOneRef with direct field access via Proxy (for explicit mode).
+ * HasOneAccessor = HasOneRef + $state/$data/$fields/$entity, proxy returns Accessor variants.
+ * Includes HasOneRef in definition so TypeScript can infer generic params.
  */
 export type HasOneAccessor<
 	TEntity,
@@ -517,124 +267,66 @@ export type HasOneAccessor<
 	TBrand extends AnyBrand = AnyBrand,
 	TEntityName extends string = string,
 	TSchema extends Record<string, object> = Record<string, object>,
-> = HasOneRef<TEntity, TSelected, TBrand, TEntityName, TSchema> &
-	SelectedEntityFields<TEntity, TSelected, TSchema>
+> = HasOneRef<TEntity, TSelected, TBrand, TEntityName, TSchema> & {
+	readonly $data: TSelected | null
+	readonly $state: HasOneRelationState
+	readonly $fields: EntityFieldsAccessor<TEntity, TSelected, TSchema>
+	readonly $entity: EntityAccessor<TEntity, TSelected, TBrand, TEntityName, TSchema>
+} & EntityFieldsAccessor<TEntity, TSelected, TSchema>
 
 // ============================================================================
 // ENTITY TYPES
 // ============================================================================
 
 /**
- * Base interface for entity references.
- * Works everywhere, can be passed to components.
- * Does NOT include .$data, .$fields - use EntityRef for those.
+ * Entity ref interface props (without proxy field access).
  */
-export interface EntityRefBase<
+export interface EntityRefInterface<
 	TEntity,
 	TSelected = TEntity,
 	TBrand extends AnyBrand = AnyBrand,
 	TEntityName extends string = string,
 	TSchema extends Record<string, object> = Record<string, object>,
 > {
-	/** Entity ID */
 	readonly id: string
-
-	/** Whether entity is dirty */
 	readonly $isDirty: boolean
-
-	/** Whether entity is currently being persisted */
 	readonly $isPersisting: boolean
-
-	/** Server-assigned ID after persistence */
 	readonly $persistedId: string | null
-
-	/** Whether this entity is new */
 	readonly $isNew: boolean
-
-	/** Type brand - ensures type safety */
 	readonly __entityType: TEntity
-
-	/** Type brand for schema */
+	readonly __selected?: TSelected
 	readonly __schema?: TSchema & any
-
-	/** Type brand for entity name */
 	readonly __entityName: TEntityName
-
-	/** Runtime brand symbols for validation */
 	readonly __brands?: Set<symbol>
-
-	/** List of entity-level errors */
 	readonly $errors: readonly FieldError[]
-
-	/** Whether this entity has any errors */
 	readonly $hasError: boolean
-
-	/** Add a client-side error to this entity */
 	$addError(error: ErrorInput): void
-
-	/** Clear entity-level errors */
 	$clearErrors(): void
-
-	/** Clear all errors (entity-level, fields, and relations) */
 	$clearAllErrors(): void
-
-	/** Subscribe to any event on this entity */
-	$on<E extends AfterEventTypes>(
-		eventType: E,
-		listener: EventListener<EventTypeMap[E]>,
-	): UnsubscribeType
-
-	/** Intercept any before event on this entity */
-	$intercept<E extends BeforeEventTypes>(
-		eventType: E,
-		interceptor: Interceptor<EventTypeMap[E]>,
-	): UnsubscribeType
-
-	/** Subscribe to persist success events */
+	$on<E extends AfterEventTypes>(eventType: E, listener: EventListener<EventTypeMap[E]>): UnsubscribeType
+	$intercept<E extends BeforeEventTypes>(eventType: E, interceptor: Interceptor<EventTypeMap[E]>): UnsubscribeType
 	$onPersisted(listener: EventListener<EntityPersistedEvent>): UnsubscribeType
-
-	/** Intercept persist (can cancel) */
 	$interceptPersisting(interceptor: Interceptor<EntityPersistingEvent>): UnsubscribeType
 }
 
 /**
- * Full interface for entity references.
- * Extends EntityRefBase with data access properties.
+ * EntityRef = interface props + proxy field access returning Ref variants.
  */
-export interface EntityRef<
-	TEntity,
-	TSelected = TEntity,
-	TBrand extends AnyBrand = AnyBrand,
-	TEntityName extends string = string,
-	TSchema extends Record<string, object> = Record<string, object>,
-> extends EntityRefBase<TEntity, TSelected, TBrand, TEntityName, TSchema> {
-	/** Typed field accessors */
-	readonly $fields: SelectedEntityFields<TEntity, TSelected, TSchema>
-
-	/** Raw data snapshot */
-	readonly $data: TSelected | null
-}
-
-/**
- * EntityRefBase with direct field access via Proxy (for implicit mode).
- * TRoleMap carries the role map for HasRole type inference.
- */
-export type EntityAccessorBase<
+export type EntityRef<
 	TEntity,
 	TSelected = TEntity,
 	TBrand extends AnyBrand = AnyBrand,
 	TEntityName extends string = string,
 	TSchema extends Record<string, object> = Record<string, object>,
 	TRoleMap extends Record<string, object> = Record<string, object>,
-> = EntityRefBase<TEntity, TSelected, TBrand, TEntityName, TSchema> &
-	SelectedEntityFieldsBase<TEntity, TSelected, TSchema> & {
-		/** @internal phantom — role map for HasRole inference */
+> = EntityRefInterface<TEntity, TSelected, TBrand, TEntityName, TSchema> &
+	EntityFieldsRef<TEntity, TSelected, TSchema> & {
 		readonly __roleMap?: TRoleMap
 	}
 
 /**
- * EntityRef with direct field access via Proxy (for explicit mode).
- * TRoleMap carries the role map for HasRole type inference.
+ * EntityAccessor = EntityRef + $data/$fields, proxy returns Accessor variants.
+ * Includes EntityRef in definition so TypeScript can infer generic params.
  */
 export type EntityAccessor<
 	TEntity,
@@ -643,107 +335,109 @@ export type EntityAccessor<
 	TEntityName extends string = string,
 	TSchema extends Record<string, object> = Record<string, object>,
 	TRoleMap extends Record<string, object> = Record<string, object>,
-> = EntityRef<TEntity, TSelected, TBrand, TEntityName, TSchema> &
-	SelectedEntityFields<TEntity, TSelected, TSchema> & {
-		/** @internal phantom — role map for HasRole inference */
-		readonly __roleMap?: TRoleMap
-	}
+> = EntityRef<TEntity, TSelected, TBrand, TEntityName, TSchema, TRoleMap> & {
+	readonly $fields: EntityFieldsAccessor<TEntity, TSelected, TSchema>
+	readonly $data: TSelected | null
+} & EntityFieldsAccessor<TEntity, TSelected, TSchema>
 
 // ============================================================================
 // ENTITY FIELDS MAPPING TYPES
 // ============================================================================
 
 /**
- * Maps entity fields to their correct Handle types based on structural typing.
- * Uses full types (FieldHandle, HasManyRef, HasOneRef) for backwards compatibility.
+ * Maps entity fields to their Handle types (internal use).
  */
 export type EntityFields<T> = {
 	[K in ScalarKeys<T>]: FieldHandle<T[K]>
 } & {
 	[K in HasManyKeys<T>]: T[K] extends (infer U)[]
 		? U extends object
-			? HasManyRef<U>
+			? HasManyAccessor<U>
 			: never
 		: never
 } & {
-	[K in HasOneKeys<T>]: HasOneRef<NonNullable<T[K]>>
+	[K in HasOneKeys<T>]: HasOneAccessor<NonNullable<T[K]>>
 }
 
 /**
- * Maps entity fields to Base types (restricted, for implicit mode).
- * These types can be passed to components but don't allow direct value access.
+ * Resolves a single field to its Ref type based on field kind.
  */
-export type SelectedEntityFieldsBase<
-	TEntity,
-	TSelected,
-	TSchema extends Record<string, object> = Record<string, object>,
-> = {
-	[K in ScalarKeys<TEntity> & keyof TSelected]: FieldRefBase<TEntity[K]>
-} & {
-	[K in HasManyKeys<TEntity> & keyof TSelected]: TEntity[K] extends (infer U)[]
-		? U extends object
-			? HasManyRefBase<U, ExtractNestedSelection<TSelected, K> extends (infer S)[] ? S : U, AnyBrand, EntityNameFromType<TSchema, U>, TSchema>
-			: never
-		: never
-} & {
-	[K in HasOneKeys<TEntity> & keyof TSelected]: HasOneAccessorBase<
-		NonNullable<TEntity[K]>,
-		ExtractNestedSelection<TSelected, K> extends object ? ExtractNestedSelection<TSelected, K> : NonNullable<TEntity[K]>,
-		AnyBrand,
-		EntityNameFromType<TSchema, NonNullable<TEntity[K]>>,
-		TSchema
-	>
-}
-
-/**
- * Maps entity fields to Full types (for explicit mode).
- * These types allow direct value access.
- */
-export type SelectedEntityFields<
-	TEntity,
-	TSelected,
-	TSchema extends Record<string, object> = Record<string, object>,
-> = {
-	[K in ScalarKeys<TEntity> & keyof TSelected]: FieldRef<TEntity[K]>
-} & {
-	[K in HasManyKeys<TEntity> & keyof TSelected]: TEntity[K] extends (infer U)[]
+type FieldRefType<TEntity, TSelected, TSchema extends Record<string, object>, K extends keyof TEntity & keyof TSelected> =
+	K extends ScalarKeys<TEntity> ? FieldRef<TEntity[K]> :
+	K extends HasManyKeys<TEntity> ? (TEntity[K] extends (infer U)[]
 		? U extends object
 			? HasManyRef<U, ExtractNestedSelection<TSelected, K> extends (infer S)[] ? S : U, AnyBrand, EntityNameFromType<TSchema, U>, TSchema>
 			: never
-		: never
-} & {
-	[K in HasOneKeys<TEntity> & keyof TSelected]: HasOneAccessor<
+		: never) :
+	K extends HasOneKeys<TEntity> ? HasOneRef<
 		NonNullable<TEntity[K]>,
 		ExtractNestedSelection<TSelected, K> extends object ? ExtractNestedSelection<TSelected, K> : NonNullable<TEntity[K]>,
 		AnyBrand,
 		EntityNameFromType<TSchema, NonNullable<TEntity[K]>>,
 		TSchema
-	>
+	> :
+	never
+
+/**
+ * Resolves a single field to its Accessor type based on field kind.
+ */
+type FieldAccessorType<TEntity, TSelected, TSchema extends Record<string, object>, K extends keyof TEntity & keyof TSelected> =
+	K extends ScalarKeys<TEntity> ? FieldAccessor<TEntity[K]> :
+	K extends HasManyKeys<TEntity> ? (TEntity[K] extends (infer U)[]
+		? U extends object
+			? HasManyAccessor<U, ExtractNestedSelection<TSelected, K> extends (infer S)[] ? S : U, AnyBrand, EntityNameFromType<TSchema, U>, TSchema>
+			: never
+		: never) :
+	K extends HasOneKeys<TEntity> ? HasOneAccessor<
+		NonNullable<TEntity[K]>,
+		ExtractNestedSelection<TSelected, K> extends object ? ExtractNestedSelection<TSelected, K> : NonNullable<TEntity[K]>,
+		AnyBrand,
+		EntityNameFromType<TSchema, NonNullable<TEntity[K]>>,
+		TSchema
+	> :
+	never
+
+/**
+ * Maps selected entity fields to Ref variants (for implicit mode / createComponent).
+ */
+export type EntityFieldsRef<
+	TEntity,
+	TSelected,
+	TSchema extends Record<string, object> = Record<string, object>,
+> = {
+	[K in (ScalarKeys<TEntity> | HasManyKeys<TEntity> | HasOneKeys<TEntity>) & keyof TSelected]: FieldRefType<TEntity, TSelected, TSchema, K & keyof TEntity>
+}
+
+/**
+ * Maps selected entity fields to Accessor variants (for explicit mode / hooks).
+ */
+export type EntityFieldsAccessor<
+	TEntity,
+	TSelected,
+	TSchema extends Record<string, object> = Record<string, object>,
+> = {
+	[K in (ScalarKeys<TEntity> | HasManyKeys<TEntity> | HasOneKeys<TEntity>) & keyof TSelected]: FieldAccessorType<TEntity, TSelected, TSchema, K & keyof TEntity>
 }
 
 // ============================================================================
 // Type Extraction Helpers
 // ============================================================================
 
-/**
- * Extracts the role map from an EntityAccessor or EntityAccessorBase.
- */
 export type ExtractRoleMap<T> =
 	T extends { readonly __roleMap?: infer TRoleMap extends Record<string, object> }
 		? TRoleMap
 		: Record<string, object>
 
 export type ExtractHasOneEntityName<T> =
-	T extends HasOneRef<any, any, any, infer TEntityName, any>
+	T extends HasOneAccessor<any, any, any, infer TEntityName, any>
 		? TEntityName
-		: T extends HasOneRefBase<any, any, any, infer TEntityName, any>
+		: T extends HasOneRef<any, any, any, infer TEntityName, any>
 			? TEntityName
 			: never
 
 export type ExtractHasManyEntityName<T> =
-	T extends HasManyRef<any, any, any, infer TEntityName, any>
+	T extends HasManyAccessor<any, any, any, infer TEntityName, any>
 		? TEntityName
-		: T extends HasManyRefBase<any, any, any, infer TEntityName, any>
+		: T extends HasManyRef<any, any, any, infer TEntityName, any>
 			? TEntityName
 			: never
-

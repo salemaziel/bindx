@@ -13,7 +13,7 @@ import {
 import {
 	FIELD_REF_META,
 	type FieldRefMeta,
-	type SelectedEntityFields,
+	type EntityFieldsAccessor,
 	type Unsubscribe,
 	type EntityAccessor,
 	type HasOneAccessor,
@@ -198,7 +198,7 @@ export class HasOneHandle<TEntity extends object = object, TSelected = TEntity> 
 	 * Implements HasOneRef interface.
 	 * Delegates to the entity (either real EntityHandle or PlaceholderHandle).
 	 */
-	get fields(): SelectedEntityFields<TEntity, TSelected> {
+	get fields(): EntityFieldsAccessor<TEntity, TSelected> {
 		return this.entity.$fields
 	}
 

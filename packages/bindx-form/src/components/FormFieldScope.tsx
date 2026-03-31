@@ -2,6 +2,7 @@ import { useMemo, type ReactNode } from 'react'
 import { FIELD_REF_META, type FieldRefMeta } from '@contember/bindx'
 import { FormFieldStateProvider } from './FormFieldStateProvider.js'
 import type { FormFieldScopeProps } from '../types.js'
+import { useField } from '@contember/bindx-react'
 
 /**
  * Wraps a field with FormFieldState context.
@@ -28,6 +29,7 @@ export function FormFieldScope<T>({
 	children,
 	required,
 }: FormFieldScopeProps<T>): ReactNode {
+	const accessor = useField(field)
 	// Get metadata from the field handle
 	const meta = field[FIELD_REF_META] as FieldRefMeta | undefined
 
@@ -53,7 +55,7 @@ export function FormFieldScope<T>({
 		<FormFieldStateProvider
 			errors={field.errors}
 			required={isRequired}
-			dirty={field.isDirty}
+			dirty={accessor.isDirty}
 			field={fieldInfo}
 		>
 			{children}

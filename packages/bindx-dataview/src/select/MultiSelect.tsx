@@ -16,6 +16,7 @@
 
 import { type ReactNode, useCallback, useMemo } from 'react'
 import type { EntityAccessor, EntityDef, HasManyRef } from '@contember/bindx'
+import { useHasMany } from '@contember/bindx-react'
 import {
 	SelectCurrentEntitiesContext,
 	SelectHandleSelectContext,
@@ -41,7 +42,8 @@ export function MultiSelect({
 	onSelect,
 	onUnselect,
 }: MultiSelectProps): ReactNode {
-	const items = relation.items
+	const accessor = useHasMany(relation)
+	const items = accessor.items
 	const selectedIds = useMemo(
 		() => new Set(items.map(it => it.id)),
 		[items],

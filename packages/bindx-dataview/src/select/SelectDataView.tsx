@@ -33,7 +33,7 @@ import type {
 	SortingDirections,
 } from '@contember/bindx'
 import { SelectionScope, buildQueryFromSelection, createFullTextFilterHandler, FIELD_REF_META } from '@contember/bindx'
-import type { FieldRefBase } from '@contember/bindx'
+import type { FieldRef } from '@contember/bindx'
 import {
 	useBindxContext,
 	useEntityList,
@@ -51,7 +51,7 @@ export interface SelectDataViewProps {
 	/** Selection definer — called with collector proxy to discover fields */
 	selection?: (it: EntityAccessor<object>) => ReactNode
 	/** Field(s) to search across */
-	queryField?: FieldRefBase<unknown> | FieldRefBase<unknown>[] | string[]
+	queryField?: FieldRef<unknown> | FieldRef<unknown>[] | string[]
 	/** Initial sort order */
 	initialSorting?: Partial<Record<string, OrderDirection>>
 	/** Static filter for the options list */
