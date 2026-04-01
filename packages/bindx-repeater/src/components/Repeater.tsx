@@ -181,10 +181,11 @@ export function Repeater<
 	return <>{children(items, methods)}</>
 }
 
-// Static method for selection extraction
-const repeaterWithSelection = Repeater as typeof Repeater & SelectionProvider & { [BINDX_COMPONENT]: true }
+function createRepeaterWithSelection() {
+	const component = Repeater as typeof Repeater & SelectionProvider & { [BINDX_COMPONENT]: true }
+	component[BINDX_COMPONENT] = true
 
-repeaterWithSelection.getSelection = (
+	component.getSelection = (
 	props: RepeaterProps<unknown>,
 	collectNested: (children: ReactNode) => SelectionMeta,
 ): SelectionFieldMeta | null => {
@@ -259,6 +260,7 @@ repeaterWithSelection.getSelection = (
 	}
 }
 
-repeaterWithSelection[BINDX_COMPONENT] = true
+	return component
+}
 
-export { repeaterWithSelection as RepeaterWithMeta }
+export const RepeaterWithMeta = createRepeaterWithSelection()

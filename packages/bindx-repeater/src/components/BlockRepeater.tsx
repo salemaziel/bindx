@@ -201,11 +201,11 @@ export function BlockRepeater<
 	return <>{children(items, methods)}</>
 }
 
-// Wrap BlockRepeater with selection extraction inside a factory function
-// so the property assignments are not module-level side effects
-// (Vite dep optimizer marks module-level side effects for DCE).
+// Factory wraps getSelection assignment to avoid module-level side effects
+// which Vite dep optimizer (Rolldown with moduleSideEffects: false) would strip.
 function createBlockRepeaterWithSelection() {
 	const component = BlockRepeater as typeof BlockRepeater & SelectionProvider & { [BINDX_COMPONENT]: true }
+	component[BINDX_COMPONENT] = true
 
 	component.getSelection = (
 		props: BlockRepeaterProps<unknown>,
@@ -297,10 +297,7 @@ function createBlockRepeaterWithSelection() {
 	}
 }
 
-	component[BINDX_COMPONENT] = true
 	return component
 }
 
-const blockRepeaterWithSelection = createBlockRepeaterWithSelection()
-
-export { blockRepeaterWithSelection as BlockRepeaterWithMeta }
+export const BlockRepeaterWithMeta = createBlockRepeaterWithSelection()
