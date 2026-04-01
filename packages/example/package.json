@@ -1,6 +1,6 @@
 {
 	"name": "@contember/bindx-example",
-	"version": "0.1.16",
+	"version": "0.1.17",
 	"private": true,
 	"description": "Example application for bindx",
 	"type": "module",
