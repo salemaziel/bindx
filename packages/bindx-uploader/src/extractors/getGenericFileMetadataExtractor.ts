@@ -20,7 +20,7 @@ export const getGenericFileMetadataExtractor = <TEntity extends Record<string, u
 	getFieldNames: () => [fileNameField, fileSizeField, fileTypeField, lastModifiedField].filter((f): f is FieldName<TEntity> => !!f),
 	extractFileData: ({ file }) => {
 		return ({ entity }) => {
-			const fields = (entity as { $fields: Record<string, FieldRef<unknown>> }).$fields
+			const fields = ((entity as unknown) as { $fields: Record<string, FieldRef<unknown>> }).$fields
 
 			if (fileNameField) {
 				fields[fileNameField]?.setValue(file.name)

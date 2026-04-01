@@ -20,7 +20,7 @@ import { Slot } from '@radix-ui/react-slot'
 import { composeEventHandlers } from '@radix-ui/primitive'
 import { useDataViewContext } from './DataViewContext.js'
 import { dataAttribute } from './dataAttribute.js'
-import type { SortingDirectionAction, OrderDirection, FieldRefBase } from '@contember/bindx'
+import type { SortingDirectionAction, OrderDirection, FieldRef } from '@contember/bindx'
 
 // ============================================================================
 // DataViewSortingTrigger
@@ -28,7 +28,7 @@ import type { SortingDirectionAction, OrderDirection, FieldRefBase } from '@cont
 
 export interface DataViewSortingTriggerProps<T> {
 	/** Field to sort by */
-	field: FieldRefBase<T>
+	field: FieldRef<T>
 	/** Sorting action. Default: 'next' (cycles asc → desc → none) */
 	action?: SortingDirectionAction
 	/** Button element to render */
@@ -80,7 +80,7 @@ export const DataViewSortingTrigger = forwardRef<HTMLButtonElement, DataViewSort
 
 export interface DataViewSortingSwitchProps<T> {
 	/** Field to check sorting direction for */
-	field: FieldRefBase<T>
+	field: FieldRef<T>
 	/** Render when sorted ascending */
 	asc?: React.ReactNode
 	/** Render when sorted descending */

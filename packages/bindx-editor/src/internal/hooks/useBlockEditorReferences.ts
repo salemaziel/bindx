@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { Descendant, Editor, Element } from 'slate'
-import type { HasManyRef, EntityAccessor, AnyBrand } from '@contember/bindx'
+import type { HasManyAccessor, EntityAccessor, AnyBrand } from '@contember/bindx'
 import type { BlockDefinitions } from '../../types/editorProps.js'
 import { isElementWithReference } from '../../plugins/references/elements/ElementWithReference.js'
 import { prepareElementForInsertion } from '../../plugins/references/utils/prepareElementForInsertion.js'
@@ -15,7 +15,7 @@ export interface UseBlockEditorReferencesOptions<
 	TEntityName extends string = string,
 	TSchema extends Record<string, object> = Record<string, object>,
 > {
-	references: HasManyRef<TEntity, TSelected, TBrand, TEntityName, TSchema>
+	references: HasManyAccessor<TEntity, TSelected, TBrand, TEntityName, TSchema>
 	discriminationField: keyof TEntity & string
 	blocks: BlockDefinitions<TEntity, TSelected, TBrand, TEntityName, TSchema>
 	editor: Editor

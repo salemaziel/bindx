@@ -5,7 +5,7 @@
 
 import React, { type ReactNode } from 'react'
 import type { EntityAccessor, OrderDirection } from '@contember/bindx'
-import type { FieldRefBase } from '@contember/bindx'
+import type { FieldRef } from '@contember/bindx'
 import {
 	SelectDataView,
 	SelectOption,
@@ -29,7 +29,7 @@ export interface DefaultSelectDataViewProps {
 	/** Per-item render function */
 	children: (it: EntityAccessor<object>) => ReactNode
 	/** Field(s) to search across */
-	queryField?: FieldRefBase<unknown> | FieldRefBase<unknown>[] | string[]
+	queryField?: FieldRef<unknown> | FieldRef<unknown>[] | string[]
 	/** Initial sort order */
 	initialSorting?: Partial<Record<string, OrderDirection>>
 	/** Static filter for the options list */

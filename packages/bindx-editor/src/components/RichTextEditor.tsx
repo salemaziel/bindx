@@ -7,14 +7,14 @@ import { useRichTextFieldNodes } from '../internal/hooks/useRichTextFieldNodes.j
 import type { FieldRef } from '@contember/bindx'
 import { FIELD_REF_META } from '@contember/bindx'
 import type { RichTextEditorProps } from '../types/editorProps.js'
-import { BINDX_COMPONENT, type SelectionFieldMeta, type SelectionProvider } from '@contember/bindx-react'
+import { BINDX_COMPONENT, type SelectionFieldMeta, type SelectionProvider, useField } from '@contember/bindx-react'
 import type { SerializableEditorNode } from '../types/editor.js'
 
 export type { RichTextEditorProps }
 
 export function RichTextEditor({ field, plugins, children }: RichTextEditorProps): ReactNode {
 	// At runtime, field is always a full FieldRef (proxy provides all properties)
-	const fullField = field as FieldRef<SerializableEditorNode | null>
+	const fullField = useField(field as FieldRef<SerializableEditorNode | null>)
 
 	const [editor] = useState(() => {
 		const { editor } = createEditor({

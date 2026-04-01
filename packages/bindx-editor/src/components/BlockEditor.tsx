@@ -21,7 +21,7 @@ import { EditorErrorBoundary } from './EditorErrorBoundary.js'
 import { ReferenceElementWrapper } from '../plugins/references/ReferenceElementWrapper.js'
 import { EditorGetReferencedEntityProvider, useEditorGetReferencedEntity } from '../contexts/EditorReferencesContext.js'
 import { EditorBlockElementProvider } from '../contexts/EditorBlockElementContext.js'
-import { BINDX_COMPONENT, type SelectionFieldMeta, type SelectionProvider, type SelectionMeta, createCollectorProxy } from '@contember/bindx-react'
+import { BINDX_COMPONENT, type SelectionFieldMeta, type SelectionProvider, type SelectionMeta, createCollectorProxy, useField, useHasMany } from '@contember/bindx-react'
 import { SelectionScope } from '@contember/bindx'
 
 export type { BlockEditorBaseProps, BlockEditorWithReferencesProps, BlockEditorProps }
@@ -50,7 +50,7 @@ export function BlockEditor<
 }
 
 function BlockEditorSimple({ field, plugins, children }: BlockEditorBaseProps): ReactNode {
-	const fullField = field as FieldRef<SerializableEditorNode | null>
+	const fullField = useField(field as FieldRef<SerializableEditorNode | null>)
 
 	const [{ editor, OuterWrapper, InnerWrapper }] = useState(() => {
 		return createEditor({ defaultElementType: paragraphElementType, plugins })
@@ -102,9 +102,9 @@ function BlockEditorWithReferences<
 }: BlockEditorWithReferencesProps<TEntity, TSelected, TBrand, TEntityName, TSchema>): ReactNode {
 	type Accessor = EntityAccessor<TEntity, TSelected, TBrand, TEntityName, TSchema>
 
-	const fullField = field as FieldRef<SerializableEditorNode | null>
-	// At runtime, references is always a full HasManyRef
-	const fullReferences = references as HasManyRef<TEntity, TSelected, TBrand, TEntityName, TSchema>
+	const fullField = useField(field as FieldRef<SerializableEditorNode | null>)
+	// At runtime, references is always a full HasManyAccessor
+	const fullReferences = useHasMany(references)
 
 	const [{ editor, OuterWrapper, InnerWrapper }] = useState(() => {
 		const result = createEditor({ defaultElementType: paragraphElementType, plugins })

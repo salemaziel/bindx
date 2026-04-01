@@ -31,11 +31,11 @@
 
 import type {
 	FieldRef,
-	FieldRefBase,
+	FieldAccessor,
 	HasManyRef,
-	HasManyRefBase,
+	HasManyAccessor,
 	HasOneRef,
-	HasOneRefBase,
+	HasOneAccessor,
 } from '@contember/bindx'
 
 // ============================================================================
@@ -74,19 +74,19 @@ export interface Condition {
 // ============================================================================
 
 /**
- * Base type for scalar fields - accepts both FieldRef and FieldRefBase.
+ * Base type for scalar fields - accepts FieldRef (pointer, no .value).
  */
-type AnyScalarField<T> = FieldRefBase<T>
+type AnyScalarField<T> = FieldRef<T>
 
 /**
- * Base type for has-many - accepts both HasManyRef and HasManyRefBase.
+ * Base type for has-many - accepts HasManyRef (pointer, no .items/.length/.map).
  */
-type AnyHasManyField = HasManyRefBase<any, any, any, any, any>
+type AnyHasManyField = HasManyRef<any, any, any, any, any>
 
 /**
- * Base type for has-one - accepts both HasOneRef and HasOneRefBase.
+ * Base type for has-one - accepts HasOneRef (pointer).
  */
-type AnyHasOneField = HasOneRefBase<any, any, any, any, any>
+type AnyHasOneField = HasOneRef<any, any, any, any, any>
 
 // ============================================================================
 // Condition Builder Object
@@ -139,7 +139,7 @@ export const cond = {
 			[CONDITION_META]: {
 				type: 'hasItems',
 				fields: [field],
-				evaluate: () => (field as HasManyRef<any>).length > 0,
+				evaluate: () => (field as unknown as HasManyAccessor<any>).length > 0,
 			},
 		}
 	},
@@ -162,7 +162,7 @@ export const cond = {
 			[CONDITION_META]: {
 				type: 'isEmpty',
 				fields: [field],
-				evaluate: () => (field as HasManyRef<any>).length === 0,
+				evaluate: () => (field as unknown as HasManyAccessor<any>).length === 0,
 			},
 		}
 	},
@@ -187,7 +187,7 @@ export const cond = {
 			[CONDITION_META]: {
 				type: 'isConnected',
 				fields: [field],
-				evaluate: () => (field as HasOneRef<any>).$state === 'connected',
+				evaluate: () => (field as unknown as HasOneAccessor<any>).$state === 'connected',
 			},
 		}
 	},
@@ -210,7 +210,7 @@ export const cond = {
 			[CONDITION_META]: {
 				type: 'isDisconnected',
 				fields: [field],
-				evaluate: () => (field as HasOneRef<any>).$state === 'disconnected',
+				evaluate: () => (field as unknown as HasOneAccessor<any>).$state === 'disconnected',
 			},
 		}
 	},
@@ -236,7 +236,7 @@ export const cond = {
 			[CONDITION_META]: {
 				type: 'eq',
 				fields: [field],
-				evaluate: () => (field as FieldRef<T>).value === value,
+				evaluate: () => (field as unknown as FieldAccessor<T>).value === value,
 			},
 		}
 	},
@@ -260,7 +260,7 @@ export const cond = {
 			[CONDITION_META]: {
 				type: 'neq',
 				fields: [field],
-				evaluate: () => (field as FieldRef<T>).value !== value,
+				evaluate: () => (field as unknown as FieldAccessor<T>).value !== value,
 			},
 		}
 	},
@@ -283,7 +283,7 @@ export const cond = {
 			[CONDITION_META]: {
 				type: 'isNull',
 				fields: [field],
-				evaluate: () => (field as FieldRef<T>).value === null,
+				evaluate: () => (field as unknown as FieldAccessor<T>).value === null,
 			},
 		}
 	},
@@ -306,7 +306,7 @@ export const cond = {
 			[CONDITION_META]: {
 				type: 'isNotNull',
 				fields: [field],
-				evaluate: () => (field as FieldRef<T>).value !== null,
+				evaluate: () => (field as unknown as FieldAccessor<T>).value !== null,
 			},
 		}
 	},
@@ -329,7 +329,7 @@ export const cond = {
 			[CONDITION_META]: {
 				type: 'isTruthy',
 				fields: [field],
-				evaluate: () => Boolean((field as FieldRef<T>).value),
+				evaluate: () => Boolean((field as unknown as FieldAccessor<T>).value),
 			},
 		}
 	},
@@ -352,7 +352,7 @@ export const cond = {
 			[CONDITION_META]: {
 				type: 'isFalsy',
 				fields: [field],
-				evaluate: () => !(field as FieldRef<T>).value,
+				evaluate: () => !(field as unknown as FieldAccessor<T>).value,
 			},
 		}
 	},

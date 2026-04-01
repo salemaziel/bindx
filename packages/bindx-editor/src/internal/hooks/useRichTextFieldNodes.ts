@@ -2,6 +2,7 @@ import type { FieldRef } from '@contember/bindx'
 import { Descendant, Editor } from 'slate'
 import { useRef } from 'react'
 import type { SerializableEditorNode } from '../../types/editor.js'
+import { useField } from '@contember/bindx-react'
 
 export interface UseRichTextFieldNodesOptions {
 	editor: Editor
@@ -12,9 +13,10 @@ export const useRichTextFieldNodes = ({
 	editor,
 	field,
 }: UseRichTextFieldNodesOptions): Descendant[] => {
+	const accessor = useField(field)
 	const cacheRef = useRef<{ value: SerializableEditorNode | null; nodes: Descendant[] } | null>(null)
 
-	const fieldValue = field.value
+	const fieldValue = accessor.value
 
 	if (cacheRef.current && cacheRef.current.value === fieldValue) {
 		return cacheRef.current.nodes

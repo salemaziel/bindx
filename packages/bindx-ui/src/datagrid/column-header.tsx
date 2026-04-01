@@ -8,7 +8,7 @@ import {
 	DataViewVisibilityTrigger,
 	useDataViewFilter,
 } from '@contember/bindx-dataview'
-import type { FieldRefBase } from '@contember/bindx'
+import type { FieldRef } from '@contember/bindx'
 import { ArrowDownAZIcon, ArrowUpDownIcon, ArrowUpZaIcon, EyeOffIcon, FilterIcon } from 'lucide-react'
 import { cn } from '../utils/cn.js'
 import { dict } from '../dict.js'
@@ -18,7 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover.js'
 export interface DataGridColumnHeaderUIProps {
 	children: ReactNode
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	sortingField?: FieldRefBase<any>
+	sortingField?: FieldRef<any>
 	hidingName?: string
 	filterName?: string
 	filter?: ReactNode

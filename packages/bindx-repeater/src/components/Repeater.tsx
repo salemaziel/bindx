@@ -7,7 +7,7 @@ import type {
 	SelectionMeta,
 } from '@contember/bindx'
 import { SelectionScope, FIELD_REF_META } from '@contember/bindx'
-import { createCollectorProxy, mergeSelections, BINDX_COMPONENT, SCOPE_REF, type SelectionProvider } from '@contember/bindx-react'
+import { createCollectorProxy, mergeSelections, BINDX_COMPONENT, SCOPE_REF, type SelectionProvider, useHasMany } from '@contember/bindx-react'
 import type {
 	RepeaterProps,
 	RepeaterItems,
@@ -60,7 +60,8 @@ export function Repeater<
 	sortableBy,
 	children,
 }: RepeaterProps<TEntity, TSelected, TBrand, TEntityName, TSchema>): ReactElement {
-	const sortedItems = useSortedItems(field, sortableBy)
+	const fieldAccessor = useHasMany(field)
+	const sortedItems = useSortedItems(fieldAccessor, sortableBy)
 
 	// Create stable items collection object
 	const items = useMemo((): RepeaterItems<TEntity, TSelected, TBrand, TEntityName, TSchema> => {
@@ -73,7 +74,7 @@ export function Repeater<
 
 			const remove = (): void => {
 				if (sortableBy) {
-					const items = sortEntities(field.items, sortableBy) as EntityAccessor<TEntity, TSelected>[]
+					const items = sortEntities(fieldAccessor.items, sortableBy) as EntityAccessor<TEntity, TSelected>[]
 					const currentIndex = items.findIndex(item => item.id === entity.id)
 					if (currentIndex !== -1) {
 						items.splice(currentIndex, 1)
@@ -85,7 +86,7 @@ export function Repeater<
 
 			const moveUp = (): void => {
 				if (!sortableBy || isFirst) return
-				const items = sortEntities(field.items, sortableBy) as EntityAccessor<TEntity, TSelected>[]
+				const items = sortEntities(fieldAccessor.items, sortableBy) as EntityAccessor<TEntity, TSelected>[]
 				const currentIndex = items.findIndex(item => item.id === entity.id)
 				if (currentIndex === -1 || currentIndex === 0) return
 				const newItems = arrayMove(items, currentIndex, currentIndex - 1)
@@ -94,7 +95,7 @@ export function Repeater<
 
 			const moveDown = (): void => {
 				if (!sortableBy || isLast) return
-				const items = sortEntities(field.items, sortableBy) as EntityAccessor<TEntity, TSelected>[]
+				const items = sortEntities(fieldAccessor.items, sortableBy) as EntityAccessor<TEntity, TSelected>[]
 				const currentIndex = items.findIndex(item => item.id === entity.id)
 				if (currentIndex === -1 || currentIndex === items.length - 1) return
 				const newItems = arrayMove(items, currentIndex, currentIndex + 1)
@@ -130,7 +131,7 @@ export function Repeater<
 				if (index === 'last' || index === undefined) {
 					const entityId = field.add()
 					if (preprocess) {
-						const items = field.items
+						const items = fieldAccessor.items
 						const newEntity = items.find(item => item.id === entityId)
 						if (newEntity) {
 							preprocess(newEntity as unknown as EntityAccessor<TEntity>)
@@ -141,7 +142,7 @@ export function Repeater<
 				throw new Error('Cannot add item at specific index without sortableBy field')
 			}
 
-			const sortedItems = sortEntities(field.items, sortableBy) as EntityAccessor<TEntity, TSelected>[]
+			const sortedItems = sortEntities(fieldAccessor.items, sortableBy) as EntityAccessor<TEntity, TSelected>[]
 
 			const resolvedIndex = (() => {
 				switch (index) {
@@ -156,7 +157,7 @@ export function Repeater<
 			})()
 
 			const entityId = field.add()
-			const items = field.items
+			const items = fieldAccessor.items
 			const newEntity = items.find(item => item.id === entityId)
 
 			if (newEntity) {
@@ -172,7 +173,7 @@ export function Repeater<
 
 		return {
 			addItem,
-			isEmpty: field.length === 0,
+			isEmpty: fieldAccessor.length === 0,
 		}
 	}, [field, sortableBy])
 

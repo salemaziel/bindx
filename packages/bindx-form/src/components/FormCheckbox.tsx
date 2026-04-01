@@ -3,6 +3,7 @@ import { SlotInput } from './SlotInput.js'
 import { useFormFieldState } from '../contexts.js'
 import { useFormInputValidationHandler } from '../hooks/useFormInputValidationHandler.js'
 import type { FormCheckboxProps } from '../types.js'
+import { useField } from '@contember/bindx-react'
 
 /**
  * Helper to set data attribute only when true
@@ -32,6 +33,7 @@ export function FormCheckbox({
 	field,
 	children,
 }: FormCheckboxProps): ReactElement {
+	const accessor = useField(field)
 	const formState = useFormFieldState()
 	const id = formState?.htmlId
 
@@ -43,9 +45,9 @@ export function FormCheckbox({
 
 	// Compute derived state
 	const hasErrors = (formState?.errors.length ?? field.errors.length) > 0
-	const dirty = formState?.dirty ?? field.isDirty
+	const dirty = formState?.dirty ?? accessor.isDirty
 	const touched = field.isTouched
-	const value = field.value
+	const value = accessor.value
 
 	// Set indeterminate state on the DOM element
 	useEffect(() => {

@@ -22,7 +22,7 @@
  */
 
 import React, { type ReactElement } from 'react'
-import type { FieldRefBase } from '@contember/bindx'
+import type { FieldRef } from '@contember/bindx'
 import { FIELD_REF_META } from '@contember/bindx'
 import { DataViewFilterNameProvider } from './filterContext.js'
 
@@ -31,12 +31,12 @@ import { DataViewFilterNameProvider } from './filterContext.js'
 // ============================================================================
 
 interface FilterWrapperProps<T> {
-	field: FieldRefBase<T>
+	field: FieldRef<T>
 	name?: string
 	children: React.ReactNode
 }
 
-function resolveFilterName<T>(name: string | undefined, field: FieldRefBase<T>): string {
+function resolveFilterName<T>(name: string | undefined, field: FieldRef<T>): string {
 	return name ?? field[FIELD_REF_META].fieldName
 }
 
@@ -172,7 +172,7 @@ export function DataViewIsDefinedFilter<T>({ field, name, children }: DataViewIs
 
 export interface DataViewUnionTextFilterProps<T> {
 	/** Single field or array of fields to search across */
-	fields: FieldRefBase<T> | FieldRefBase<T>[]
+	fields: FieldRef<T> | FieldRef<T>[]
 	/** Required unique filter name */
 	name: string
 	children: React.ReactNode

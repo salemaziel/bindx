@@ -16,6 +16,7 @@
 
 import { type ReactNode, useCallback, useMemo } from 'react'
 import type { EntityAccessor, EntityDef, HasOneRef } from '@contember/bindx'
+import { useHasOne } from '@contember/bindx-react'
 import { isPlaceholderId } from '@contember/bindx'
 import {
 	SelectCurrentEntitiesContext,
@@ -42,7 +43,8 @@ export function Select({
 	onSelect,
 	onUnselect,
 }: SelectProps): ReactNode {
-	const entity = relation.$entity
+	const accessor = useHasOne(relation)
+	const entity = accessor.$entity
 	const entityId = entity.id
 	const isConnected = !isPlaceholderId(entityId)
 	const currentId = isConnected ? entityId : null

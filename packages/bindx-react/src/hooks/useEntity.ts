@@ -8,7 +8,7 @@ import type {
 	FieldError,
 	EntitySnapshot,
 	LoadStatus,
-	SelectedEntityFields,
+	EntityFieldsAccessor,
 	CommonEntity,
 	EntityForRoles,
 	RoleNames,

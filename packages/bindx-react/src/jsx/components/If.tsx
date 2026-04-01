@@ -2,6 +2,7 @@ import React, { memo, type ReactElement, type ReactNode } from 'react'
 import type { IfProps, SelectionFieldMeta, SelectionMeta, SelectionProvider, FieldRef } from '../types.js'
 import { FIELD_REF_META, BINDX_COMPONENT } from '../types.js'
 import { mergeSelections, createEmptySelection } from '../SelectionMeta.js'
+import { useField } from '../../hooks/useField.js'
 import {
 	type Condition,
 	isCondition,
@@ -52,17 +53,17 @@ import {
  * ```
  */
 function IfImpl({ condition, then: thenBranch, else: elseBranch }: IfProps): ReactElement | null {
+	const fieldRef = typeof condition !== 'boolean' && !isCondition(condition) ? condition : null
+	const fieldAccessor = useField(fieldRef)
+
 	let conditionValue: boolean
 
 	if (typeof condition === 'boolean') {
-		// Boolean literal
 		conditionValue = condition
 	} else if (isCondition(condition)) {
-		// Condition DSL object
 		conditionValue = evaluateCondition(condition)
 	} else {
-		// FieldRef<boolean>
-		conditionValue = (condition as FieldRef<boolean>).value ?? false
+		conditionValue = fieldAccessor?.value ?? false
 	}
 
 	return conditionValue ? <>{thenBranch}</> : <>{elseBranch ?? null}</>

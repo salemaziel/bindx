@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import type { EntityRef, HasOneRef } from '@contember/bindx'
+import type { EntityRef, HasOneAccessor } from '@contember/bindx'
 import type { FileType, StartUploadEvent, UploaderEvents } from '../../types.js'
 import { resolveAcceptingSingleType } from '../utils/resolveAccept.js'
 import { executeExtractors } from '../utils/executeExtractors.js'
@@ -8,25 +8,25 @@ export interface UseFillEntityArgs<TEntity = Record<string, unknown>> extends Up
 	/**
 	 * The entity to fill. Can be:
 	 * - EntityRef: fill the entity directly
-	 * - HasOneRef: fill the related entity (disconnect first on upload start)
+	 * - HasOneAccessor: fill the related entity (disconnect first on upload start)
 	 */
-	entity: EntityRef<TEntity> | HasOneRef<TEntity>
+	entity: EntityRef<TEntity> | HasOneAccessor<TEntity>
 	fileType: FileType<TEntity>
 }
 
 /**
  * Checks if the entity is a HasOneRef (has $disconnect method)
  */
-const isHasOneRef = <TEntity>(entity: EntityRef<TEntity> | HasOneRef<TEntity>): entity is HasOneRef<TEntity> => {
+const isHasOneAccessor = <TEntity>(entity: EntityRef<TEntity> | HasOneAccessor<TEntity>): entity is HasOneAccessor<TEntity> => {
 	return '$disconnect' in entity && typeof entity.$disconnect === 'function'
 }
 
 /**
  * Gets the target entity for filling.
- * For HasOneRef, returns the related entity. For EntityRef, returns the entity itself.
+ * For HasOneAccessor, returns the related entity. For EntityRef, returns the entity itself.
  */
-const getTargetEntity = <TEntity>(entity: EntityRef<TEntity> | HasOneRef<TEntity>): EntityRef<TEntity> => {
-	if (isHasOneRef(entity)) {
+const getTargetEntity = <TEntity>(entity: EntityRef<TEntity> | HasOneAccessor<TEntity>): EntityRef<TEntity> => {
+	if (isHasOneAccessor(entity)) {
 		return entity.$entity
 	}
 	return entity
@@ -54,7 +54,7 @@ export const useFillEntity = <TEntity extends Record<string, unknown>>({
 	const handleStartUpload = useCallback(
 		(event: StartUploadEvent) => {
 			// Disconnect existing relation before upload
-			if (isHasOneRef(entity)) {
+			if (isHasOneAccessor(entity)) {
 				entity.$disconnect()
 			}
 			events.onStartUpload?.(event)

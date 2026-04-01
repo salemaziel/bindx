@@ -1,6 +1,7 @@
 import React, { memo, type ReactElement, type ReactNode } from 'react'
-import type { FieldRef, SelectionFieldMeta, SelectionMeta, SelectionProvider } from '../types.js'
+import type { FieldRef, FieldAccessor, SelectionFieldMeta, SelectionMeta, SelectionProvider } from '../types.js'
 import { FIELD_REF_META, BINDX_COMPONENT } from '../types.js'
+import { useField } from '../../hooks/useField.js'
 
 /**
  * Props for Show component
@@ -27,11 +28,14 @@ export interface ShowProps<T> {
  * ```
  */
 function ShowImpl<T>({ field, children, fallback }: ShowProps<T>): ReactElement | null {
-	if (field.value === null || field.value === undefined) {
+	// useField() subscribes to store and returns FieldAccessor with .value access
+	const accessor = useField(field)
+
+	if (accessor.value === null || accessor.value === undefined) {
 		return fallback ? <>{fallback}</> : null
 	}
 
-	return <>{children(field.value as NonNullable<T>)}</>
+	return <>{children(accessor.value as NonNullable<T>)}</>
 }
 
 export const Show = memo(ShowImpl) as typeof ShowImpl

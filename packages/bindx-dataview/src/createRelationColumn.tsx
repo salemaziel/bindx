@@ -11,7 +11,7 @@
  */
 
 import React from 'react'
-import type { FieldRefBase, FilterArtifact, FilterHandler, EntityAccessor, SelectionMeta } from '@contember/bindx'
+import type { FieldRef, FilterArtifact, FilterHandler, EntityAccessor, SelectionMeta } from '@contember/bindx'
 import { SelectionScope } from '@contember/bindx'
 import { createCollectorProxy } from '@contember/bindx-react'
 import type { ColumnTypeDef } from './columnTypes.js'
@@ -51,7 +51,7 @@ export interface RelationCellWrapperContext {
 	readonly item: EntityAccessor<object>
 	readonly fieldName: string
 	readonly filterName: string
-	readonly fieldRef: FieldRefBase<unknown>
+	readonly fieldRef: FieldRef<unknown>
 }
 
 // ============================================================================
@@ -72,7 +72,7 @@ export interface RelationColumnProps<TEntity, TSelected> {
 
 interface RelationCellConfig {
 	/** How to collect selection for the relation (differs between hasOne and hasMany) */
-	collectSelection: (renderer: (ref: unknown) => React.ReactNode, fieldRef: FieldRefBase<unknown>) => void
+	collectSelection: (renderer: (ref: unknown) => React.ReactNode, fieldRef: FieldRef<unknown>) => void
 	/** How to render the cell content (differs between hasOne and hasMany) */
 	renderCell: (accessor: EntityAccessor<object>, fieldName: string, renderer: (ref: unknown) => React.ReactNode) => React.ReactNode
 }
@@ -83,7 +83,7 @@ export function createRelationColumn<TFilterArtifact extends FilterArtifact>(
 	uiConfig: RelationColumnConfig = {},
 ) {
 	function buildLeaf(props: Record<string, unknown>): ColumnLeafProps {
-		const fieldRef = props['field'] as FieldRefBase<unknown> | undefined
+		const fieldRef = props['field'] as FieldRef<unknown> | undefined
 		const fieldName = fieldRef ? extractFieldName(fieldRef) : null
 		const renderer = props['children'] as ((ref: unknown) => React.ReactNode) | undefined
 		const header = props['header'] as React.ReactNode | undefined

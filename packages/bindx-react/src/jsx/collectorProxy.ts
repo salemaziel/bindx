@@ -1,21 +1,24 @@
 import type { SchemaRegistry } from '@contember/bindx'
 import { SelectionScope, generatePlaceholderId } from '@contember/bindx'
 import {
-	type EntityRef,
 	type EntityAccessor,
 	type EntityFields,
 	type FieldRef,
+	type FieldAccessor,
 	type HasManyRef,
+	type HasManyAccessor,
 	type HasOneRef,
+	type HasOneAccessor,
 	FIELD_REF_META,
 	SCOPE_REF,
 } from './types.js'
 import { wrapEntityRefWithFieldAccessProxy } from './proxyShared.js'
 
 /**
- * Combined ref type for collector that satisfies all ref interfaces
+ * Combined ref type for collector that satisfies all accessor interfaces.
+ * The collector needs to provide .value, .items, .length, .map, .$state, etc.
  */
-type CollectorRef = FieldRef<unknown> & HasManyRef<unknown> & HasOneRef<unknown>
+type CollectorRef = FieldAccessor<unknown> & HasManyAccessor<unknown> & HasOneAccessor<unknown>
 
 /**
  * Creates a collector proxy for the collection phase.
@@ -32,7 +35,7 @@ export function createCollectorProxy<T>(
 	schemaRegistry: SchemaRegistry<Record<string, object>> | null = null,
 ): EntityAccessor<T> {
 	const fieldsProxy = new Proxy({} as EntityFields<T>, {
-		get(_, fieldName: string): FieldRef<unknown> | HasManyRef<unknown> | HasOneRef<unknown> {
+		get(_, fieldName: string): FieldAccessor<unknown> | HasManyAccessor<unknown> | HasOneAccessor<unknown> {
 			// Return a collector ref that works for all field types
 			// The actual type (scalar/hasMany/hasOne) will be determined
 			// by how it's used in components or by schema lookup
@@ -42,7 +45,7 @@ export function createCollectorProxy<T>(
 
 	const noop = () => () => {}
 
-	const ref: EntityRef<T> = {
+	const ref = {
 		id: '__collector__',
 		$fields: fieldsProxy,
 		$data: null,
@@ -55,7 +58,7 @@ export function createCollectorProxy<T>(
 
 		__schema: {} as Record<string, object>,
 		// Error properties (stubs for collection phase)
-		$errors: [],
+		$errors: [] as readonly never[],
 		$hasError: false,
 		$addError: () => {},
 		$clearErrors: () => {},

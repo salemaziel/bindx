@@ -1,6 +1,7 @@
 import { type ReactNode, useMemo, useState } from 'react'
 import type { FieldRef } from '@contember/bindx'
 import { FormFieldScope, FormInput, useFormFieldState } from '@contember/bindx-form'
+import { useField } from '@contember/bindx-react'
 import { ChevronDownIcon, ChevronUpIcon } from 'lucide-react'
 import { FormContainer, type FormContainerProps } from './container.js'
 import { useEnumOptionsFormatter } from '../labels/enumLabels.js'
@@ -50,6 +51,7 @@ function SelectEnumFieldInner<T>({
 	options,
 	placeholder,
 }: SelectEnumFieldInnerProps<T>): ReactNode {
+	const accessor = useField(field)
 	const [open, setOpen] = useState(false)
 	const enumLabelsFormatter = useEnumOptionsFormatter()
 	const fieldState = useFormFieldState()
@@ -68,8 +70,8 @@ function SelectEnumFieldInner<T>({
 	}, [resolvedOptions])
 
 	const selectedOption = useMemo(
-		() => normalizedOptions.find(it => it.value === field.value),
-		[field.value, normalizedOptions],
+		() => normalizedOptions.find(it => it.value === accessor.value),
+		[accessor.value, normalizedOptions],
 	)
 
 	return (

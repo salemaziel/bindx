@@ -1,8 +1,9 @@
 import React, { memo, type ReactElement, type ReactNode } from 'react'
-import type { HasOneProps, SelectionFieldMeta, SelectionMeta, SelectionProvider, AnyBrand, HasOneRef } from '../types.js'
+import type { HasOneProps, SelectionFieldMeta, SelectionMeta, SelectionProvider, AnyBrand } from '../types.js'
 import { FIELD_REF_META, BINDX_COMPONENT, SCOPE_REF } from '../types.js'
 import { mergeSelections } from '../SelectionMeta.js'
-import { SelectionScope } from '@contember/bindx'
+import { SelectionScope, type HasOneAccessor } from '@contember/bindx'
+import { useHasOne } from '../../hooks/useHasOne.js'
 
 /**
  * HasOne component - renders a has-one relation
@@ -26,11 +27,10 @@ function HasOneImpl<
 	TEntityName extends string = string,
 	TSchema extends Record<string, object> = Record<string, object>,
 >({ field, children }: HasOneProps<TEntity, TSelected, TBrand, TEntityName, TSchema>): ReactElement {
-	// At runtime, field is always a full HasOneRef (proxy provides all properties)
-	// Props accept HasOneRefBase for type compatibility with both implicit and explicit modes
-	const fullField = field as HasOneRef<TEntity, TSelected, TBrand, TEntityName, TSchema>
+	// useHasOne() subscribes to store and returns HasOneAccessor with .$entity
+	const accessor = useHasOne(field)
 	// Get the related entity reference (always available, may be placeholder with id=null)
-	return <>{children(fullField.$entity)}</>
+	return <>{children(accessor.$entity)}</>
 }
 
 export const HasOne = memo(HasOneImpl) as typeof HasOneImpl
@@ -43,8 +43,8 @@ hasOneWithSelection.getSelection = (
 	collectNested: (children: ReactNode) => SelectionMeta,
 ): SelectionFieldMeta => {
 	const meta = props.field[FIELD_REF_META]
-	// At runtime, field is always a full HasOneRef (proxy provides all properties)
-	const fullField = props.field as HasOneRef<unknown>
+	// During collection, field is a collector proxy with all accessor properties
+	const fullField = props.field as unknown as HasOneAccessor<unknown>
 
 	// Use field's $entity which has a properly configured scope with schema info
 	const nestedCollector = fullField.$entity

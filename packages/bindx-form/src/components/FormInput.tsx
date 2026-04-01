@@ -4,6 +4,7 @@ import { useFormFieldState } from '../contexts.js'
 import { useFormInputHandler } from '../hooks/useFormInputHandler.js'
 import { useFormInputValidationHandler } from '../hooks/useFormInputValidationHandler.js'
 import type { FormInputProps } from '../types.js'
+import { useField } from '@contember/bindx-react'
 
 /**
  * Helper to set data attribute only when true
@@ -53,14 +54,16 @@ export function FormInput<T>({
 
 	const handlerContext = { state: handlerState, setState: setHandlerState }
 
+	const accessor = useField(field)
+
 	// Compute derived state
 	const hasErrors = (formState?.errors.length ?? field.errors.length) > 0
-	const dirty = formState?.dirty ?? field.isDirty
+	const dirty = formState?.dirty ?? accessor.isDirty
 	const required = formState?.required ?? false
 	const touched = field.isTouched
 
 	// Format current value for display
-	const displayValue = handler.formatValue(field.value, handlerContext)
+	const displayValue = handler.formatValue(accessor.value, handlerContext)
 
 	// Handle input changes
 	const handleChange = useCallback<ChangeEventHandler<HTMLInputElement>>(

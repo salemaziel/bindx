@@ -1,6 +1,7 @@
 import { memo, type ReactElement } from 'react'
-import type { FieldProps, SelectionFieldMeta, SelectionProvider, FieldRef } from '../types.js'
+import type { FieldProps, SelectionFieldMeta, SelectionProvider } from '../types.js'
 import { FIELD_REF_META, BINDX_COMPONENT } from '../types.js'
+import { useField } from '../../hooks/useField.js'
 
 /**
  * Field component - renders a scalar field value
@@ -25,24 +26,23 @@ function FieldImpl<T>({ field, children, format }: FieldProps<T>): ReactElement 
 		return null
 	}
 
-	// At runtime, field is always a full FieldRef (proxy provides all properties)
-	// Props accept FieldRefBase for type compatibility with both implicit and explicit modes
-	const fullField = field as FieldRef<T>
+	// useField() subscribes to store and returns FieldAccessor with .value access
+	const accessor = useField(field)
 
 	if (children) {
-		return <>{children(fullField)}</>
+		return <>{children(accessor)}</>
 	}
 
 	if (format) {
-		return <>{format(fullField.value)}</>
+		return <>{format(accessor.value)}</>
 	}
 
 	// Default: render value as string
-	if (fullField.value === null || fullField.value === undefined) {
+	if (accessor.value === null || accessor.value === undefined) {
 		return null
 	}
 
-	return <>{String(fullField.value)}</>
+	return <>{String(accessor.value)}</>
 }
 
 export const Field = memo(FieldImpl) as typeof FieldImpl

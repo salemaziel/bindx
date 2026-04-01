@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import type { RenderElementProps } from 'slate-react'
 import type { ContentReference } from '../generated/entities.js'
-import type { FieldRefBase } from '@contember/bindx'
+import type { FieldRef } from '@contember/bindx'
 import {
 	withBold,
 	boldMark,

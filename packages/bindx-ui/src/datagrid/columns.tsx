@@ -9,7 +9,7 @@
  */
 
 import React, { type ReactElement, type ReactNode } from 'react'
-import type { EntityAccessor, EntityDef, EnumFilterArtifact, EnumListFilterArtifact, FieldRefBase } from '@contember/bindx'
+import type { EntityAccessor, EntityDef, EnumFilterArtifact, EnumListFilterArtifact, FieldRef } from '@contember/bindx'
 import {
 	createColumn,
 	createRelationColumn,
@@ -157,9 +157,9 @@ const _DataGridEnumColumn = createColumn(enumColumnDef, {
 	renderFilter: () => <ColumnEnumFilterControls />,
 })
 
-type ExtractEnum<F> = F extends FieldRefBase<infer T> ? Exclude<T, null | undefined> & string : string
+type ExtractEnum<F> = F extends FieldRef<infer T> ? Exclude<T, null | undefined> & string : string
 
-export const DataGridEnumColumn = <F extends FieldRefBase<any>>(props: {
+export const DataGridEnumColumn = <F extends FieldRef<any>>(props: {
 	field: F
 	header?: ReactNode
 	sortable?: boolean
@@ -174,11 +174,11 @@ const _DataGridEnumListColumn = createColumn(enumListColumnDef, {
 	renderFilter: () => <ColumnEnumFilterControls />,
 })
 
-type ExtractEnumList<F> = F extends FieldRefBase<infer T>
+type ExtractEnumList<F> = F extends FieldRef<infer T>
 	? T extends readonly (infer U)[] | null ? U & string : string
 	: string
 
-export const DataGridEnumListColumn = <F extends FieldRefBase<any>>(props: {
+export const DataGridEnumListColumn = <F extends FieldRef<any>>(props: {
 	field: F
 	header?: ReactNode
 	sortable?: boolean

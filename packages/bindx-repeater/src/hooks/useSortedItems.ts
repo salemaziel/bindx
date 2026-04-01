@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react'
-import type { EntityAccessor, HasManyRef, AnyBrand } from '@contember/bindx'
+import type { EntityAccessor, HasManyAccessor, AnyBrand } from '@contember/bindx'
 import { sortEntities } from '../utils/sortEntities.js'
 import { repairEntitiesOrder } from '../utils/repairEntitiesOrder.js'
 
@@ -17,10 +17,11 @@ export function useSortedItems<
 	TEntityName extends string = string,
 	TSchema extends Record<string, object> = Record<string, object>,
 >(
-	hasMany: HasManyRef<T, S, TBrand, TEntityName, TSchema>,
+	hasMany: HasManyAccessor<T, S, TBrand, TEntityName, TSchema>,
 	orderField: string | undefined,
 ): EntityAccessor<T, S, TBrand, TEntityName, TSchema>[] {
-	const items = hasMany.items
+	const rawItems = hasMany?.items
+	const items = Array.isArray(rawItems) ? rawItems : []
 
 	const sortedItems = useMemo(
 		() => sortEntities(items, orderField) as EntityAccessor<T, S, TBrand, TEntityName, TSchema>[],

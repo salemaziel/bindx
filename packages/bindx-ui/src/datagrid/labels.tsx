@@ -11,7 +11,7 @@ import { useDataViewContext } from '@contember/bindx-dataview'
 import { useBindxContext } from '@contember/bindx-react'
 import { useFieldLabelFormatter } from '../labels/index.js'
 
-/** Any ref that carries FIELD_REF_META (FieldRefBase, HasOneRefBase, HasManyRefBase) */
+/** Any ref that carries FIELD_REF_META (FieldRef, HasOneRef, HasManyRef) */
 interface RefWithMeta {
 	readonly [FIELD_REF_META]: FieldRefMeta
 }

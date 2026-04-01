@@ -10,7 +10,7 @@
  */
 
 import React, { ReactNode } from 'react'
-import type { FieldRefBase, HasOneRef, HasManyRef, FilterHandler, FilterArtifact, EntityAccessor, EnumFilterArtifact, EnumListFilterArtifact, SelectionMeta } from '@contember/bindx'
+import type { FieldRef, HasOneRef, HasManyRef, FilterHandler, FilterArtifact, EntityAccessor, EnumFilterArtifact, EnumListFilterArtifact, SelectionMeta } from '@contember/bindx'
 import { SelectionScope } from '@contember/bindx'
 import { FIELD_REF_META, createCollectorProxy } from '@contember/bindx-react'
 import { createColumn, type ColumnRenderProps } from './createColumn.js'
@@ -114,7 +114,7 @@ function renderEnumListDefault({ value }: ColumnRenderProps<readonly string[] | 
 // ============================================================================
 
 interface DataGridScalarColumnPropsBase<T> {
-	field: FieldRefBase<T> | FieldRefBase<T | undefined>
+	field: FieldRef<T> | FieldRef<T | undefined>
 	header?: React.ReactNode
 	sortable?: boolean
 	filter?: boolean
@@ -256,7 +256,7 @@ export const DataGridActionColumn = Object.assign(
 // ============================================================================
 
 export interface DataGridColumnProps<T> {
-	field?: FieldRefBase<T>
+	field?: FieldRef<T>
 	header?: React.ReactNode
 	sortable?: boolean
 	filter?: boolean
@@ -270,7 +270,7 @@ export const DataGridColumn = Object.assign(
 	},
 	{
 		staticRender: (props: Record<string, unknown>): React.ReactNode => {
-			const fieldRef = props['field'] as FieldRefBase<unknown> | undefined
+			const fieldRef = props['field'] as FieldRef<unknown> | undefined
 			const fieldName = fieldRef ? extractFieldName(fieldRef) : null
 			const header = props['header'] as React.ReactNode | undefined
 			const sortable = (props['sortable'] as boolean | undefined) ?? false

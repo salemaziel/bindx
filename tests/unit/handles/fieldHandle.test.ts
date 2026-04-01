@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, mock } from 'bun:test'
-import { SnapshotStore, ActionDispatcher, EventEmitter, FieldHandle, createServerError, FIELD_REF_META, type FieldRef } from '@contember/bindx'
+import { SnapshotStore, ActionDispatcher, EventEmitter, FieldHandle, createServerError, FIELD_REF_META, type FieldAccessor } from '@contember/bindx'
 import { createTestDispatcher } from '../shared/unitTestHelpers.js'
 
 describe('FieldHandle', () => {
@@ -14,7 +14,7 @@ describe('FieldHandle', () => {
 		eventEmitter = setup.eventEmitter
 	})
 
-	function createFieldHandle<T>(fieldPath: string[]): FieldRef<T> {
+	function createFieldHandle<T>(fieldPath: string[]): FieldAccessor<T> {
 		return FieldHandle.create<T>('Article', 'a-1', fieldPath, store, dispatcher)
 	}
 

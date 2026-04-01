@@ -43,7 +43,7 @@ export const getVideoFileDataExtractor = <TEntity extends Record<string, unknown
 		})
 
 		return ({ entity }) => {
-			const fields = (entity as { $fields: Record<string, FieldRef<unknown>> }).$fields
+			const fields = ((entity as unknown) as { $fields: Record<string, FieldRef<unknown>> }).$fields
 
 			if (widthField) {
 				fields[widthField]?.setValue(result.width ?? null)

@@ -1,8 +1,9 @@
 import React, { memo, type ReactElement, type ReactNode } from 'react'
-import type { HasManyProps, SelectionFieldMeta, SelectionMeta, SelectionProvider, EntityRef, AnyBrand, HasManyRef } from '../types.js'
+import type { HasManyProps, SelectionFieldMeta, SelectionMeta, SelectionProvider, AnyBrand } from '../types.js'
 import { FIELD_REF_META, BINDX_COMPONENT, SCOPE_REF } from '../types.js'
 import { mergeSelections } from '../SelectionMeta.js'
-import { SelectionScope, generateHasManyAlias } from '@contember/bindx'
+import { SelectionScope, generateHasManyAlias, type HasManyAccessor } from '@contember/bindx'
+import { useHasMany } from '../../hooks/useHasMany.js'
 
 /**
  * HasMany component - renders a has-many relation
@@ -35,10 +36,9 @@ function HasManyImpl<
 	TEntityName extends string = string,
 	TSchema extends Record<string, object> = Record<string, object>,
 >({ field, children }: HasManyProps<TEntity, TSelected, TBrand, TEntityName, TSchema>): ReactElement {
-	// At runtime, field is always a full HasManyRef (proxy provides all properties)
-	// Props accept HasManyRefBase for type compatibility with both implicit and explicit modes
-	const fullField = field as HasManyRef<TEntity, TSelected, TBrand, TEntityName, TSchema>
-	const items = fullField.map((item, index) => {
+	// useHasMany() subscribes to store and returns HasManyAccessor with .map()/.items/.length
+	const accessor = useHasMany(field)
+	const items = accessor.map((item, index) => {
 		return <React.Fragment key={item.id}>{children(item, index)}</React.Fragment>
 	})
 
@@ -55,8 +55,8 @@ hasManyWithSelection.getSelection = (
 	collectNested: (children: ReactNode) => SelectionMeta,
 ): SelectionFieldMeta => {
 	const meta = props.field[FIELD_REF_META]
-	// At runtime, field is always a full HasManyRef (proxy provides all properties)
-	const fullField = props.field as HasManyRef<unknown>
+	// During collection, field is a collector proxy with all accessor properties
+	const fullField = props.field as unknown as HasManyAccessor<unknown>
 
 	// Use field's map function to get a properly configured collector with schema info
 	// The map() creates a collector that knows about entity types and relations

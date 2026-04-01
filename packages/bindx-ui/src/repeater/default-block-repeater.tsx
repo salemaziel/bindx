@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import type { EntityAccessor, HasManyRef, AnyBrand } from '@contember/bindx'
-import { HasMany, withCollector } from '@contember/bindx-react'
+import { HasMany, withCollector, useHasMany } from '@contember/bindx-react'
 import {
 	BlockRepeater,
 	type BlockDefinition,
@@ -57,12 +57,13 @@ import { uic } from '../utils/uic.js'
  * - `form` optional — when present, render shows a clickable preview and form opens in a sheet
  */
 export interface BlockRenderDefinition<
-	TEntity,
+	TEntity extends object,
 	TSelected = TEntity,
 	TBrand extends AnyBrand = AnyBrand,
 	TEntityName extends string = string,
 	TSchema extends Record<string, object> = Record<string, object>,
-> extends BlockDefinition {
+> {
+	label?: ReactNode
 	render: (
 		entity: EntityAccessor<TEntity, TSelected, TBrand, TEntityName, TSchema>,
 		info: BlockRepeaterItemInfo,
@@ -135,7 +136,7 @@ export const DefaultBlockRepeater = withCollector(function DefaultBlockRepeater<
 			field={field}
 			discriminationField={discriminationField}
 			sortableBy={sortableBy}
-			blocks={blocks}
+			blocks={blocks as unknown as Record<TBlockNames, BlockDefinition<object, object>>}
 		>
 			{(items, methods) => (
 				<RepeaterWrapperUI>
@@ -187,8 +188,8 @@ export const DefaultBlockRepeater = withCollector(function DefaultBlockRepeater<
 						const info = { ...blockCollectionInfo, index: i }
 						return (
 							<React.Fragment key={i}>
-								{blockDef.render(item, info)}
-								{blockDef.form?.(item, info)}
+								{blockDef.render(item as EntityAccessor<object, object>, info)}
+								{blockDef.form?.(item as EntityAccessor<object, object>, info)}
 							</React.Fragment>
 						)
 					})}
@@ -204,13 +205,13 @@ export const DefaultBlockRepeater = withCollector(function DefaultBlockRepeater<
 
 import React from 'react'
 
-interface PlainBlockListProps<TEntity, TSelected, TBrand extends AnyBrand, TEntityName extends string, TSchema extends Record<string, object>, TBlockNames extends string> {
+interface PlainBlockListProps<TEntity extends object, TSelected, TBrand extends AnyBrand, TEntityName extends string, TSchema extends Record<string, object>, TBlockNames extends string> {
 	items: BlockRepeaterItems<TEntity, TSelected, TBrand, TEntityName, TSchema>
 	blocks: Record<TBlockNames, BlockRenderDefinition<TEntity, TSelected, TBrand, TEntityName, TSchema>>
 	showRemoveButton: boolean
 }
 
-function PlainBlockList<TEntity, TSelected, TBrand extends AnyBrand, TEntityName extends string, TSchema extends Record<string, object>, TBlockNames extends string>({
+function PlainBlockList<TEntity extends object, TSelected, TBrand extends AnyBrand, TEntityName extends string, TSchema extends Record<string, object>, TBlockNames extends string>({
 	items,
 	blocks,
 	showRemoveButton,
@@ -234,7 +235,7 @@ function PlainBlockList<TEntity, TSelected, TBrand extends AnyBrand, TEntityName
 // Sortable list (DnD)
 // ============================================================================
 
-interface SortableBlockListProps<TEntity, TSelected, TBrand extends AnyBrand, TEntityName extends string, TSchema extends Record<string, object>, TBlockNames extends string> {
+interface SortableBlockListProps<TEntity extends object, TSelected, TBrand extends AnyBrand, TEntityName extends string, TSchema extends Record<string, object>, TBlockNames extends string> {
 	items: BlockRepeaterItems<TEntity, TSelected, TBrand, TEntityName, TSchema>
 	methods: BlockRepeaterMethods<TBlockNames>
 	field: HasManyRef<TEntity, TSelected, TBrand, TEntityName, TSchema>
@@ -250,6 +251,7 @@ function SortableBlockList<TEntity extends object, TSelected, TBrand extends Any
 	blocks,
 	showRemoveButton,
 }: SortableBlockListProps<TEntity, TSelected, TBrand, TEntityName, TSchema, TBlockNames>): ReactNode {
+	const fieldAccessor = useHasMany(field)
 	const [activeId, setActiveId] = useState<string | null>(null)
 
 	const sensors = useSensors(
@@ -270,7 +272,7 @@ function SortableBlockList<TEntity extends object, TSelected, TBrand extends Any
 		const { active, over } = event
 		if (!over || active.id === over.id) return
 
-		const sorted = sortEntities(field.items, sortableBy) as EntityAccessor<TEntity, TSelected>[]
+		const sorted = sortEntities(fieldAccessor.items, sortableBy) as EntityAccessor<TEntity, TSelected>[]
 		const oldIndex = sorted.findIndex(e => e.id === active.id)
 		const newIndex = sorted.findIndex(e => e.id === over.id)
 		if (oldIndex === -1 || newIndex === -1) return
@@ -319,14 +321,14 @@ function SortableBlockList<TEntity extends object, TSelected, TBrand extends Any
 // Sortable item wrapper
 // ============================================================================
 
-interface SortableBlockItemProps<TEntity, TSelected, TBrand extends AnyBrand, TEntityName extends string, TSchema extends Record<string, object>, TBlockNames extends string> {
+interface SortableBlockItemProps<TEntity extends object, TSelected, TBrand extends AnyBrand, TEntityName extends string, TSchema extends Record<string, object>, TBlockNames extends string> {
 	entity: EntityAccessor<TEntity, TSelected, TBrand, TEntityName, TSchema>
 	info: BlockRepeaterItemInfo
 	blocks: Record<TBlockNames, BlockRenderDefinition<TEntity, TSelected, TBrand, TEntityName, TSchema>>
 	showRemoveButton: boolean
 }
 
-function SortableBlockItem<TEntity, TSelected, TBrand extends AnyBrand, TEntityName extends string, TSchema extends Record<string, object>, TBlockNames extends string>({
+function SortableBlockItem<TEntity extends object, TSelected, TBrand extends AnyBrand, TEntityName extends string, TSchema extends Record<string, object>, TBlockNames extends string>({
 	entity,
 	info,
 	blocks,
@@ -371,14 +373,14 @@ function SortableBlockItem<TEntity, TSelected, TBrand extends AnyBrand, TEntityN
 // Block item (plain, no sortable wrapper)
 // ============================================================================
 
-interface BlockItemProps<TEntity, TSelected, TBrand extends AnyBrand, TEntityName extends string, TSchema extends Record<string, object>, TBlockNames extends string> {
+interface BlockItemProps<TEntity extends object, TSelected, TBrand extends AnyBrand, TEntityName extends string, TSchema extends Record<string, object>, TBlockNames extends string> {
 	entity: EntityAccessor<TEntity, TSelected, TBrand, TEntityName, TSchema>
 	info: BlockRepeaterItemInfo
 	blocks: Record<TBlockNames, BlockRenderDefinition<TEntity, TSelected, TBrand, TEntityName, TSchema>>
 	showRemoveButton: boolean
 }
 
-function BlockItem<TEntity, TSelected, TBrand extends AnyBrand, TEntityName extends string, TSchema extends Record<string, object>, TBlockNames extends string>({
+function BlockItem<TEntity extends object, TSelected, TBrand extends AnyBrand, TEntityName extends string, TSchema extends Record<string, object>, TBlockNames extends string>({
 	entity,
 	info,
 	blocks,
@@ -395,7 +397,7 @@ function BlockItem<TEntity, TSelected, TBrand extends AnyBrand, TEntityName exte
 // Block item content with dual-mode (render/form)
 // ============================================================================
 
-function BlockItemContent<TEntity, TSelected, TBrand extends AnyBrand, TEntityName extends string, TSchema extends Record<string, object>, TBlockNames extends string>({
+function BlockItemContent<TEntity extends object, TSelected, TBrand extends AnyBrand, TEntityName extends string, TSchema extends Record<string, object>, TBlockNames extends string>({
 	entity,
 	info,
 	blocks,

@@ -14,8 +14,9 @@
 import { describe, test, expect } from 'bun:test'
 import type {
 	EntityRef,
+	EntityAccessor,
 	FluentFragment,
-	SelectedEntityFields,
+	EntityFieldsAccessor,
 	EntityFromProp,
 	SelectionFromProp,
 } from '@contember/bindx-react'
@@ -138,52 +139,49 @@ const entityDefs = {
 
 describe('Type Safety - Compile Time Checks', () => {
 	describe('EntityRef Selection Awareness', () => {
-		test('EntityRef<T> defaults to full entity (backwards compatible)', () => {
-			// EntityRef<Author> should have all Author fields
+		test('EntityRef<T> has all fields via proxy (direct field access)', () => {
+			// EntityRef<Author> should have all Author fields via EntityFieldsRef intersection
 			type FullAuthorRef = EntityRef<Author>
-			type FullFields = FullAuthorRef['$fields']
 
-			// These should all be accessible - compile-time verification
-			assertTrue<AssertExtends<'name', keyof FullFields>>()
-			assertTrue<AssertExtends<'email', keyof FullFields>>()
-			assertTrue<AssertExtends<'bio', keyof FullFields>>()
+			// These should all be accessible via proxy - compile-time verification
+			assertTrue<AssertExtends<'name', keyof FullAuthorRef>>()
+			assertTrue<AssertExtends<'email', keyof FullAuthorRef>>()
+			assertTrue<AssertExtends<'bio', keyof FullAuthorRef>>()
 		})
 
-		test('EntityRef<T, S> restricts to selected fields', () => {
+		test('EntityRef<T, S> restricts proxy fields to selected fields', () => {
 			// EntityRef<Author, { name: string }> should only have name
 			type SelectedAuthorRef = EntityRef<Author, { name: string }>
-			type SelectedFields = SelectedAuthorRef['$fields']
 
-			// name should be accessible
-			assertTrue<AssertExtends<'name', keyof SelectedFields>>()
+			// name should be accessible via proxy
+			assertTrue<AssertExtends<'name', keyof SelectedAuthorRef>>()
 
 			// email and bio should NOT be in the type
-			assertFalse<AssertExtends<'email', keyof SelectedFields>>()
-			assertFalse<AssertExtends<'bio', keyof SelectedFields>>()
+			assertFalse<AssertExtends<'email', keyof SelectedAuthorRef>>()
+			assertFalse<AssertExtends<'bio', keyof SelectedAuthorRef>>()
 		})
 
-		test('EntityRef $data property matches selection type', () => {
-			type SelectedRef = EntityRef<Author, { name: string; email: string }>
-			type DataType = SelectedRef['$data']
+		test('EntityAccessor $data property matches selection type', () => {
+			type SelectedAcc = EntityAccessor<Author, { name: string; email: string }>
+			type DataType = SelectedAcc['$data']
 
 			// $data should be { name: string; email: string } | null
 			assertTrue<AssertExtends<DataType, { name: string; email: string } | null>>()
 		})
 
-		test('accessing non-selected field is type error', () => {
-			type SelectedRef = EntityRef<Author, { name: string }>
+		test('EntityAccessor $fields only includes selected fields', () => {
+			type SelectedAcc = EntityAccessor<Author, { name: string }>
+			type SelectedFields = SelectedAcc['$fields']
 
-			// This would be a type error if uncommented:
-			// declare const ref: SelectedRef
-			// @ts-expect-error - 'email' does not exist on selected fields
-			type _TestError = SelectedRef['$fields']['email']
+			assertTrue<AssertExtends<'name', keyof SelectedFields>>()
+			assertFalse<AssertExtends<'email', keyof SelectedFields>>()
 		})
 	})
 
-	describe('SelectedEntityFields Type', () => {
+	describe('EntityFieldsAccessor Type', () => {
 		test('only includes fields from selection', () => {
 			type Selected = { name: string; email: string }
-			type Fields = SelectedEntityFields<Author, Selected>
+			type Fields = EntityFieldsAccessor<Author, Selected>
 
 			// Should have name and email
 			assertTrue<AssertExtends<'name', keyof Fields>>()
@@ -195,7 +193,7 @@ describe('Type Safety - Compile Time Checks', () => {
 
 		test('handles nested relation selections', () => {
 			type Selected = { title: string; author: { name: string } }
-			type Fields = SelectedEntityFields<Article, Selected>
+			type Fields = EntityFieldsAccessor<Article, Selected>
 
 			// Should have title and author
 			assertTrue<AssertExtends<'title', keyof Fields>>()
@@ -397,17 +395,13 @@ describe('Type Safety - Expected Errors', () => {
 
 	test('accessing non-selected field should be type error', () => {
 		type SelectedRef = EntityRef<Author, { name: string }>
-		type SelectedFields = SelectedRef['$fields']
 
-		// This should work - name is selected
-		assertTrue<AssertExtends<'name', keyof SelectedFields>>()
+		// This should work - name is selected via proxy
+		assertTrue<AssertExtends<'name', keyof SelectedRef>>()
 
 		// email and bio should NOT be accessible
-		// @ts-expect-error - 'email' does not exist on SelectedFields
-		type _EmailField = SelectedFields['email']
-
-		// @ts-expect-error - 'bio' does not exist on SelectedFields
-		type _BioField = SelectedFields['bio']
+		assertFalse<AssertExtends<'email', keyof SelectedRef>>()
+		assertFalse<AssertExtends<'bio', keyof SelectedRef>>()
 	})
 
 	test('fragment with wrong entity type should be type error', () => {
@@ -417,18 +411,18 @@ describe('Type Safety - Expected Errors', () => {
 		const _ArticleFragment = createFragment<Article>()(e => e.author(TagFragment))
 	})
 
-	test('EntityRef types with different selections have different $data types', () => {
-		type SmallRef = EntityRef<Author, { name: string }>
-		type LargeRef = EntityRef<Author, { name: string; email: string }>
+	test('EntityAccessor types with different selections have different $data types', () => {
+		type SmallAcc = EntityAccessor<Author, { name: string }>
+		type LargeAcc = EntityAccessor<Author, { name: string; email: string }>
 
-		// LargeRef.$data extends SmallRef.$data (has all required fields plus more)
-		assertTrue<AssertExtends<NonNullable<LargeRef['$data']>, NonNullable<SmallRef['$data']>>>()
+		// LargeAcc.$data extends SmallAcc.$data (has all required fields plus more)
+		assertTrue<AssertExtends<NonNullable<LargeAcc['$data']>, NonNullable<SmallAcc['$data']>>>()
 
-		// But SmallRef.$data does NOT extend LargeRef.$data (missing email)
-		assertFalse<AssertExtends<NonNullable<SmallRef['$data']>, NonNullable<LargeRef['$data']>>>()
+		// But SmallAcc.$data does NOT extend LargeAcc.$data (missing email)
+		assertFalse<AssertExtends<NonNullable<SmallAcc['$data']>, NonNullable<LargeAcc['$data']>>>()
 
 		// The $data types are NOT equal
-		assertFalse<AssertEqual<LargeRef['$data'], SmallRef['$data']>>()
+		assertFalse<AssertEqual<LargeAcc['$data'], SmallAcc['$data']>>()
 	})
 
 	test('EntityRef with different entity types should NOT be assignable', () => {
@@ -493,10 +487,10 @@ describe('Type Safety - Known Limitations', () => {
 		// EntityRef<Article, SelectedArticle> should restrict to only 'title'
 
 		// This SHOULD work - title is selected
-		assertTrue<AssertExtends<'title', keyof EntityRef<Article, SelectedArticle>['$fields']>>()
+		assertTrue<AssertExtends<'title', keyof EntityRef<Article, SelectedArticle>>>()
 
 		// This SHOULD NOT work - content is not selected
-		assertFalse<AssertExtends<'content', keyof EntityRef<Article, SelectedArticle>['$fields']>>()
+		assertFalse<AssertExtends<'content', keyof EntityRef<Article, SelectedArticle>>>()
 	})
 
 	test('mergeFragments preserves model type brand', () => {
@@ -530,14 +524,14 @@ describe('Type Safety - Known Limitations', () => {
 
 	test('nested relation selection types are propagated', () => {
 		// When you select author.name from Article, the author field should be typed correctly
-		type ArticleWithAuthor = EntityRef<Article, { title: string; author: { name: string } }>
-		type AuthorFields = ArticleWithAuthor['$fields']['author']['$fields']
+		type ArticleWithAuthor = EntityAccessor<Article, { title: string; author: { name: string } }>
+		type AuthorField = ArticleWithAuthor['$fields']['author']
 
-		// Should have access to name
-		assertTrue<AssertExtends<'name', keyof AuthorFields>>()
+		// Should have access to name on the nested has-one accessor
+		assertTrue<AssertExtends<'name', keyof AuthorField>>()
 
 		// Should NOT have access to email (not selected)
-		assertFalse<AssertExtends<'email', keyof AuthorFields>>()
+		assertFalse<AssertExtends<'email', keyof AuthorField>>()
 	})
 
 	test('HasManyProps is selection-aware', () => {
