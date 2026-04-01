@@ -218,14 +218,7 @@ blockRepeaterWithSelection.getSelection = (
 	const scope = new SelectionScope()
 	const collectorEntity = createCollectorProxy<unknown>(scope)
 
-	// Collect block render/form JSX so the collector proxy records field accesses.
-	// Done inside mockItems.map callback to survive Rolldown dead-code elimination
-	// (the callback is invoked by props.children which Rolldown cannot analyze).
 	const blockJsx: ReactNode[] = []
-	for (const blockDef of Object.values(props.blocks) as BlockDefinition[]) {
-		if (blockDef.render) blockJsx.push(blockDef.render(collectorEntity as EntityAccessor<object>))
-		if (blockDef.form) blockJsx.push(blockDef.form(collectorEntity as EntityAccessor<object>))
-	}
 
 	const mockItems: BlockRepeaterItems<unknown> = {
 		map: (fn) => {
@@ -239,6 +232,13 @@ blockRepeaterWithSelection.getSelection = (
 				blockType: null,
 				block: undefined,
 			})
+			// Call block render/form functions inside the map callback so the
+			// collector proxy records field accesses. This code must execute inside
+			// a callback passed through props.children() to survive Rolldown DCE.
+			for (const blockDef of Object.values(props.blocks) as BlockDefinition[]) {
+				if (blockDef.render) blockJsx.push(blockDef.render(collectorEntity as EntityAccessor<object>))
+				if (blockDef.form) blockJsx.push(blockDef.form(collectorEntity as EntityAccessor<object>))
+			}
 			return []
 		},
 		length: 0,
