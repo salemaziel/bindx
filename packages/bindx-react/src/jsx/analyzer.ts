@@ -49,13 +49,31 @@ export function analyzeJsx(node: ReactNode, selection: SelectionMetaCollector): 
 
 	// Check if it's a bindx component with pre-computed selection - needs special handling
 	if (isBindxComponent(component)) {
-		// First, trigger implicit collection if the component has getSelection
-		// This ensures lazy implicit selections are collected before we access COMPONENT_SELECTIONS
 		const componentObj = component as Record<string, unknown>
+
+		// If the component has getSelection (e.g. <If>, <HasMany>, <Show>), call it with
+		// a real collectNested so nested selections (including createComponent fragments) are captured.
+		// This is needed because container components like <If> analyze both branches internally.
 		if ('getSelection' in componentObj && typeof componentObj['getSelection'] === 'function') {
-			;(component as SelectionProvider).getSelection(element.props as Record<string, unknown>, () => new SelectionMetaCollector())
+			const provider = component as SelectionProvider
+			const collectNested = (children: ReactNode): SelectionMeta => {
+				const nestedSelection = new SelectionMetaCollector()
+				analyzeJsx(children, nestedSelection)
+				return nestedSelection
+			}
+			const fieldSelection = provider.getSelection(element.props as Record<string, unknown>, collectNested)
+			if (fieldSelection) {
+				if (Array.isArray(fieldSelection)) {
+					for (const field of fieldSelection) {
+						selection.addField(field)
+					}
+				} else {
+					selection.addField(fieldSelection)
+				}
+			}
 		}
 
+		// Also run handleBindxComponent for scope-based merging (createComponent fragments)
 		handleBindxComponent(
 			component as { [COMPONENT_SELECTIONS]: Map<string, { selection: SelectionMeta }> },
 			element.props as Record<string, unknown>,
@@ -191,6 +209,14 @@ function handleBindxComponent(
 			const targetScope = (propValue as { [SCOPE_REF]: SelectionScope })[SCOPE_REF]
 			// Merge the nested component's selection directly into the relation's scope
 			targetScope.mergeFromSelectionMeta(meta.selection)
+
+			// Also add fields to parentSelection so container components (e.g. <If>)
+			// that call collectNested() can see the fields in their SelectionMetaCollector
+			for (const [_key, field] of meta.selection.fields) {
+				if (field.path.length === 1) {
+					parentSelection.addField({ ...field })
+				}
+			}
 		}
 		// Case 2: Prop is a FieldRef from a relation (e.g., article.fields.author)
 		// This has FIELD_REF_META with a path to adjust
