@@ -3,6 +3,7 @@ import { type EntityDef, type EntityWhere, type EntityOrderBy, type FieldError, 
 import { useEntityList } from '../../hooks/useEntityList.js'
 import { useSelectionCollection } from '../../hooks/useSelectionCollection.js'
 import type { EntityAccessor } from '../types.js'
+import { annotateElement } from '../devAnnotations.js'
 
 /**
  * Props for EntityList component
@@ -104,9 +105,10 @@ function EntityListComponent<TRoleMap extends Record<string, object>>({
 
 	// Phase 3: Runtime render — items are already EntityAccessors from the hook
 	const items = result.items.map((item: (typeof result.items)[number], index: number) => {
+		const result = children(item as unknown as EntityAccessor<CommonEntity<TRoleMap>>, index)
 		return (
 			<React.Fragment key={item.id}>
-				{children(item as unknown as EntityAccessor<CommonEntity<TRoleMap>>, index)}
+				{annotateElement(result, { 'data-entity': entityType, 'data-entity-id': item.id })}
 			</React.Fragment>
 		)
 	})

@@ -1,5 +1,6 @@
 import React, { memo, useCallback, useEffect, useMemo, useRef, useSyncExternalStore, type ReactElement } from 'react'
 import { useBindxContext, useSchemaRegistry } from '../../hooks/BackendAdapterContext.js'
+import { annotateElement } from '../devAnnotations.js'
 import { useEntity } from '../../hooks/useEntity.js'
 import { useSelectionCollection } from '../../hooks/useSelectionCollection.js'
 import type { EntityAccessor, EntityRef, SelectionMeta } from '../types.js'
@@ -284,7 +285,8 @@ function EntityHandleRenderer({
 
 	useEffect(() => () => { rawHandle.dispose() }, [rawHandle])
 
-	return <>{children(handle as EntityAccessor<unknown>)}</>
+	const result = children(handle as EntityAccessor<unknown>)
+	return <>{annotateElement(result, { 'data-entity': entityType, 'data-entity-id': entityId })}</>
 }
 
 // ==================== Main Entity Component ====================

@@ -3,6 +3,7 @@ import type { FieldAccessor, FieldRef, SelectionFieldMeta, SelectionMeta, AnyBra
 import { FIELD_REF_META, BINDX_COMPONENT } from '../types.js'
 import type { SelectionProvider } from '../types.js'
 import { useField } from '../../hooks/useField.js'
+import { isDevAnnotationsEnabled } from '../devAnnotations.js'
 
 /**
  * Props for Attribute component.
@@ -38,7 +39,10 @@ function AttributeImpl<T>({ field, format, children }: AttributeProps<T>): React
 	}
 
 	const accessor = useField(field)
-	const extraProps = format(accessor)
+	const extraProps = {
+		...format(accessor),
+		...(isDevAnnotationsEnabled() ? { 'data-field': field[FIELD_REF_META]?.fieldName } : {}),
+	}
 
 	if (!isValidElement(children)) {
 		return children
