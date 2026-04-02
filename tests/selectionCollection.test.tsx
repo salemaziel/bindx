@@ -14,6 +14,7 @@ import {
 	buildQueryFromSelection,
 	COMPONENT_SELECTIONS,
 	withCollector,
+	If,
 	type SelectionMeta,
 } from '@contember/bindx-react'
 import { SchemaRegistry } from '@contember/bindx'
@@ -348,6 +349,94 @@ describe('Selection Collection with Schema', () => {
 		expect(ffsField).toBeDefined()
 		expect(ffsField!.isRelation).toBe(true)
 		expect(ffsField!.nested).toBeDefined()
+		expect(ffsField!.nested!.fields.has('name')).toBe(true)
+	})
+
+	test('createComponent with explicit fragment inside <If> is collected', () => {
+		// Fragment component with explicit selection
+		const OrganizationInfo = createComponent()
+			.entity('org', schema.Organization, e => e.name())
+			.render(({ org }) => (
+				<span>{org.name.value}</span>
+			))
+
+		// Parent component using OrganizationInfo inside <If>
+		const ProjectForm = createComponent()
+			.entity('entity', schema.Project)
+			.render(({ entity }) => (
+				<div>
+					<Field field={entity.name} />
+					<If
+						condition={true}
+						then={
+							<HasOne field={entity.organization}>
+								{org => <OrganizationInfo org={org} />}
+							</HasOne>
+						}
+					/>
+				</div>
+			))
+
+		const sel = getComponentSelection(ProjectForm, 'entity')
+		expect(sel).toBeDefined()
+		expect(getField(sel!, 'name')).toBeDefined()
+
+		// The organization relation from <If> → <HasOne> should be collected
+		const orgField = getField(sel!, 'organization')
+		expect(orgField).toBeDefined()
+		expect(orgField!.isRelation).toBe(true)
+		expect(orgField!.nested).toBeDefined()
+		// The OrganizationInfo fragment's explicit selection (name) should be merged
+		expect(orgField!.nested!.fields.has('name')).toBe(true)
+	})
+
+	test('createComponent with explicit fragment inside <If> else branch is collected', () => {
+		const OrganizationInfo = createComponent()
+			.entity('org', schema.Organization, e => e.name())
+			.render(({ org }) => (
+				<span>{org.name.value}</span>
+			))
+
+		const FeatureFlagInfo = createComponent()
+			.entity('ffs', schema.FeatureFlagSet, e => e.name())
+			.render(({ ffs }) => (
+				<span>{ffs.name.value}</span>
+			))
+
+		// Both branches of <If> should contribute to selection
+		const ProjectForm = createComponent()
+			.entity('entity', schema.Project)
+			.render(({ entity }) => (
+				<div>
+					<Field field={entity.slug} />
+					<If
+						condition={true}
+						then={
+							<HasOne field={entity.organization}>
+								{org => <OrganizationInfo org={org} />}
+							</HasOne>
+						}
+						else={
+							<HasOne field={entity.featureFlagSet}>
+								{ffs => <FeatureFlagInfo ffs={ffs} />}
+							</HasOne>
+						}
+					/>
+				</div>
+			))
+
+		const sel = getComponentSelection(ProjectForm, 'entity')
+		expect(sel).toBeDefined()
+
+		// Both branches should be collected
+		const orgField = getField(sel!, 'organization')
+		expect(orgField).toBeDefined()
+		expect(orgField!.isRelation).toBe(true)
+		expect(orgField!.nested!.fields.has('name')).toBe(true)
+
+		const ffsField = getField(sel!, 'featureFlagSet')
+		expect(ffsField).toBeDefined()
+		expect(ffsField!.isRelation).toBe(true)
 		expect(ffsField!.nested!.fields.has('name')).toBe(true)
 	})
 })
