@@ -2,7 +2,7 @@ import React, { memo, useCallback, useEffect, useMemo, useRef, useSyncExternalSt
 import { useBindxContext, useSchemaRegistry } from '../../hooks/BackendAdapterContext.js'
 import { useEntity } from '../../hooks/useEntity.js'
 import { useSelectionCollection } from '../../hooks/useSelectionCollection.js'
-import type { EntityAccessor, SelectionMeta } from '../types.js'
+import type { EntityAccessor, EntityRef, SelectionMeta } from '../types.js'
 import { type EntityDef, type EntityUniqueWhere, type AnyBrand, type FieldError, EntityHandle, type SnapshotStore, type ActionDispatcher, type SchemaRegistry, type CommonEntity } from '@contember/bindx'
 
 // ==================== Props Types ====================
@@ -15,7 +15,7 @@ interface EntityBaseProps<TRoleMap extends Record<string, object>> {
 	/** Entity definition reference */
 	entity: EntityDef<TRoleMap>
 	/** Render function receiving typed entity accessor with direct field access */
-	children: (entity: EntityAccessor<CommonEntity<TRoleMap>>) => React.ReactNode
+	children: (entity: EntityRef<CommonEntity<TRoleMap>>) => React.ReactNode
 	/** Error fallback */
 	error?: (error: FieldError) => React.ReactNode
 }

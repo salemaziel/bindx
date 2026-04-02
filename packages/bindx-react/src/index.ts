@@ -297,6 +297,7 @@ export {
 	useInterceptEntity,
 	useInterceptField,
 	// Ref → Accessor hooks
+	useAccessor,
 	useField,
 	useHasMany,
 	useHasOne,
