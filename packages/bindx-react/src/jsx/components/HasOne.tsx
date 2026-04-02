@@ -4,6 +4,7 @@ import { FIELD_REF_META, BINDX_COMPONENT, SCOPE_REF } from '../types.js'
 import { mergeSelections } from '../SelectionMeta.js'
 import { SelectionScope, type HasOneAccessor } from '@contember/bindx'
 import { useHasOne } from '../../hooks/useHasOne.js'
+import { annotateElement } from '../devAnnotations.js'
 
 /**
  * HasOne component - renders a has-one relation
@@ -29,8 +30,11 @@ function HasOneImpl<
 >({ field, children }: HasOneProps<TEntity, TSelected, TBrand, TEntityName, TSchema>): ReactElement {
 	// useHasOne() subscribes to store and returns HasOneAccessor with .$entity
 	const accessor = useHasOne(field)
+	const relationName = field[FIELD_REF_META]?.fieldName
+
 	// Get the related entity reference (always available, may be placeholder with id=null)
-	return <>{children(accessor.$entity)}</>
+	const result = children(accessor.$entity)
+	return <>{annotateElement(result, { 'data-relation': relationName ?? '' })}</>
 }
 
 export const HasOne = memo(HasOneImpl) as typeof HasOneImpl

@@ -11,7 +11,7 @@ import {
 	clearEntityErrors,
 	clearAllErrors as clearAllErrorsAction,
 } from '../core/actions.js'
-import { type FieldAccessor, type HasOneAccessor, type HasManyAccessor, type EntityFieldsAccessor, type Unsubscribe, type EntityAccessor } from './types.js'
+import { FIELD_REF_META, type FieldRefMeta, type FieldAccessor, type HasOneAccessor, type HasManyAccessor, type EntityFieldsAccessor, type Unsubscribe, type EntityAccessor } from './types.js'
 import { deepEqual } from '../utils/deepEqual.js'
 import { createClientError, type ErrorInput, type FieldError } from '../errors/types.js'
 import type {
@@ -112,6 +112,17 @@ export class EntityHandle<T extends object = object, TSelected = T> extends Enti
 
 	static wrapProxy<T extends object, TSelected>(handle: EntityHandle<T, TSelected>): EntityAccessor<T, TSelected> {
 		return createHandleProxy<EntityHandle<T, TSelected>, EntityAccessor<T, TSelected>>(handle, (target) => target.fields)
+	}
+
+	get [FIELD_REF_META](): FieldRefMeta {
+		return {
+			entityType: this.entityType,
+			entityId: this.entityId,
+			path: [],
+			fieldName: '',
+			isArray: false,
+			isRelation: false,
+		}
 	}
 
 	/**

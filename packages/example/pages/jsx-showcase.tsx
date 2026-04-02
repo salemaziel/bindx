@@ -1,18 +1,75 @@
 import type { ReactNode } from 'react'
-import { Entity, Field, HasMany, HasOne, If, Show } from '@contember/bindx-react'
+import { Entity, Field, HasMany, HasOne, If, Show, Attribute, createComponent } from '@contember/bindx-react'
 import { schema } from '../generated/index.js'
+
+// ============================================================================
+// createComponent-based fragments (participate in selection collection)
+// ============================================================================
+
+const AuthorEditForm = createComponent()
+	.entity('author', schema.Author)
+	.render(({ author }) => (
+		<form className="flex flex-col gap-3">
+			<div>
+				<label className="block text-sm font-medium">Name</label>
+				<Field field={author.name}>
+					{name => (
+						<>
+							<input
+								type="text"
+								className="border rounded px-2 py-1 w-full"
+								value={name.value ?? ''}
+								onChange={e => author.name.setValue(e.target.value)}
+							/>
+							{name.isDirty && <span className="text-orange-500 text-xs ml-1">*</span>}
+						</>
+					)}
+				</Field>
+			</div>
+
+			<div>
+				<label className="block text-sm font-medium">Email</label>
+				<Field field={author.email}>
+					{email => (
+						<input
+							type="email"
+							className="border rounded px-2 py-1 w-full"
+							value={email.value ?? ''}
+							onChange={e => author.email.setValue(e.target.value)}
+						/>
+					)}
+				</Field>
+			</div>
+
+			<div>
+				<label className="block text-sm font-medium">Bio</label>
+				<Field field={author.bio}>
+					{bio => (
+						<textarea
+							className="border rounded px-2 py-1 w-full"
+							value={bio.value ?? ''}
+							onChange={e => author.bio.setValue(e.target.value)}
+						/>
+					)}
+				</Field>
+			</div>
+
+			{author.$isDirty && (
+				<div className="flex gap-2">
+					<button type="button" className="px-3 py-1 bg-blue-500 text-white rounded text-sm">
+						Save Changes
+					</button>
+				</div>
+			)}
+		</form>
+	))
+
+// ============================================================================
+// Pages
+// ============================================================================
 
 /**
  * Showcase of all JSX components: Entity, Field, HasMany, HasOne, If, Show.
- *
- * Demonstrates:
- * - Two-pass JSX approach with full type safety
- * - Field for scalar values (with render function)
- * - HasMany for has-many relations with index
- * - HasOne for has-one relations
- * - Show for conditional display based on field value
- * - If for conditional rendering
- * - Nested relation traversal
  */
 export function JsxShowcasePage({ authorId }: { authorId: string }): ReactNode {
 	return (
@@ -62,27 +119,22 @@ export function JsxShowcasePage({ authorId }: { authorId: string }): ReactNode {
 									<div className="flex gap-1 mt-1">
 										<HasMany field={article.tags}>
 											{tag => (
-												<span
-												key={tag.id}
-													className="inline-block px-1.5 py-0.5 rounded text-white text-xs"
-													style={{ backgroundColor: tag.color.value ?? '#666' }}
-												>
-													<Field field={tag.name} />
-												</span>
-											)}
+								<Attribute key={tag.id} field={tag.color} format={color => ({ style: { backgroundColor: color.value ?? '#666' } })}>
+									<span className="inline-block px-1.5 py-0.5 rounded text-white text-xs">
+										<Field field={tag.name} />
+									</span>
+								</Attribute>
+							)}
 										</HasMany>
 									</div>
 
-									{/* If component for conditional rendering */}
-									<If
-										condition={article.publishedAt.value !== null}
-										then={
-											<time className="text-xs text-green-600">
-												Published: <Field field={article.publishedAt} />
-											</time>
+									{/* Conditional rendering */}
+									<Field field={article.publishedAt}>
+										{pub => pub.value !== null
+											? <time className="text-xs text-green-600">Published: {String(pub.value)}</time>
+											: <span className="text-xs text-orange-500">Draft</span>
 										}
-										else={<span className="text-xs text-orange-500">Draft</span>}
-									/>
+									</Field>
 								</article>
 							)}
 						</HasMany>
@@ -95,10 +147,6 @@ export function JsxShowcasePage({ authorId }: { authorId: string }): ReactNode {
 
 /**
  * Interactive editing example using Entity JSX.
- *
- * Demonstrates:
- * - Direct field mutation via setValue
- * - Dirty state tracking
  */
 export function AuthorEditPage({ authorId }: { authorId: string }): ReactNode {
 	return (
@@ -108,47 +156,7 @@ export function AuthorEditPage({ authorId }: { authorId: string }): ReactNode {
 			loading={<div>Loading author...</div>}
 			error={err => <div className="error">Failed to load: {err.message}</div>}
 		>
-			{author => (
-				<form className="flex flex-col gap-3">
-					<div>
-						<label className="block text-sm font-medium">Name</label>
-						<input
-							type="text"
-							className="border rounded px-2 py-1 w-full"
-							value={author.name.value ?? ''}
-							onChange={e => author.name.setValue(e.target.value)}
-						/>
-						{author.name.isDirty && <span className="text-orange-500 text-xs ml-1">*</span>}
-					</div>
-
-					<div>
-						<label className="block text-sm font-medium">Email</label>
-						<input
-							type="email"
-							className="border rounded px-2 py-1 w-full"
-							value={author.email.value ?? ''}
-							onChange={e => author.email.setValue(e.target.value)}
-						/>
-					</div>
-
-					<div>
-						<label className="block text-sm font-medium">Bio</label>
-						<textarea
-							className="border rounded px-2 py-1 w-full"
-							value={author.bio.value ?? ''}
-							onChange={e => author.bio.setValue(e.target.value)}
-						/>
-					</div>
-
-					{author.$isDirty && (
-						<div className="flex gap-2">
-							<button type="button" className="px-3 py-1 bg-blue-500 text-white rounded text-sm">
-								Save Changes
-							</button>
-						</div>
-					)}
-				</form>
-			)}
+			{author => <AuthorEditForm author={author} />}
 		</Entity>
 	)
 }
@@ -195,9 +203,11 @@ function ArticleDetailPage({ articleId }: { articleId: string }): ReactNode {
 					<footer className="flex gap-1">
 						<HasMany field={article.tags}>
 							{tag => (
-								<span key={tag.id} className="inline-block px-1.5 py-0.5 rounded text-white text-xs" style={{ backgroundColor: tag.color.value ?? '#666' }}>
-									<Field field={tag.name} />
-								</span>
+								<Attribute key={tag.id} field={tag.color} format={color => ({ style: { backgroundColor: color.value ?? '#666' } })}>
+									<span className="inline-block px-1.5 py-0.5 rounded text-white text-xs">
+										<Field field={tag.name} />
+									</span>
+								</Attribute>
 							)}
 						</HasMany>
 					</footer>

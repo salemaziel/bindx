@@ -97,7 +97,7 @@ export interface HasManyProps<
 	TSchema extends Record<string, object> = Record<string, object>,
 > {
 	field: HasManyRef<TEntity, TSelected, TBrand, TEntityName, TSchema>
-	children: (item: EntityAccessor<TEntity, TSelected, TBrand, TEntityName, TSchema>, index: number) => ReactNode
+	children: (item: EntityRef<TEntity, TSelected, TBrand, TEntityName, TSchema>, index: number) => ReactNode
 	filter?: unknown
 	orderBy?: unknown
 	limit?: number
@@ -123,7 +123,7 @@ export interface HasOneProps<
 	TSchema extends Record<string, object> = Record<string, object>,
 > {
 	field: HasOneRef<TEntity, TSelected, TBrand, TEntityName, TSchema>
-	children: (entity: EntityAccessor<TEntity, TSelected, TBrand, TEntityName, TSchema>) => ReactNode
+	children: (entity: EntityRef<TEntity, TSelected, TBrand, TEntityName, TSchema>) => ReactNode
 }
 
 /**
@@ -134,7 +134,7 @@ export interface HasOneProps<
 export interface EntityComponentProps<TSchema extends Record<string, object>, K extends keyof TSchema & string> {
 	name: K
 	id: string
-	children: (entity: EntityAccessor<TSchema[K], TSchema[K], import('@contember/bindx').AnyBrand, K, TSchema>) => ReactNode
+	children: (entity: EntityRef<TSchema[K], TSchema[K], import('@contember/bindx').AnyBrand, K, TSchema>) => ReactNode
 }
 
 /**

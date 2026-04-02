@@ -222,18 +222,30 @@ export type SetScalarProps<
 // ============================================================================
 
 /**
- * Build EntityAccessor props from entity config.
- *
- * For explicit selection (selector provided): Returns EntityAccessor with full access
- * - Allows direct field access: `entity.fieldName.value`
- * - Allows relation access: `entity.relation.length`, `entity.relation.$entity`
- *
- * For implicit selection (no selector): Returns EntityRef with restricted access
- * - Blocks direct field access to enforce declarative patterns
- * - Users must use components: `<Field field={entity.fieldName} />`
- * - Users must use condition DSL: `<If condition={cond.hasItems(entity.relation)} />`
+ * Build public entity props — always EntityRef (stable pointer, no live data).
+ * Used for the component's external React props.
  */
 export type BuildEntityProps<
+	TEntityProps extends Record<string, AnyEntityPropConfig>,
+	TRoles extends readonly string[],
+> = {
+	readonly [K in keyof TEntityProps]: TEntityProps[K] extends EntityPropConfig<
+		infer TEntity,
+		infer TSelected,
+		infer _TIsImplicit
+	>
+		? EntityRef<TEntity, TSelected, AnyBrand, string>
+		: TEntityProps[K] extends InterfaceEntityPropConfig<infer TInterface, infer _TIsImplicit>
+			? EntityRef<TInterface, TInterface, AnyBrand, string>
+			: never
+}
+
+/**
+ * Build render entity props — explicit selection → EntityAccessor (live data),
+ * implicit selection → EntityRef (pointer only, use <Field> components).
+ * Used for the render function's props type.
+ */
+export type BuildRenderEntityProps<
 	TEntityProps extends Record<string, AnyEntityPropConfig>,
 	TRoles extends readonly string[],
 > = {
@@ -243,25 +255,28 @@ export type BuildEntityProps<
 		infer TIsImplicit
 	>
 		? TIsImplicit extends true
-			// Implicit selection -> restricted EntityRef (no .value, .length access)
 			? EntityRef<TEntity, TSelected, AnyBrand, string>
-			// Explicit selection -> full EntityAccessor (full access)
 			: EntityAccessor<TEntity, TSelected, AnyBrand, string>
 		: TEntityProps[K] extends InterfaceEntityPropConfig<infer TInterface, infer TIsImplicit>
 			? TIsImplicit extends true
-				// Implicit interface -> restricted
 				? EntityRef<TInterface, TInterface, AnyBrand, string>
-				// Explicit interface -> full access
 				: EntityAccessor<TInterface, TInterface, AnyBrand, string>
 			: never
 }
 
 /**
- * Build complete props type from builder state.
+ * Build complete public props type from builder state.
  */
 export type BuildProps<TState extends ComponentBuilderState> =
 	TState['__scalarProps'] &
 		BuildEntityProps<TState['__entityProps'], TState['__roles']>
+
+/**
+ * Build complete render props type from builder state.
+ */
+export type BuildRenderProps<TState extends ComponentBuilderState> =
+	TState['__scalarProps'] &
+		BuildRenderEntityProps<TState['__entityProps'], TState['__roles']>
 
 /**
  * Build fragment properties ($propName) from entity config.
@@ -437,7 +452,7 @@ export interface ComponentBuilder<
 	 * @param renderFn - React render function receiving typed props
 	 * @returns Bindx component with fragment properties
 	 */
-	render(renderFn: (props: BuildProps<TState>) => ReactNode): BindxComponent<TState>
+	render(renderFn: (props: BuildRenderProps<TState>) => ReactNode): BindxComponent<TState>
 }
 
 // ============================================================================

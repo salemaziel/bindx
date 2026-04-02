@@ -15,6 +15,7 @@ import type {
 	SelectionMeta,
 	SelectionBuilder,
 	AnyBrand,
+	EntityRef,
 	SchemaDefinition,
 } from '@contember/bindx'
 import {
@@ -28,10 +29,11 @@ import type {
 	SelectionPropMeta,
 } from './componentBuilder.types.js'
 import type { SelectionProvider, SelectionFieldMeta } from './types.js'
-import { FIELD_REF_META, BINDX_COMPONENT } from './types.js'
+import { FIELD_REF_META, BINDX_COMPONENT, SCOPE_REF } from './types.js'
 import { createCollectorProxy } from './proxy.js'
 import { collectSelection } from './analyzer.js'
 import { type Condition, evaluateCondition } from './conditions.js'
+import { useAccessor } from '../hooks/useAccessor.js'
 
 // ============================================================================
 // Symbols
@@ -61,6 +63,24 @@ export interface EntityConfig {
 	readonly selector?: (builder: SelectionBuilder<object>) => SelectionBuilder<object, object, object>
 	readonly isInterface?: boolean
 	readonly schema?: SchemaDefinition<Record<string, object>>
+}
+
+// ============================================================================
+// Render Props Transformation
+// ============================================================================
+
+/**
+ * Converts explicit entity ref props to accessors via useAccessor.
+ * Called with a fixed list of prop names — hook count is stable across renders.
+ */
+function useRenderProps<TProps extends object>(props: TProps, explicitPropNames: string[]): TProps {
+	const record = props as Record<string, unknown>
+	const accessors: Record<string, unknown> = {}
+	for (const name of explicitPropNames) {
+		// eslint-disable-next-line react-hooks/rules-of-hooks -- stable iteration count (explicitPropNames is fixed at build time)
+		accessors[name] = useAccessor(record[name] as EntityRef<object>)
+	}
+	return { ...props, ...accessors } as TProps
 }
 
 // ============================================================================
@@ -100,6 +120,11 @@ export function buildComponent<TProps extends object>(
 		}
 	}
 
+	// Collect explicit entity prop names (stable list for hooks)
+	const explicitEntityPropNames = [...entityConfigs.entries()]
+		.filter(([_, c]) => c.selector)
+		.map(([name]) => name)
+
 	// 2. Implicit entities - collect lazily to avoid TDZ errors
 	const implicitConfigs = [...entityConfigs.entries()].filter(([_, c]) => !c.selector)
 	let implicitCollected = false
@@ -118,14 +143,20 @@ export function buildComponent<TProps extends object>(
 	// 3. Create React component
 	function ComponentImpl(props: TProps): ReactNode {
 		ensureImplicitCollected()
+
+		// Convert explicit entity refs to accessors (stable hook count — explicitEntityPropNames is fixed)
+		const renderProps = explicitEntityPropNames.length > 0
+			? useRenderProps(props, explicitEntityPropNames)
+			: props
+
 		// Evaluate condition at runtime
 		if (conditionFn) {
-			const condition = conditionFn(props)
+			const condition = conditionFn(renderProps)
 			if (!evaluateCondition(condition)) {
 				return null
 			}
 		}
-		return renderFn(props)
+		return renderFn(renderProps)
 	}
 
 	const MemoizedComponent = memo(ComponentImpl)
@@ -372,8 +403,19 @@ function createGetSelection(
 		for (const [propName, meta] of selectionsMap) {
 			const propValue = props[propName]
 
+			if (!propValue || typeof propValue !== 'object') {
+				continue
+			}
+
+			// Case 0: Collection phase — prop has SCOPE_REF, merge directly into scope
+			if (SCOPE_REF in propValue) {
+				const targetScope = (propValue as { [SCOPE_REF]: SelectionScope })[SCOPE_REF]
+				targetScope.mergeFromSelectionMeta(meta.selection)
+				continue
+			}
+
 			// Case 1: Prop is a field reference (from relation)
-			if (propValue && typeof propValue === 'object' && FIELD_REF_META in propValue) {
+			if (FIELD_REF_META in propValue) {
 				const refMeta = (propValue as { [FIELD_REF_META]: { path: string[]; fieldName: string } })[FIELD_REF_META]
 
 				for (const [_key, field] of meta.selection.fields) {
@@ -386,7 +428,7 @@ function createGetSelection(
 				}
 			}
 			// Case 2: Prop is an EntityRef from root level
-			else if (propValue && typeof propValue === 'object' && 'id' in propValue && 'fields' in propValue) {
+			else if ('id' in propValue && 'fields' in propValue) {
 				for (const [_key, field] of meta.selection.fields) {
 					if (field.path.length === 1) {
 						fields.push({ ...field })

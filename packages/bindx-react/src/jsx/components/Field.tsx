@@ -2,6 +2,7 @@ import { memo, type ReactElement } from 'react'
 import type { FieldProps, SelectionFieldMeta, SelectionProvider } from '../types.js'
 import { FIELD_REF_META, BINDX_COMPONENT } from '../types.js'
 import { useField } from '../../hooks/useField.js'
+import { annotateElement, isDevAnnotationsEnabled } from '../devAnnotations.js'
 
 /**
  * Field component - renders a scalar field value
@@ -28,13 +29,18 @@ function FieldImpl<T>({ field, children, format }: FieldProps<T>): ReactElement 
 
 	// useField() subscribes to store and returns FieldAccessor with .value access
 	const accessor = useField(field)
+	const fieldName = field[FIELD_REF_META]?.fieldName
 
 	if (children) {
-		return <>{children(accessor)}</>
+		const result = children(accessor)
+		return <>{annotateElement(result, { 'data-field': fieldName })}</>
 	}
 
 	if (format) {
-		return <>{format(accessor.value)}</>
+		const content = format(accessor.value)
+		return isDevAnnotationsEnabled() && fieldName
+			? <span data-field={fieldName}>{content}</span>
+			: <>{content}</>
 	}
 
 	// Default: render value as string
@@ -42,7 +48,9 @@ function FieldImpl<T>({ field, children, format }: FieldProps<T>): ReactElement 
 		return null
 	}
 
-	return <>{String(accessor.value)}</>
+	return isDevAnnotationsEnabled() && fieldName
+		? <span data-field={fieldName}>{String(accessor.value)}</span>
+		: <>{String(accessor.value)}</>
 }
 
 export const Field = memo(FieldImpl) as typeof FieldImpl

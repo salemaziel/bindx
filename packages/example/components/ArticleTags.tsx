@@ -1,4 +1,4 @@
-import { createComponent, Field, HasMany } from '@contember/bindx-react'
+import { createComponent, Field, HasMany, Attribute } from '@contember/bindx-react'
 import { schema } from '../generated/index.js'
 
 /**
@@ -12,13 +12,11 @@ export const ArticleTags = createComponent()
 		<div className={className ?? 'article-tags'}>
 			<HasMany field={article.tags}>
 				{tag => (
-					<span
-						key={tag.id}
-						className="inline-block px-2 py-0.5 rounded text-white text-sm mr-1"
-						style={{ backgroundColor: tag.color.value ?? '#666' }}
-					>
-						<Field field={tag.name} />
-					</span>
+					<Attribute field={tag.color} format={color => ({ style: { backgroundColor: color.value ?? '#666' } })}>
+						<span className="inline-block px-2 py-0.5 rounded text-white text-sm mr-1">
+							<Field field={tag.name} />
+						</span>
+					</Attribute>
 				)}
 			</HasMany>
 		</div>

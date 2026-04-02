@@ -56,6 +56,7 @@ export {
 
 export { useEntityBeforePersist } from './useEntityBeforePersist.js'
 
+export { useAccessor } from './useAccessor.js'
 export { useField } from './useField.js'
 export { useHasMany } from './useHasMany.js'
 export { useHasOne } from './useHasOne.js'

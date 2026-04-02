@@ -288,6 +288,7 @@ export interface EntityRefInterface<
 	TEntityName extends string = string,
 	TSchema extends Record<string, object> = Record<string, object>,
 > {
+	readonly [FIELD_REF_META]: FieldRefMeta<TEntityName>
 	readonly id: string
 	readonly $isDirty: boolean
 	readonly $isPersisting: boolean

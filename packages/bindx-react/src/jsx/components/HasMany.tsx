@@ -4,6 +4,7 @@ import { FIELD_REF_META, BINDX_COMPONENT, SCOPE_REF } from '../types.js'
 import { mergeSelections } from '../SelectionMeta.js'
 import { SelectionScope, generateHasManyAlias, type HasManyAccessor } from '@contember/bindx'
 import { useHasMany } from '../../hooks/useHasMany.js'
+import { annotateElement } from '../devAnnotations.js'
 
 /**
  * HasMany component - renders a has-many relation
@@ -38,8 +39,16 @@ function HasManyImpl<
 >({ field, children }: HasManyProps<TEntity, TSelected, TBrand, TEntityName, TSchema>): ReactElement {
 	// useHasMany() subscribes to store and returns HasManyAccessor with .map()/.items/.length
 	const accessor = useHasMany(field)
+	const targetType = field[FIELD_REF_META]?.targetType
+
 	const items = accessor.map((item, index) => {
-		return <React.Fragment key={item.id}>{children(item, index)}</React.Fragment>
+		const result = children(item, index)
+		return <React.Fragment key={item.id}>{
+			annotateElement(result, {
+				'data-entity': targetType ?? '',
+				'data-entity-id': item.id,
+			})
+		}</React.Fragment>
 	})
 
 	return <>{items}</>

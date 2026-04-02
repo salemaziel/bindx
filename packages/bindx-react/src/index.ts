@@ -297,6 +297,7 @@ export {
 	useInterceptEntity,
 	useInterceptField,
 	// Ref → Accessor hooks
+	useAccessor,
 	useField,
 	useHasMany,
 	useHasOne,
@@ -314,6 +315,8 @@ export type { UndoHookResult } from './hooks/useUndo.js'
 
 // JSX Components
 export {
+	Attribute,
+	type AttributeProps,
 	Field,
 	HasMany,
 	HasOne,

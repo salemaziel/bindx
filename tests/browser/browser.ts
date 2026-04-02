@@ -7,6 +7,7 @@ const POLL_INTERVAL = 200
 const POLL_TIMEOUT = 10_000
 const PLAYGROUND_URL = process.env['PLAYGROUND_URL'] ?? 'http://localhost:15180'
 
+
 let currentSession: string | null = null
 
 function exec(cmd: string): string {
