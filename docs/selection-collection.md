@@ -1,105 +1,210 @@
-# Selection Collection Guide
+# Bindx React Guide
 
-Bindx automatically builds GraphQL queries from JSX. Components declare which fields they need via **selection collection** — a static analysis phase that runs before data fetching.
+## Data Loading
 
-## How it works
+### `useEntity` — single entity
 
-When you render `<Entity>` or call `useEntity()`, bindx analyzes the component tree to discover which fields to fetch. It does this by walking the JSX tree and asking each component what fields it needs. There are two mechanisms a component can use to participate:
+```tsx
+const article = useEntity(schema.Article, { by: { id } }, e => e.title().content().author(a => a.name()))
+```
 
-1. **`getSelection`** — component returns field metadata directly
-2. **`staticRender`** (via `withCollector`) — component returns JSX that gets analyzed recursively
+Returns a discriminated union on `$status`:
 
-Most users never implement these directly. Instead, use `createComponent()` which handles everything automatically.
+```tsx
+if (article.$isLoading) return <Spinner />
+if (article.$isError) return <Error error={article.$error} />
+if (article.$isNotFound) return <NotFound />
+
+// Ready — full EntityAccessor with .value access
+return <input value={article.title.value ?? ''} onChange={e => article.title.setValue(e.target.value)} />
+```
+
+The ready state is an `EntityAccessor` merged with status metadata. You get direct `.value` access on fields because the selection definer (third argument) declares which fields to fetch.
+
+Options:
+```tsx
+useEntity(schema.Article, {
+  by: { id: '...' },      // Required — unique identifier
+  cache: true,             // Use cached data if available
+}, definer)
+```
+
+### `useEntityList` — entity list with filtering
+
+```tsx
+const articles = useEntityList(schema.Article, {
+  filter: { published: { eq: true } },
+  orderBy: [{ publishedAt: 'desc' }],
+  limit: 10,
+  offset: 0,
+}, e => e.title().publishedAt())
+```
+
+Returns a discriminated union on `$status`:
+
+```tsx
+if (articles.$isLoading) return <Spinner />
+if (articles.$isError) return <Error error={articles.$error} />
+
+// Ready — items array of EntityAccessors
+return (
+  <ul>
+    {articles.items.map(article => (
+      <li key={article.id}>{article.title.value}</li>
+    ))}
+  </ul>
+)
+```
+
+Mutation methods on the ready result:
+```tsx
+const tempId = articles.$add({ title: 'New Article' })  // Add item, returns temp ID
+articles.$remove(tempId)                                  // Remove by ID
+articles.$move(0, 2)                                      // Reorder
+```
+
+### Selection definer
+
+The third argument to `useEntity`/`useEntityList` declares which fields to fetch:
+
+```tsx
+e => e
+  .title()                                    // Scalar field
+  .content()                                  // Scalar field
+  .author(a => a.name().email())              // Has-one relation with nested fields
+  .tags({ limit: 5 }, t => t.name().color())  // Has-many with params + nested fields
+  .author(AuthorInfo.$author)                 // Merge fragment from createComponent
+```
+
+## Persistence
+
+### `usePersist` — global persistence
+
+```tsx
+const { persistAll, persist, isPersisting, isDirty, dirtyEntities } = usePersist()
+
+// Save all dirty entities in a transaction
+await persistAll()
+
+// Save single entity via ref
+await persist(article.title)  // Persists the Article containing this field
+
+// Save specific fields only
+await persistFields(article.title)
+```
+
+### `usePersistEntity` — entity-scoped persistence
+
+```tsx
+const { persist, persistFields, isPersisting, isDirty, dirtyFields } = usePersistEntity('Article', id)
+
+await persist()                    // Save this entity
+await persistFields(['title'])     // Save only the title field
+```
+
+`isDirty`, `isPersisting`, `dirtyFields` are reactive — component re-renders when they change.
+
+## Undo/Redo
+
+Requires `enableUndo` on the provider:
+
+```tsx
+<BindxProvider adapter={adapter} schema={schema} enableUndo>
+```
+
+```tsx
+const { canUndo, canRedo, undo, redo, beginGroup, endGroup } = useUndo()
+
+// Manual grouping — multiple actions as single undo step
+const groupId = beginGroup('batch edit')
+article.title.setValue('New Title')
+article.content.setValue('New Content')
+endGroup(groupId)
+```
+
+## Events and Interceptors
+
+### Event listeners — react to changes
+
+```tsx
+// Global — any field change
+useOnEvent('field:changed', event => {
+  console.log('Field changed:', event)
+})
+
+// Entity-scoped
+useOnEntityEvent('entity:persisted', 'Article', id, event => {
+  toast.success('Article saved!')
+})
+
+// Field-scoped
+useOnFieldEvent('field:changed', 'Article', id, 'title', event => {
+  console.log('Title:', event.oldValue, '→', event.newValue)
+})
+```
+
+### Interceptors — cancel or allow mutations
+
+```tsx
+// Reject empty values
+useInterceptField('field:changing', 'Article', id, 'title', event => {
+  if (event.newValue === '') return { action: 'cancel' }
+  return { action: 'continue' }
+})
+
+// Validate before persist
+useInterceptEntity('entity:persisting', 'Article', id, () => {
+  if (!isValid) return { action: 'cancel' }
+  return { action: 'continue' }
+})
+```
+
+### `useEntityBeforePersist` — pre-persist validation
+
+```tsx
+useEntityBeforePersist('Article', id, () => {
+  if (!article.title.value) {
+    article.title.addError({ message: 'Title is required', source: 'client', category: 'validation' })
+  }
+})
+```
+
+## Error Handling
+
+### `useEntityErrors` — entity error state
+
+```tsx
+const { hasErrors, entityErrors, fieldErrors, relationErrors } = useEntityErrors('Article', id)
+
+// fieldErrors is Map<string, FieldError[]>
+const titleErrors = fieldErrors.get('title') ?? []
+```
+
+### Inline errors on refs
+
+```tsx
+article.title.addError({ message: 'Too short', source: 'client', category: 'validation' })
+article.title.clearErrors()
+article.title.errors      // readonly FieldError[]
+article.title.hasError     // boolean
+```
 
 ## EntityRef vs EntityAccessor
 
-Bindx has a two-tier type system for entity references:
+- **`EntityRef`** — stable pointer with `id`, `$isDirty`, `$isNew`, field access returning `FieldRef` (no `.value`). Used in public API surfaces (component props, children callbacks).
+- **`EntityAccessor`** — extends `EntityRef` with `$data`, `$fields`, field access returning `FieldAccessor` (with `.value`, `.isDirty`). Created by hooks or by `createComponent` with explicit selection.
 
-- **`EntityRef`** — a stable pointer. Has `id`, `$isDirty`, `$isNew`, and field access returning `FieldRef` (no `.value`). Safe to pass between components. Used in all public API surfaces (component props, children callbacks).
-- **`EntityAccessor`** — extends `EntityRef` with live data access: `$data`, `$fields`, and field access returning `FieldAccessor` (with `.value`, `.isDirty`). Created by subscribing to the store.
+**Rule**: components receive `EntityRef` as props. To access `.value`:
+- Use `<Field>` / `<Attribute>` JSX components
+- Use `createComponent()` with explicit selection (render gets `EntityAccessor`)
+- Call `useAccessor(ref)` in a React component
 
-**Rule of thumb**: components receive `EntityRef` as props. To access `.value`, either:
-- Use `<Field>` / `<Attribute>` JSX components (they subscribe internally)
-- Use `createComponent()` with explicit selection (render function gets `EntityAccessor`)
-- Call `useAccessor(ref)` in a React component (subscribes and widens the type)
-
-## JSX components
-
-### `<Field>` — render a scalar value
-
-```tsx
-{/* Text output */}
-<Field field={article.title} />
-
-{/* Custom render — children receives FieldAccessor with .value */}
-<Field field={article.email}>
-  {email => <a href={`mailto:${email.value}`}>{email.value}</a>}
-</Field>
-
-{/* Format function */}
-<Field field={article.publishedAt} format={d => d?.toLocaleDateString()} />
-```
-
-### `<Attribute>` — apply field value to element attributes
-
-Use when you need a field value in `style`, `className`, `data-*`, or other HTML attributes. Like `<Field>` but for attributes instead of text content:
-
-```tsx
-<Attribute field={tag.color} format={color => ({ style: { backgroundColor: color.value ?? '#666' } })}>
-  <span className="tag-badge">
-    <Field field={tag.name} />
-  </span>
-</Attribute>
-```
-
-`format` receives `FieldAccessor` and returns a props object that gets spread onto the child element via `cloneElement`. The child must be a single React element.
-
-**Important**: `<Attribute>` must wrap `<Field>`, not the other way around. During selection collection, only the outer component's `field` prop and children JSX tree are analyzed. A `<Field>` nested inside `<Attribute>`'s children is visible to the analyzer. But a `<Field>` wrapping `<Attribute>` in its children callback is not — the callback isn't executed during collection.
-
-```tsx
-{/* CORRECT — Attribute outer, Field inner */}
-<Attribute field={tag.color} format={c => ({ style: { color: c.value } })}>
-  <span><Field field={tag.name} /></span>
-</Attribute>
-
-{/* WRONG — Field inner's children are invisible during collection */}
-<Field field={tag.name}>
-  {name => (
-    <Attribute field={tag.color} format={c => ({ style: { color: c.value } })}>
-      <span>{name.value}</span>
-    </Attribute>
-  )}
-</Field>
-```
-
-### `<HasMany>` — render a has-many relation
-
-```tsx
-<HasMany field={author.articles} limit={5} orderBy={{ publishedAt: 'desc' }}>
-  {(article, index) => (
-    <div key={article.id}>
-      {index + 1}. <Field field={article.title} />
-    </div>
-  )}
-</HasMany>
-```
-
-### `<HasOne>` — render a has-one relation
-
-```tsx
-<HasOne field={article.author}>
-  {author => (
-    <div>
-      <Field field={author.name} /> (<Field field={author.email} />)
-    </div>
-  )}
-</HasOne>
-```
+## JSX Components
 
 ### `<Entity>` — root data boundary
 
 ```tsx
-<Entity entity={schema.Article} by={{ id }} loading={<Spinner />}>
+<Entity entity={schema.Article} by={{ id }} loading={<Spinner />} notFound={<NotFound />}>
   {article => (
     <div>
       <Field field={article.title} />
@@ -111,42 +216,71 @@ Use when you need a field value in `style`, `className`, `data-*`, or other HTML
 </Entity>
 ```
 
-Children callback receives `EntityRef`. Use `<Field>`, `<Attribute>`, `<HasOne>`, `<HasMany>` inside for data access. The `Entity` component manages subscription — children re-render when data changes.
+Children receives `EntityRef`. Use `<Field>`, `<HasOne>`, `<HasMany>`, `<Attribute>` inside.
 
-### `useAccessor` hook
-
-Converts any `Ref` to its `Accessor` variant with store subscription. Use in your own React components when you need `.value` access outside of JSX components:
-
+Create mode:
 ```tsx
-import { useAccessor } from '@contember/bindx-react'
-
-function AuthorBadge({ author }: { author: EntityRef<Author> }) {
-  const acc = useAccessor(author)
-  return <span title={acc.email.value ?? ''}>{acc.name.value}</span>
-}
+<Entity entity={schema.Article} create onPersisted={id => navigate(`/articles/${id}`)}>
+  {article => <InputField field={article.title} />}
+</Entity>
 ```
 
-Also works with individual field refs via `useField`:
+### `<Field>` — render a scalar value
 
 ```tsx
-import { useField } from '@contember/bindx-react'
+<Field field={article.title} />
 
-function DirtyIndicator({ field }: { field: FieldRef<unknown> }) {
-  const acc = useField(field)
-  return acc.isDirty ? <span>*</span> : null
-}
+<Field field={article.email}>
+  {email => <a href={`mailto:${email.value}`}>{email.value}</a>}
+</Field>
+
+<Field field={article.publishedAt} format={d => d?.toLocaleDateString()} />
 ```
 
-**Note**: `useAccessor`/`useField` are React hooks — they can only be called inside React components, not inside render callbacks like `HasMany` children. For render callbacks, use `<Field>` and `<Attribute>` instead.
-
-## `createComponent()` — reusable components
-
-### Implicit mode (recommended for JSX-heavy components)
-
-Fields are auto-detected from JSX. Use `Field`, `HasOne`, `HasMany`, `Attribute` in your render function:
+### `<Attribute>` — apply field value to element attributes
 
 ```tsx
-export const AuthorInfo = createComponent()
+<Attribute field={tag.color} format={color => ({ style: { backgroundColor: color.value ?? '#666' } })}>
+  <span className="tag-badge">
+    <Field field={tag.name} />
+  </span>
+</Attribute>
+```
+
+**Important**: `<Attribute>` must wrap `<Field>`, not the other way around. During collection, only the outer component's props and children JSX are analyzed.
+
+### `<HasMany>` / `<HasOne>` — relations
+
+```tsx
+<HasMany field={author.articles} limit={5} orderBy={{ publishedAt: 'desc' }}>
+  {(article, index) => (
+    <div key={article.id}>
+      {index + 1}. <Field field={article.title} />
+    </div>
+  )}
+</HasMany>
+
+<HasOne field={article.author}>
+  {author => <Field field={author.name} />}
+</HasOne>
+```
+
+### `<If>` / `<Show>` — conditional rendering
+
+```tsx
+<If condition={article.$isDirty} then={<span>Unsaved changes</span>} />
+
+<Show field={author.bio} fallback={<p>No bio</p>}>
+  {bio => <p>{bio}</p>}
+</Show>
+```
+
+## `createComponent()` — reusable fragments
+
+### Implicit mode — auto-detected selection from JSX
+
+```tsx
+const AuthorInfo = createComponent()
   .entity('author', schema.Author)
   .render(({ author }) => (
     <div>
@@ -156,16 +290,12 @@ export const AuthorInfo = createComponent()
   ))
 ```
 
-How it works internally: the render function is called once with proxy props during analysis. Field accesses on the proxy are tracked automatically.
+Render receives `EntityRef`. Use `<Field>` and `<Attribute>` for value access. Do not call `useAccessor` (crashes during collection phase).
 
-The render function receives `EntityRef` — use `<Field>` and `<Attribute>` for value access. Do not use `useAccessor` in implicit mode (it crashes during collection phase when the render function is called without React context).
-
-### Explicit mode (for computed values and attributes)
-
-Declare fields upfront via a selector. The render function receives `EntityAccessor` with direct `.value` access — no need for `<Field>` or `useAccessor`:
+### Explicit mode — declared selection, full accessor
 
 ```tsx
-export const TagBadge = createComponent()
+const TagBadge = createComponent()
   .entity('tag', schema.Tag, t => t.name().color())
   .render(({ tag }) => (
     <span style={{ backgroundColor: tag.color.value ?? '#666' }}>
@@ -174,15 +304,11 @@ export const TagBadge = createComponent()
   ))
 ```
 
-Use explicit mode when:
-- You need field values in attributes (style, className, data-*)
-- You have conditional field access (`if (x) entity.field`)
-- You pass data to non-bindx libraries
-- You want full `EntityAccessor` API (`.value`, `.$data`, `.isDirty`)
+Render receives `EntityAccessor` — direct `.value` access. Use when you need field values in attributes, conditional logic, or non-bindx libs.
 
 ### Fragment properties
 
-Both modes generate `$propName` fragment properties for composing with `useEntity`:
+Both modes generate `$propName` for composing with `useEntity`:
 
 ```tsx
 const article = useEntity(schema.Article, { by: { id } }, e =>
@@ -190,30 +316,36 @@ const article = useEntity(schema.Article, { by: { id } }, e =>
 )
 ```
 
-### When to use which mode
+### `useAccessor` / `useField` hooks
 
-| Scenario | Mode | Render receives |
-|---|---|---|
-| Standard forms/views with Field, HasOne, HasMany | Implicit | `EntityRef` |
-| Field values in HTML attributes | Explicit (or Attribute in implicit) | `EntityAccessor` |
-| Conditional field access | Explicit | `EntityAccessor` |
-| Passing data to non-bindx libs | Explicit | `EntityAccessor` |
-| Quick prototyping | Implicit | `EntityRef` |
-
-## For library/UI component developers
-
-### `withCollector` — for components with render props
-
-Use `withCollector` when your component wraps a relation and passes entity data via render prop (children callback). The analyzer can't see inside render props, so you provide a `staticRender` function that simulates the call:
+Convert Ref → Accessor with store subscription. Use in your own React components:
 
 ```tsx
-export const SelectField = withCollector(
+function AuthorBadge({ author }: { author: EntityRef<Author> }) {
+  const acc = useAccessor(author)
+  return <span>{acc.name.value}</span>
+}
+```
+
+**Note**: these are React hooks — call only in components, not in render callbacks.
+
+## Selection Collection
+
+### How it works
+
+When `<Entity>` or `useEntity()` renders, bindx analyzes the component tree to discover which fields to fetch:
+
+1. **`getSelection`** — component returns field metadata directly (Field, HasOne, HasMany, Attribute)
+2. **`staticRender`** (via `withCollector`) — component returns JSX analyzed recursively
+
+### `withCollector` — for library components with render props
+
+```tsx
+const SelectField = withCollector(
   function SelectField({ field, children }) {
-    // runtime implementation
     const accessor = useHasOne(field)
     return <Popover>{children(accessor.$entity)}</Popover>
   },
-  // collection: simulate children call with proxy entity
   (props) => (
     <HasOne field={props.field}>
       {entity => props.children(entity)}
@@ -222,58 +354,64 @@ export const SelectField = withCollector(
 )
 ```
 
-The `staticRender` function receives the same props (with collector proxies during analysis). Return JSX that represents the field structure — it gets analyzed recursively. The returned JSX doesn't need to match runtime output, it just needs to express which fields are accessed.
+### `getSelection` — for framework primitives
 
-Typical use cases:
-- Repeaters (wrap HasMany, provide item render callback)
-- Select fields (wrap HasOne, provide option render callback)
-- Any component where children is `(entity) => ReactNode`
+Low-level API for precise control over reported fields. Used by Field, HasOne, HasMany, Attribute.
 
-### `getSelection` — for leaf/framework components
+## Provider Setup
 
-Use `getSelection` when your component needs precise control over the `SelectionFieldMeta` it reports. This is a low-level API used by framework primitives:
+### `BindxProvider` — generic
 
 ```tsx
-const MyField = memo(function MyField({ field }) {
-  const accessor = useField(field)
-  return <span>{accessor.value}</span>
-})
+<BindxProvider
+  adapter={new MockAdapter(data)}
+  schema={testSchema}
+  enableUndo
+  debug
+>
+  {children}
+</BindxProvider>
+```
 
-;(MyField as any).getSelection = (props, collectNested) => {
-  const meta = props.field[FIELD_REF_META]
-  return {
-    fieldName: meta.fieldName,
-    path: meta.path,
-    isRelation: false,
-    isArray: false,
-  }
+### `ContemberBindxProvider` — Contember CMS
+
+```tsx
+<ContemberBindxProvider
+  schema={generatedSchema}
+  client={graphQlClient}
+  undoManager
+  defaultUpdateMode="optimistic"
+>
+  {children}
+</ContemberBindxProvider>
+```
+
+## Testing with MockAdapter
+
+```tsx
+import { MockAdapter, BindxProvider } from '@contember/bindx-react'
+
+const data = {
+  Article: {
+    'article-1': { id: 'article-1', title: 'Hello', content: 'World' },
+  },
+  Author: {
+    'author-1': { id: 'author-1', name: 'John' },
+  },
 }
+
+const adapter = new MockAdapter(data, { delay: 0 })
+
+render(
+  <BindxProvider adapter={adapter} schema={testSchema}>
+    <TestComponent />
+  </BindxProvider>
+)
 ```
 
-Signature: `getSelection(props, collectNested) => SelectionFieldMeta | SelectionFieldMeta[] | null`
-
-- `props` — component props (may contain collector proxies during analysis)
-- `collectNested(jsx)` — call this to recursively analyze children JSX, returns `SelectionMeta`
-
-Used by: `Field`, `HasOne`, `HasMany`, `Attribute`, `If`, `Show`, `Repeater`
-
-You rarely need this unless building new framework-level primitives.
-
-## Decision tree
-
-```
-Building a reusable component with entity props?
-  → Use createComponent() (implicit or explicit mode)
-
-Need field values in HTML attributes (style, className)?
-  → Use <Attribute> in implicit mode, or explicit selection in createComponent
-
-Need .value access in a standalone React component?
-  → Use useAccessor() or useField() hooks
-
-Building a library component that wraps a relation with render props?
-  → Use withCollector()
-
-Building a new framework primitive (like Field or HasOne)?
-  → Implement getSelection directly
-```
+`MockAdapter` supports:
+- Configurable delay (`delay: 0` for instant responses in tests)
+- Full CRUD operations
+- Relation operations (connect, disconnect, create, delete)
+- Filter, orderBy, limit/offset
+- `resetStore(newData)` for test state manipulation
