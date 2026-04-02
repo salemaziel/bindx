@@ -7,6 +7,11 @@ const POLL_INTERVAL = 200
 const POLL_TIMEOUT = 10_000
 const PLAYGROUND_URL = process.env['PLAYGROUND_URL'] ?? 'http://localhost:15180'
 
+// Browser launch args — --no-sandbox needed for containers, VMs, and some Linux setups
+const BROWSER_ARGS = process.env['AGENT_BROWSER_ARGS']?.includes('--no-sandbox')
+	? ''
+	: ' --args "--no-sandbox"'
+
 let currentSession: string | null = null
 
 function exec(cmd: string): string {
@@ -127,7 +132,7 @@ export function browserTest(name: string, fn: () => void, hash?: string): void {
 		beforeAll(() => {
 			currentSession = `test-${crypto.randomUUID().slice(0, 8)}`
 			const url = hash ? `${PLAYGROUND_URL}#${hash}` : PLAYGROUND_URL
-			exec(`agent-browser open ${url}`)
+			exec(`agent-browser${BROWSER_ARGS} open ${url}`)
 			waitFor(() => {
 				try {
 					return exec('agent-browser get title').length > 0
