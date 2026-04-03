@@ -377,10 +377,11 @@ export class SnapshotStore implements SnapshotVersionBumper {
 		parentId: string,
 		fieldName: string,
 		itemId: string,
+		removalType: 'disconnect' | 'delete' = 'disconnect',
 		alias?: string,
 	): void {
 		const key = this.getRelationKey(parentType, parentId, alias ?? fieldName)
-		const result = this.relations.removeFromHasMany(key, itemId)
+		const result = this.relations.removeFromHasMany(key, itemId, removalType)
 		if (result === 'planned_removal') {
 			this.notifyRelationSubscribers(key)
 		} else if (result === 'cancelled_connection') {

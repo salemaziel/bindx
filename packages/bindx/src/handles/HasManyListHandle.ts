@@ -354,9 +354,13 @@ export class HasManyListHandle<TEntity extends object = object, TSelected = TEnt
 	/**
 	 * Removes an item from the list by ID.
 	 * For newly created entities (via add()), cancels the add operation.
-	 * For existing server entities, plans a disconnect.
+	 * For existing server entities, plans a disconnect or delete.
+	 *
+	 * @param itemId - The entity ID to remove
+	 * @param mode - 'disconnect' (default) sets the FK to null, 'delete' deletes the entity.
+	 *               Use 'delete' for junction entities where the FK is NOT NULL.
 	 */
-	remove(itemId: string): void {
+	remove(itemId: string, mode?: 'disconnect' | 'delete'): void {
 		this.assertNotDisposed()
 
 		this.store.removeFromHasMany(
@@ -364,6 +368,7 @@ export class HasManyListHandle<TEntity extends object = object, TSelected = TEnt
 			this.entityId,
 			this.fieldName,
 			itemId,
+			mode ?? 'disconnect',
 			this.alias,
 		)
 	}

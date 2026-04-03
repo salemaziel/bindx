@@ -162,7 +162,7 @@ export interface HasManyRef<
 	readonly [FIELD_REF_META]: FieldRefMeta<TEntityName>
 	readonly isDirty: boolean
 	add(data?: Partial<TEntity>): string
-	remove(itemId: string): void
+	remove(itemId: string, mode?: 'disconnect' | 'delete'): void
 	move(fromIndex: number, toIndex: number): void
 	connect(itemId: string): void
 	disconnect(itemId: string | null): void
