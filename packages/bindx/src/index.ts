@@ -14,6 +14,7 @@ export type {
 	ScalarFieldDef,
 	HasOneRelationDef,
 	HasManyRelationDef,
+	HasManyRelationKind,
 	FieldDef,
 	EntitySchemaDef,
 	SchemaDefinition,

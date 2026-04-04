@@ -198,6 +198,7 @@ function createCollectorFieldRef(
 		move: () => {},
 		connect: () => {},
 		disconnect: () => {},
+		delete: () => {},
 		reset: () => {},
 		onItemConnected: noop,
 		onItemDisconnected: noop,

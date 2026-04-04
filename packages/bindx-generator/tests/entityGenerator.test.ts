@@ -13,10 +13,10 @@ describe('NameSchemaGenerator', () => {
 		expect(schema.entities['Author']?.name).toBe('Author')
 		expect(schema.entities['Author']?.scalars).toContain('id')
 		expect(schema.entities['Author']?.scalars).toContain('name')
-		expect(schema.entities['Author']?.fields['posts']).toEqual({ type: 'many', entity: 'Post' })
+		expect(schema.entities['Author']?.fields['posts']).toEqual({ type: 'many', entity: 'Post', relationKind: 'oneHasMany', nullable: false })
 
-		expect(schema.entities['Post']?.fields['author']).toEqual({ type: 'one', entity: 'Author' })
-		expect(schema.entities['Post']?.fields['tags']).toEqual({ type: 'many', entity: 'Tag' })
+		expect(schema.entities['Post']?.fields['author']).toEqual({ type: 'one', entity: 'Author', nullable: false })
+		expect(schema.entities['Post']?.fields['tags']).toEqual({ type: 'many', entity: 'Tag', relationKind: 'manyHasMany', nullable: undefined })
 		expect(schema.entities['Post']?.fields['title']).toEqual({ type: 'column', columnType: 'text' })
 		expect(schema.enums['PostStatus']).toEqual(['draft', 'published', 'archived'])
 	})

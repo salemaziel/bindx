@@ -9,7 +9,8 @@ export interface SchemaNames {
 			readonly fields: {
 				readonly [fieldName: string]:
 					| { readonly type: 'column'; readonly enumName?: string; readonly columnType?: string }
-					| { readonly type: 'many' | 'one'; readonly entity: string }
+					| { readonly type: 'one'; readonly entity: string; readonly nullable?: boolean }
+					| { readonly type: 'many'; readonly entity: string; readonly relationKind?: 'oneHasMany' | 'manyHasMany'; readonly nullable?: boolean }
 			}
 		}
 	}

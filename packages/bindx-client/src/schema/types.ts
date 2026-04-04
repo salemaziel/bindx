@@ -35,7 +35,16 @@ export interface HasOneRelationDef<TTarget extends string = string> {
 	readonly target: TTarget
 	/** Inverse field name on the target entity (for bidirectional relations) */
 	readonly inverse?: string
+	/** Whether the FK column is nullable (determines if disconnect is safe) */
+	readonly nullable?: boolean
 }
+
+/**
+ * Contember-level relation kind for has-many fields.
+ * - 'oneHasMany': parent owns children via FK on child (e.g. Article → Comments)
+ * - 'manyHasMany': junction table relation (e.g. Article ↔ Tags)
+ */
+export type HasManyRelationKind = 'oneHasMany' | 'manyHasMany'
 
 /**
  * Has-many relation definition
@@ -45,6 +54,10 @@ export interface HasManyRelationDef<TTarget extends string = string> {
 	readonly target: TTarget
 	/** Inverse field name on the target entity (for bidirectional relations) */
 	readonly inverse?: string
+	/** Contember relation kind — determines default removal behavior */
+	readonly relationKind?: HasManyRelationKind
+	/** Whether the FK on the child side is nullable (only relevant for oneHasMany) */
+	readonly nullable?: boolean
 }
 
 /**
@@ -95,12 +108,13 @@ export function enumScalar<T extends string>(enumName: string, values: readonly 
  */
 export function hasOne<TTarget extends string>(
 	target: TTarget,
-	options?: { inverse?: string },
+	options?: { inverse?: string; nullable?: boolean },
 ): HasOneRelationDef<TTarget> {
 	return {
 		type: 'hasOne',
 		target,
 		inverse: options?.inverse,
+		nullable: options?.nullable,
 	}
 }
 
@@ -109,12 +123,14 @@ export function hasOne<TTarget extends string>(
  */
 export function hasMany<TTarget extends string>(
 	target: TTarget,
-	options?: { inverse?: string },
+	options?: { inverse?: string; relationKind?: HasManyRelationKind; nullable?: boolean },
 ): HasManyRelationDef<TTarget> {
 	return {
 		type: 'hasMany',
 		target,
 		inverse: options?.inverse,
+		relationKind: options?.relationKind,
+		nullable: options?.nullable,
 	}
 }
 
