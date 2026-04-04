@@ -1,30 +1,9 @@
 import { memo, useMemo, type ReactNode } from 'react'
 import { GraphQlClient } from '@contember/graphql-client'
 import { ContentClient } from '@contember/bindx-client'
-import { ContemberAdapter, SnapshotStore, ActionDispatcher, BatchPersister, MutationCollector, ContemberSchemaMutationAdapter, UndoManager, SchemaRegistry, type SchemaDefinition, type FieldDef, type UndoManagerConfig, type UpdateMode } from '@contember/bindx'
+import { ContemberAdapter, SnapshotStore, ActionDispatcher, BatchPersister, MutationCollector, ContemberSchemaMutationAdapter, UndoManager, SchemaRegistry, type SchemaDefinition, type SchemaNames, type FieldDef, type UndoManagerConfig, type UpdateMode } from '@contember/bindx'
 import { BindxContext, type BindxContextValue } from './BackendAdapterContext.js'
 import { QueryBatcher } from '../batching/QueryBatcher.js'
-
-/**
- * Runtime schema names format (from Contember API / generated code).
- * Used by ContemberBindxProvider for backwards compatibility.
- */
-export interface SchemaNames {
-	readonly entities: {
-		readonly [entityName: string]: {
-			readonly name: string
-			readonly scalars: readonly string[]
-			readonly fields: {
-				readonly [fieldName: string]:
-					| { readonly type: 'column'; readonly enumName?: string; readonly columnType?: string }
-					| { readonly type: 'many' | 'one'; readonly entity: string }
-			}
-		}
-	}
-	readonly enums?: {
-		readonly [enumName: string]: readonly string[]
-	}
-}
 
 /**
  * Converts SchemaNames (Contember format) to SchemaDefinition (bindx format)
@@ -46,9 +25,9 @@ export function schemaNamesToDef(schemaNames: SchemaNames): SchemaDefinition<Rec
 					fields[fieldName] = { type: 'scalar', columnType }
 				}
 			} else if (fieldDef.type === 'one') {
-				fields[fieldName] = { type: 'hasOne', target: fieldDef.entity }
+				fields[fieldName] = { type: 'hasOne', target: fieldDef.entity, nullable: fieldDef.nullable }
 			} else if (fieldDef.type === 'many') {
-				fields[fieldName] = { type: 'hasMany', target: fieldDef.entity }
+				fields[fieldName] = { type: 'hasMany', target: fieldDef.entity, relationKind: fieldDef.relationKind, nullable: fieldDef.nullable }
 			}
 		}
 		entities[entityName] = { fields }

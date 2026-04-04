@@ -165,7 +165,8 @@ export interface HasManyRef<
 	remove(itemId: string): void
 	move(fromIndex: number, toIndex: number): void
 	connect(itemId: string): void
-	disconnect(itemId: string | null): void
+	disconnect(itemId: string): void
+	delete(itemId: string): void
 	reset(): void
 	readonly __entityType: TEntity
 	readonly __selected?: TSelected

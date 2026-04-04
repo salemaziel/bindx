@@ -139,6 +139,7 @@ export interface RemoveFromListAction {
 	readonly entityId: string
 	readonly fieldName: string
 	readonly itemKey: string
+	readonly removalType: 'disconnect' | 'delete'
 }
 
 /**

@@ -40,18 +40,22 @@ export class SchemaRegistry<TModels extends Record<string, object> = Record<stri
 				if (field.__typename === '_Column') {
 					fields[fieldName] = { type: 'scalar' }
 				} else if (field.__typename === '_Relation') {
+					const inverse = field.side === 'owning' ? field.inversedBy ?? undefined : field.ownedBy
 					const isMany = field.type === 'OneHasMany' || field.type === 'ManyHasMany'
 					if (isMany) {
 						fields[fieldName] = {
 							type: 'hasMany',
 							target: field.targetEntity,
-							inverse: field.side === 'owning' ? field.inversedBy ?? undefined : field.ownedBy,
+							inverse,
+							relationKind: field.type === 'ManyHasMany' ? 'manyHasMany' : 'oneHasMany',
+							nullable: field.nullable ?? undefined,
 						}
 					} else {
 						fields[fieldName] = {
 							type: 'hasOne',
 							target: field.targetEntity,
-							inverse: field.side === 'owning' ? field.inversedBy ?? undefined : field.ownedBy,
+							inverse,
+							nullable: field.nullable ?? undefined,
 						}
 					}
 				}
@@ -180,6 +184,29 @@ export class SchemaRegistry<TModels extends Record<string, object> = Record<stri
 	isScalar(entityType: string, fieldName: string): boolean {
 		const fieldDef = this.getFieldDef(entityType, fieldName)
 		return fieldDef?.type === 'scalar'
+	}
+
+	/**
+	 * Gets the has-many relation kind ('oneHasMany' or 'manyHasMany').
+	 * Returns undefined if the field is not a has-many relation or kind is not set.
+	 */
+	getHasManyRelationKind(entityType: string, fieldName: string): HasManyRelationDef['relationKind'] {
+		const fieldDef = this.getFieldDef(entityType, fieldName)
+		if (!fieldDef || fieldDef.type !== 'hasMany') return undefined
+		return fieldDef.relationKind
+	}
+
+	/**
+	 * Gets whether a relation's FK is nullable.
+	 * Returns undefined if the field is not a relation or nullable is not set.
+	 */
+	getRelationNullable(entityType: string, fieldName: string): boolean | undefined {
+		const fieldDef = this.getFieldDef(entityType, fieldName)
+		if (!fieldDef) return undefined
+		if (fieldDef.type === 'hasOne' || fieldDef.type === 'hasMany') {
+			return fieldDef.nullable
+		}
+		return undefined
 	}
 
 	/**

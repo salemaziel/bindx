@@ -3,6 +3,7 @@ export {
 	type ScalarFieldDef,
 	type HasOneRelationDef,
 	type HasManyRelationDef,
+	type HasManyRelationKind,
 	type FieldDef,
 	type EntitySchemaDef,
 	type SchemaDefinition,

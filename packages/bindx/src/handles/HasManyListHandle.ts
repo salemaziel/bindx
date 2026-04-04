@@ -2,6 +2,7 @@ import { EntityRelatedHandle } from './BaseHandle.js'
 import { EntityHandle } from './EntityHandle.js'
 import type { ActionDispatcher } from '../core/ActionDispatcher.js'
 import type { SnapshotStore } from '../store/SnapshotStore.js'
+import type { HasManyRemovalType } from '../store/RelationStore.js'
 import type { SchemaRegistry } from '../schema/SchemaRegistry.js'
 import type { SelectionMeta } from '../selection/types.js'
 import {
@@ -312,15 +313,34 @@ export class HasManyListHandle<TEntity extends object = object, TSelected = TEnt
 
 	/**
 	 * Disconnects an entity from this has-many relation.
+	 * Sets the FK to null — only works when the FK column is nullable.
+	 * For created entities (via add()), cancels the add operation.
 	 */
 	disconnect(itemId: string): void {
 		this.assertNotDisposed()
-		this.store.planHasManyRemoval(
+		this.store.removeFromHasMany(
 			this.entityType,
 			this.entityId,
 			this.fieldName,
 			itemId,
 			'disconnect',
+			this.alias,
+		)
+	}
+
+	/**
+	 * Deletes an entity from this has-many relation.
+	 * Removes the entity itself from the database.
+	 * For created entities (via add()), cancels the add operation.
+	 */
+	delete(itemId: string): void {
+		this.assertNotDisposed()
+		this.store.removeFromHasMany(
+			this.entityType,
+			this.entityId,
+			this.fieldName,
+			itemId,
+			'delete',
 			this.alias,
 		)
 	}
@@ -354,7 +374,11 @@ export class HasManyListHandle<TEntity extends object = object, TSelected = TEnt
 	/**
 	 * Removes an item from the list by ID.
 	 * For newly created entities (via add()), cancels the add operation.
-	 * For existing server entities, plans a disconnect.
+	 * For existing server entities, auto-detects removal strategy from schema:
+	 * - manyHasMany → disconnect (removes the junction record)
+	 * - oneHasMany + nullable FK → disconnect (sets FK to null)
+	 * - oneHasMany + non-nullable FK → delete (child can't exist without parent)
+	 * Falls back to disconnect when schema metadata is not available.
 	 */
 	remove(itemId: string): void {
 		this.assertNotDisposed()
@@ -364,8 +388,28 @@ export class HasManyListHandle<TEntity extends object = object, TSelected = TEnt
 			this.entityId,
 			this.fieldName,
 			itemId,
+			this.resolveRemovalType(),
 			this.alias,
 		)
+	}
+
+	/**
+	 * Resolves the default removal type for this has-many relation based on schema metadata.
+	 * - manyHasMany → disconnect (removes junction record, target entity stays)
+	 * - oneHasMany + nullable FK → disconnect (sets FK to null, child entity stays)
+	 * - oneHasMany + non-nullable FK → delete (child can't exist without parent)
+	 * - unknown → disconnect (safe fallback)
+	 */
+	private resolveRemovalType(): HasManyRemovalType {
+		const relationKind = this.schema.getHasManyRelationKind(this.entityType, this.fieldName)
+		if (relationKind === 'oneHasMany') {
+			const nullable = this.schema.getRelationNullable(this.entityType, this.fieldName)
+			if (nullable === true) {
+				return 'disconnect'
+			}
+			return 'delete'
+		}
+		return 'disconnect'
 	}
 
 	/**

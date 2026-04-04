@@ -368,10 +368,10 @@ export class RelationStore {
 	/**
 	 * Removes an entity from a has-many relation.
 	 * For newly created entities (via add()), cancels the connection.
-	 * For existing server entities, plans a disconnect.
+	 * For existing server entities, plans the specified removal type.
 	 * Returns the key if a removal was planned (caller should notify), or null if handled inline.
 	 */
-	removeFromHasMany(key: string, itemId: string): 'planned_removal' | 'cancelled_connection' | null {
+	removeFromHasMany(key: string, itemId: string, removalType: HasManyRemovalType): 'planned_removal' | 'cancelled_connection' | null {
 		const existing = this.hasManyStates.get(key)
 		if (!existing) return null
 
@@ -410,7 +410,7 @@ export class RelationStore {
 			this.hasManyStates.set(key, newState)
 			return 'cancelled_connection'
 		} else {
-			this.planHasManyRemoval(key, itemId, 'disconnect')
+			this.planHasManyRemoval(key, itemId, removalType)
 			return 'planned_removal'
 		}
 	}

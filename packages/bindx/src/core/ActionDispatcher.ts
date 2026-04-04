@@ -297,6 +297,7 @@ export class ActionDispatcher {
 					action.entityId,
 					action.fieldName,
 					action.itemKey,
+					action.removalType,
 				)
 				break
 
