@@ -39,9 +39,18 @@ export class SubscriptionManager {
 
 	/**
 	 * Resolves a key through the rekey redirect chain.
+	 * The rekey() method collapses chains (A→C instead of A→B→C), so this should
+	 * always resolve in one hop. The loop with depth limit is a safety net in case
+	 * chain collapsing has a bug — prevents infinite loops instead of silently hanging.
 	 */
 	private resolveKey(key: string): string {
-		return this.rekeyedKeys.get(key) ?? key
+		let resolved = key
+		for (let depth = 0; depth < 10; depth++) {
+			const next = this.rekeyedKeys.get(resolved)
+			if (!next || next === resolved) return resolved
+			resolved = next
+		}
+		return resolved
 	}
 
 	/**
