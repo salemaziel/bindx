@@ -366,6 +366,37 @@ export class RelationStore {
 	}
 
 	/**
+	 * Connects an existing (persisted) entity to a has-many relation.
+	 * Unlike addToHasMany, does NOT add to createdEntities — used for
+	 * materializing embedded connect references to existing entities.
+	 */
+	connectExistingToHasMany(key: string, itemId: string): void {
+		const existing = this.hasManyStates.get(key)
+
+		if (!existing) {
+			this.hasManyStates.set(key, {
+				serverIds: new Set(),
+				orderedIds: [itemId],
+				plannedRemovals: new Map(),
+				plannedConnections: new Set([itemId]),
+				createdEntities: new Set(),
+				version: 0,
+			})
+		} else {
+			const newPlannedConnections = new Set(existing.plannedConnections)
+			newPlannedConnections.add(itemId)
+			const currentOrderedIds = existing.orderedIds ?? computeDefaultOrderedIds(existing)
+			const newOrderedIds = [...currentOrderedIds, itemId]
+			this.hasManyStates.set(key, {
+				...existing,
+				orderedIds: newOrderedIds,
+				plannedConnections: newPlannedConnections,
+				version: existing.version + 1,
+			})
+		}
+	}
+
+	/**
 	 * Removes an entity from a has-many relation.
 	 * For newly created entities (via add()), cancels the connection.
 	 * For existing server entities, plans the specified removal type.
@@ -652,6 +683,112 @@ export class RelationStore {
 			keys.push(key)
 		}
 		return keys
+	}
+
+	/**
+	 * Replaces all occurrences of oldId with newId across relation and hasMany states.
+	 * Used after persist to rekey temp IDs to server-assigned IDs.
+	 */
+	replaceEntityId(oldId: string, newId: string): void {
+		// Replace in has-one relation states: currentId, serverId
+		for (const [key, state] of this.relationStates) {
+			let changed = false
+			let currentId = state.currentId
+			let serverId = state.serverId
+
+			if (currentId === oldId) { currentId = newId; changed = true }
+			if (serverId === oldId) { serverId = newId; changed = true }
+
+			if (changed) {
+				this.relationStates.set(key, { ...state, currentId, serverId, version: state.version + 1 })
+			}
+		}
+
+		// Replace in has-many states: serverIds, orderedIds, plannedConnections, createdEntities, plannedRemovals
+		for (const [key, state] of this.hasManyStates) {
+			let changed = false
+
+			let serverIds = state.serverIds
+			if (serverIds.has(oldId)) {
+				serverIds = new Set(serverIds)
+				serverIds.delete(oldId)
+				serverIds.add(newId)
+				changed = true
+			}
+
+			let orderedIds = state.orderedIds
+			if (orderedIds) {
+				const idx = orderedIds.indexOf(oldId)
+				if (idx !== -1) {
+					orderedIds = [...orderedIds]
+					orderedIds[idx] = newId
+					changed = true
+				}
+			}
+
+			let plannedConnections = state.plannedConnections
+			if (plannedConnections.has(oldId)) {
+				plannedConnections = new Set(plannedConnections)
+				plannedConnections.delete(oldId)
+				plannedConnections.add(newId)
+				changed = true
+			}
+
+			let createdEntities = state.createdEntities
+			if (createdEntities.has(oldId)) {
+				createdEntities = new Set(createdEntities)
+				createdEntities.delete(oldId)
+				createdEntities.add(newId)
+				changed = true
+			}
+
+			let plannedRemovals = state.plannedRemovals
+			if (plannedRemovals.has(oldId)) {
+				const removalType = plannedRemovals.get(oldId)!
+				plannedRemovals = new Map(plannedRemovals)
+				plannedRemovals.delete(oldId)
+				plannedRemovals.set(newId, removalType)
+				changed = true
+			}
+
+			if (changed) {
+				this.hasManyStates.set(key, {
+					serverIds,
+					orderedIds,
+					plannedRemovals,
+					plannedConnections,
+					createdEntities,
+					version: state.version + 1,
+				})
+			}
+		}
+	}
+
+	/**
+	 * Rekeys relation/hasMany entries owned by an entity (changes the parent ID in the key).
+	 */
+	rekeyOwner(oldKeyPrefix: string, newKeyPrefix: string): void {
+		const toMoveRelations: [string, StoredRelationState][] = []
+		for (const [key, value] of this.relationStates) {
+			if (key.startsWith(oldKeyPrefix)) {
+				toMoveRelations.push([key, value])
+			}
+		}
+		for (const [oldKey, value] of toMoveRelations) {
+			this.relationStates.delete(oldKey)
+			this.relationStates.set(newKeyPrefix + oldKey.slice(oldKeyPrefix.length), value)
+		}
+
+		const toMoveHasMany: [string, StoredHasManyState][] = []
+		for (const [key, value] of this.hasManyStates) {
+			if (key.startsWith(oldKeyPrefix)) {
+				toMoveHasMany.push([key, value])
+			}
+		}
+		for (const [oldKey, value] of toMoveHasMany) {
+			this.hasManyStates.delete(oldKey)
+			this.hasManyStates.set(newKeyPrefix + oldKey.slice(oldKeyPrefix.length), value)
+		}
 	}
 
 	/**

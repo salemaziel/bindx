@@ -52,12 +52,30 @@ export class SnapshotStore implements SnapshotVersionBumper {
 
 	// ==================== Key Generation ====================
 
+	/** Maps temp ID entity keys to their persisted ID entity keys for transparent resolution */
+	private readonly rekeyedEntities = new Map<string, string>()
+
 	private getEntityKey(entityType: string, id: string): string {
-		return `${entityType}:${id}`
+		const key = `${entityType}:${id}`
+		return this.rekeyedEntities.get(key) ?? key
 	}
 
 	private getRelationKey(parentType: string, parentId: string, fieldName: string): string {
-		return `${parentType}:${parentId}:${fieldName}`
+		const resolvedParentId = this.resolveId(parentType, parentId)
+		return `${parentType}:${resolvedParentId}:${fieldName}`
+	}
+
+	/**
+	 * Resolves an ID to its persisted ID if it has been rekeyed.
+	 */
+	private resolveId(entityType: string, id: string): string {
+		const key = `${entityType}:${id}`
+		const rekeyed = this.rekeyedEntities.get(key)
+		if (rekeyed) {
+			// Extract the ID from the rekeyed key (format: "EntityType:id")
+			return rekeyed.slice(entityType.length + 1)
+		}
+		return id
 	}
 
 	// ==================== SnapshotVersionBumper ====================
@@ -218,9 +236,37 @@ export class SnapshotStore implements SnapshotVersionBumper {
 	}
 
 	mapTempIdToPersistedId(entityType: string, tempId: string, persistedId: string): void {
-		const key = this.getEntityKey(entityType, tempId)
-		this.meta.mapTempIdToPersistedId(key, persistedId)
-		this.notifyEntitySubscribers(key)
+		// Use raw keys (bypass resolveId) since we're the ones creating the mapping
+		const oldKey = `${entityType}:${tempId}`
+		const newKey = `${entityType}:${persistedId}`
+		const oldKeyPrefix = `${entityType}:${tempId}:`
+		const newKeyPrefix = `${entityType}:${persistedId}:`
+
+		// Register redirect so future lookups by temp ID resolve to persisted key
+		this.rekeyedEntities.set(oldKey, newKey)
+
+		// Rekey entity snapshot (moves data, updates id field)
+		this.entitySnapshots.rekey(oldKey, newKey, persistedId)
+
+		// Rekey metadata FIRST, then set persisted mapping (which sets existsOnServer)
+		this.meta.rekey(oldKey, newKey)
+		this.meta.mapTempIdToPersistedId(newKey, persistedId)
+
+		// Rekey subscriptions, parent-child relationships, and relation subscribers
+		this.subscriptions.rekey(oldKey, newKey, oldKeyPrefix, newKeyPrefix)
+
+		// Rekey relations/hasMany owned by this entity (parent key changes)
+		this.relations.rekeyOwner(oldKeyPrefix, newKeyPrefix)
+
+		// Replace tempId with persistedId in all relation/hasMany VALUE references
+		this.relations.replaceEntityId(tempId, persistedId)
+
+		// Rekey errors and touched state
+		this.errors.rekey(oldKey, newKey, oldKeyPrefix, newKeyPrefix)
+		this.touched.rekey(oldKeyPrefix, newKeyPrefix)
+
+		// Notify on the NEW key so React picks up the change
+		this.notifyEntitySubscribers(newKey)
 	}
 
 	getPersistedId(entityType: string, id: string): string | null {
@@ -369,6 +415,17 @@ export class SnapshotStore implements SnapshotVersionBumper {
 	): void {
 		const key = this.getRelationKey(parentType, parentId, alias ?? fieldName)
 		this.relations.addToHasMany(key, itemId)
+		this.notifyRelationSubscribers(key)
+	}
+
+	connectExistingToHasMany(
+		parentType: string,
+		parentId: string,
+		fieldName: string,
+		itemId: string,
+	): void {
+		const key = this.getRelationKey(parentType, parentId, fieldName)
+		this.relations.connectExistingToHasMany(key, itemId)
 		this.notifyRelationSubscribers(key)
 	}
 

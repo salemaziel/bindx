@@ -12,6 +12,7 @@ import type {
 	PersistenceResult,
 	PersistScope,
 	TransactionMutation,
+	TransactionMutationResult,
 	TransactionResult,
 	UpdateMode,
 } from './types.js'
@@ -603,11 +604,15 @@ export class BatchPersister {
 					if (this.adapter.create && mutation.data) {
 						const result = await this.adapter.create(mutation.entityType, mutation.data)
 						const persistedId = result.data?.['id'] as string | undefined
+						const nestedResults = result.ok && result.data && mutation.data
+							? this.extractNestedResultsFromNode(mutation.data, result.data, mutation.entityType, mutation.entityId)
+							: undefined
 						results.push({
 							entityType: mutation.entityType,
 							entityId: mutation.entityId,
 							ok: result.ok,
 							persistedId,
+							nestedResults,
 							errorMessage: result.errorMessage,
 							mutationResult: result.mutationResult,
 						})
@@ -621,10 +626,14 @@ export class BatchPersister {
 							mutation.entityId,
 							mutation.data,
 						)
+						const nestedResults = result.ok && result.data && mutation.data
+							? this.extractNestedResultsFromNode(mutation.data, result.data, mutation.entityType, mutation.entityId)
+							: undefined
 						results.push({
 							entityType: mutation.entityType,
 							entityId: mutation.entityId,
 							ok: result.ok,
+							nestedResults,
 							errorMessage: result.errorMessage,
 							mutationResult: result.mutationResult,
 						})
@@ -700,6 +709,11 @@ export class BatchPersister {
 						)
 					}
 
+					// Process nested results (inline-created entities within this mutation)
+					if (mutationResult.nestedResults) {
+						this.commitNestedResults(mutationResult.nestedResults)
+					}
+
 					results.push({
 						entityType: entity.entityType,
 						entityId: entity.entityId,
@@ -710,6 +724,11 @@ export class BatchPersister {
 					successCount++
 				}
 			}
+
+			// Commit nested entities that don't have explicit results from the adapter.
+			// These entities were nested inside a parent mutation's data and exist on the server,
+			// but the adapter may not provide individual results for them.
+			this.commitUnresolvedNestedEntities(entities)
 		} else {
 			// Transaction failed - map errors and optionally rollback
 			// For pessimistic mode, entities are already at server state, no rollback needed
@@ -917,6 +936,224 @@ export class BatchPersister {
 				)
 			}
 		}
+	}
+
+	/**
+	 * Recursively commits nested entity results and maps their server IDs.
+	 * Called when the adapter provides nestedResults in the transaction response.
+	 * Uses the MutationCollector's nestedEntityTypes map to resolve entity types,
+	 * since the adapter may not know the correct entity type for nested entities.
+	 */
+	private commitNestedResults(nestedResults: readonly TransactionMutationResult[]): void {
+		const nestedTypes = this.mutationCollector instanceof MutationCollector
+			? this.mutationCollector.getNestedEntityTypes()
+			: null
+
+		for (const nested of nestedResults) {
+			if (!nested.ok) continue
+
+			// Resolve entity type from collector's tracking (adapter may report 'Unknown')
+			const entityType = nestedTypes?.get(nested.entityId) ?? nested.entityType
+			const snapshot = this.store.getEntitySnapshot(entityType, nested.entityId)
+			if (!snapshot) continue
+
+			// Commit the nested entity
+			this.dispatcher.dispatch(commitEntity(entityType, nested.entityId))
+			this.store.commitAllRelations(entityType, nested.entityId)
+			this.store.setExistsOnServer(entityType, nested.entityId, true)
+
+			// Map temp ID to server-assigned ID
+			if (nested.persistedId) {
+				this.store.mapTempIdToPersistedId(
+					entityType,
+					nested.entityId,
+					nested.persistedId,
+				)
+			}
+
+			// Recurse for deeper nesting
+			if (nested.nestedResults) {
+				this.commitNestedResults(nested.nestedResults)
+			}
+		}
+	}
+
+	/**
+	 * Commits nested entities that were part of the transaction but don't have
+	 * explicit results from the adapter. These entities were created inline
+	 * inside a parent mutation and exist on the server after a successful persist.
+	 */
+	private commitUnresolvedNestedEntities(entities: DirtyEntity[]): void {
+		if (!(this.mutationCollector instanceof MutationCollector)) return
+
+		const nestedTypes = this.mutationCollector.getNestedEntityTypes()
+		if (nestedTypes.size === 0) return
+
+		// Find nested entities that are in the entities list but weren't committed
+		// by the main result processing (they had no matching result from the adapter)
+		for (const entity of entities) {
+			if (entity.changeType !== 'create') continue
+			if (!nestedTypes.has(entity.entityId)) continue
+
+			// Check if this entity was already committed (has server data)
+			if (this.store.existsOnServer(entity.entityType, entity.entityId)) continue
+
+			// Commit it — the parent mutation succeeded, so this entity exists on the server
+			this.dispatcher.dispatch(commitEntity(entity.entityType, entity.entityId))
+			this.store.commitAllRelations(entity.entityType, entity.entityId)
+			this.store.setExistsOnServer(entity.entityType, entity.entityId, true)
+		}
+
+		// Also commit materialized entities that may not be in the entities list
+		// (they were created during mutation building by materializeEmbeddedHasMany/HasOne)
+		for (const [tempId, entityType] of nestedTypes) {
+			if (this.store.existsOnServer(entityType, tempId)) continue
+
+			const snapshot = this.store.getEntitySnapshot(entityType, tempId)
+			if (!snapshot) continue
+
+			this.dispatcher.dispatch(commitEntity(entityType, tempId))
+			this.store.commitAllRelations(entityType, tempId)
+			this.store.setExistsOnServer(entityType, tempId, true)
+		}
+	}
+
+	/**
+	 * Extracts nested entity results from a mutation's node response data.
+	 * Walks the mutation data structure to find inline create operations,
+	 * then matches them against the node response to extract server-assigned IDs.
+	 *
+	 * For hasOne creates: looks up the temp ID from the store's relation state
+	 * for the parent entity, then gets the server ID from the response node field.
+	 * For hasMany creates: filters new IDs from the response array by excluding
+	 * known pre-existing IDs, matching to temp IDs (aliases) by position.
+	 */
+	private extractNestedResultsFromNode(
+		mutationData: Record<string, unknown>,
+		nodeData: Record<string, unknown>,
+		parentEntityType: string,
+		parentEntityId: string,
+	): TransactionMutationResult[] {
+		const results: TransactionMutationResult[] = []
+		const nestedTypes = this.mutationCollector instanceof MutationCollector
+			? this.mutationCollector.getNestedEntityTypes()
+			: null
+
+		const makeResult = (
+			tempId: string,
+			createData: Record<string, unknown>,
+			nodeItem: Record<string, unknown>,
+		): TransactionMutationResult => {
+			const childResults = this.extractNestedResultsFromNode(
+				createData, nodeItem,
+				nestedTypes?.get(tempId) ?? 'Unknown', tempId,
+			)
+			return {
+				entityType: nestedTypes?.get(tempId) ?? 'Unknown',
+				entityId: tempId,
+				ok: true,
+				persistedId: nodeItem['id'] as string,
+				nestedResults: childResults.length > 0 ? childResults : undefined,
+			}
+		}
+
+		for (const [fieldName, fieldValue] of Object.entries(mutationData)) {
+			if (fieldValue === null || fieldValue === undefined) continue
+
+			if (Array.isArray(fieldValue)) {
+				const nodeItems = nodeData[fieldName]
+				if (!Array.isArray(nodeItems)) continue
+
+				// Separate create ops from known IDs (connect/update)
+				const knownIds = new Set<string>()
+				const createOps: Array<{ alias: string; createData: Record<string, unknown> }> = []
+
+				for (const op of fieldValue) {
+					if (typeof op !== 'object' || op === null) continue
+					const opObj = op as Record<string, unknown>
+
+					if ('connect' in opObj) {
+						const connectBy = opObj['connect'] as Record<string, unknown>
+						if (connectBy['id']) knownIds.add(connectBy['id'] as string)
+					} else if ('update' in opObj) {
+						const by = (opObj['update'] as Record<string, unknown>)['by'] as Record<string, unknown> | undefined
+						if (by?.['id']) knownIds.add(by['id'] as string)
+					} else if ('create' in opObj && opObj['alias']) {
+						createOps.push({
+							alias: opObj['alias'] as string,
+							createData: opObj['create'] as Record<string, unknown>,
+						})
+					}
+				}
+
+				// Include pre-existing server IDs
+				const hasManyState = this.store.getHasMany(parentEntityType, parentEntityId, fieldName)
+				if (hasManyState) {
+					for (const id of hasManyState.serverIds) knownIds.add(id)
+				}
+
+				// Filter response to new items only, then content-match to create ops.
+				// Contember API does not guarantee hasMany ordering in node response,
+				// so we match by scalar field values instead of position.
+				// Unmatched creates keep their temp IDs until the next fetch.
+				const unmatchedItems = (nodeItems as Record<string, unknown>[])
+					.filter(it => typeof it === 'object' && it !== null && !knownIds.has(it['id'] as string))
+
+				for (const createOp of createOps) {
+					const idx = unmatchedItems.findIndex(it => this.isCreateDataMatchingNode(createOp.createData, it))
+					if (idx < 0) continue
+					results.push(makeResult(createOp.alias, createOp.createData, unmatchedItems.splice(idx, 1)[0]!))
+				}
+			} else if (typeof fieldValue === 'object') {
+				const opObj = fieldValue as Record<string, unknown>
+				const nodeField = nodeData[fieldName]
+
+				if ('create' in opObj && typeof nodeField === 'object' && nodeField !== null) {
+					const serverId = (nodeField as Record<string, unknown>)['id'] as string | undefined
+					if (!serverId) continue
+
+					const relationState = this.store.getRelation(parentEntityType, parentEntityId, fieldName)
+					if (!relationState?.currentId) continue
+
+					results.push(makeResult(
+						relationState.currentId,
+						opObj['create'] as Record<string, unknown>,
+						nodeField as Record<string, unknown>,
+					))
+				}
+			}
+		}
+
+		return results
+	}
+
+	/**
+	 * Content-based matching: checks whether create data matches a response node
+	 * by comparing scalars and hasOne relation IDs. Same approach as the legacy
+	 * binding's TreeAugmenter.isEntityMatching.
+	 */
+	private isCreateDataMatchingNode(
+		createData: Record<string, unknown>,
+		nodeItem: Record<string, unknown>,
+	): boolean {
+		for (const [key, value] of Object.entries(createData)) {
+			if (value === null || value === undefined) continue
+
+			if (typeof value !== 'object') {
+				if (nodeItem[key] !== value) return false
+			} else if (!Array.isArray(value)) {
+				const op = value as Record<string, unknown>
+				const nodeField = nodeItem[key]
+				if (!nodeField || typeof nodeField !== 'object') continue
+
+				if ('connect' in op) {
+					if ((op['connect'] as Record<string, unknown>)['id'] !== (nodeField as Record<string, unknown>)['id']) return false
+				} else if ('create' in op) {
+					if (!this.isCreateDataMatchingNode(op['create'] as Record<string, unknown>, nodeField as Record<string, unknown>)) return false
+				}
+			}
+		}
+		return true
 	}
 
 	/**

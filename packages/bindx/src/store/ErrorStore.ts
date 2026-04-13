@@ -248,4 +248,34 @@ export class ErrorStore {
 		this.entityErrors.clear()
 		this.relationErrors.clear()
 	}
+
+	/**
+	 * Rekeys all errors from oldKeyPrefix to newKeyPrefix.
+	 */
+	rekey(oldEntityKey: string, newEntityKey: string, oldKeyPrefix: string, newKeyPrefix: string): void {
+		this.rekeyMap(this.entityErrors, oldEntityKey, newEntityKey)
+		this.rekeyByPrefix(this.fieldErrors, oldKeyPrefix, newKeyPrefix)
+		this.rekeyByPrefix(this.relationErrors, oldKeyPrefix, newKeyPrefix)
+	}
+
+	private rekeyMap(map: Map<string, ErrorState>, oldKey: string, newKey: string): void {
+		const value = map.get(oldKey)
+		if (value) {
+			map.delete(oldKey)
+			map.set(newKey, value)
+		}
+	}
+
+	private rekeyByPrefix(map: Map<string, ErrorState>, oldPrefix: string, newPrefix: string): void {
+		const toMove: [string, ErrorState][] = []
+		for (const [key, value] of map) {
+			if (key.startsWith(oldPrefix)) {
+				toMove.push([key, value])
+			}
+		}
+		for (const [oldKey, value] of toMove) {
+			map.delete(oldKey)
+			map.set(newPrefix + oldKey.slice(oldPrefix.length), value)
+		}
+	}
 }

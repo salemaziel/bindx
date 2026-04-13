@@ -218,6 +218,29 @@ export class EntitySnapshotStore {
 		return keys
 	}
 
+	/**
+	 * Moves a snapshot from oldKey to newKey, updating the id in the snapshot data.
+	 */
+	rekey(oldKey: string, newKey: string, newId: string): void {
+		const snapshot = this.snapshots.get(oldKey)
+		if (!snapshot) return
+
+		// Update id field in data and serverData
+		const data = { ...snapshot.data as Record<string, unknown>, id: newId }
+		const serverData = { ...snapshot.serverData as Record<string, unknown>, id: newId }
+
+		const newSnapshot = createEntitySnapshot(
+			newId,
+			snapshot.entityType,
+			data,
+			serverData,
+			snapshot.version + 1,
+		)
+
+		this.snapshots.delete(oldKey)
+		this.snapshots.set(newKey, newSnapshot)
+	}
+
 	keys(): IterableIterator<string> {
 		return this.snapshots.keys()
 	}
