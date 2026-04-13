@@ -115,6 +115,35 @@ export class EntityMetaStore {
 		return !this.tempToPersistedId.has(key)
 	}
 
+	/**
+	 * Moves all metadata from oldKey to newKey.
+	 */
+	rekey(oldKey: string, newKey: string): void {
+		const meta = this.entityMetas.get(oldKey)
+		if (meta) {
+			this.entityMetas.delete(oldKey)
+			this.entityMetas.set(newKey, meta)
+		}
+
+		const loadState = this.loadStates.get(oldKey)
+		if (loadState) {
+			this.loadStates.delete(oldKey)
+			this.loadStates.set(newKey, loadState)
+		}
+
+		if (this.persistingEntities.has(oldKey)) {
+			this.persistingEntities.delete(oldKey)
+			this.persistingEntities.add(newKey)
+		}
+
+		// Move temp ID mapping
+		const persistedId = this.tempToPersistedId.get(oldKey)
+		if (persistedId !== undefined) {
+			this.tempToPersistedId.delete(oldKey)
+			this.tempToPersistedId.set(newKey, persistedId)
+		}
+	}
+
 	// ==================== Bulk Operations ====================
 
 	exportMetas(keys: string[]): Map<string, EntityMeta> {

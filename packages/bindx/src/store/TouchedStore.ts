@@ -36,6 +36,22 @@ export class TouchedStore {
 		}
 	}
 
+	/**
+	 * Rekeys all touched fields from oldKeyPrefix to newKeyPrefix.
+	 */
+	rekey(oldKeyPrefix: string, newKeyPrefix: string): void {
+		const toMove: [string, boolean][] = []
+		for (const [key, value] of this.touchedFields) {
+			if (key.startsWith(oldKeyPrefix)) {
+				toMove.push([key, value])
+			}
+		}
+		for (const [oldKey, value] of toMove) {
+			this.touchedFields.delete(oldKey)
+			this.touchedFields.set(newKeyPrefix + oldKey.slice(oldKeyPrefix.length), value)
+		}
+	}
+
 	clear(): void {
 		this.touchedFields.clear()
 	}

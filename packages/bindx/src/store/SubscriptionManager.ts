@@ -31,8 +31,18 @@ export class SubscriptionManager {
 	/** Parent-child relationships: childKey -> Set of parentKeys */
 	private readonly childToParents = new Map<string, Set<string>>()
 
+	/** Maps old keys → new keys after rekey, so unsubscribe closures can find migrated callbacks */
+	private readonly rekeyedKeys = new Map<string, string>()
+
 	/** Global version number for change detection */
 	private globalVersion = 0
+
+	/**
+	 * Resolves a key through the rekey redirect chain.
+	 */
+	private resolveKey(key: string): string {
+		return this.rekeyedKeys.get(key) ?? key
+	}
 
 	/**
 	 * Subscribe to changes on a specific entity.
@@ -46,7 +56,8 @@ export class SubscriptionManager {
 		this.entitySubscribers.get(key)!.add(callback)
 
 		return () => {
-			this.entitySubscribers.get(key)?.delete(callback)
+			const resolvedKey = this.resolveKey(key)
+			this.entitySubscribers.get(resolvedKey)?.delete(callback)
 		}
 	}
 
@@ -62,7 +73,8 @@ export class SubscriptionManager {
 		this.relationSubscribers.get(key)!.add(callback)
 
 		return () => {
-			this.relationSubscribers.get(key)?.delete(callback)
+			const resolvedKey = this.resolveKey(key)
+			this.relationSubscribers.get(resolvedKey)?.delete(callback)
 		}
 	}
 
@@ -236,6 +248,65 @@ export class SubscriptionManager {
 		this.globalVersion++
 		for (const sub of this.globalSubscribers) {
 			sub()
+		}
+	}
+
+	/**
+	 * Moves subscriptions and parent-child relationships from oldKey to newKey.
+	 * Also rekeys relation subscribers under oldKeyPrefix to newKeyPrefix.
+	 * Registers redirects so unsubscribe closures can find migrated callbacks.
+	 */
+	rekey(oldKey: string, newKey: string, oldKeyPrefix: string, newKeyPrefix: string): void {
+		// Register redirect for entity key (update existing chains first)
+		for (const [fromKey, toKey] of this.rekeyedKeys) {
+			if (toKey === oldKey) {
+				this.rekeyedKeys.set(fromKey, newKey)
+			}
+		}
+		this.rekeyedKeys.set(oldKey, newKey)
+
+		// Move entity subscribers
+		const entitySubs = this.entitySubscribers.get(oldKey)
+		if (entitySubs) {
+			this.entitySubscribers.delete(oldKey)
+			this.entitySubscribers.set(newKey, entitySubs)
+		}
+
+		// Move relation subscribers by prefix (e.g. "Entity:tempId:" → "Entity:persistedId:")
+		const toMoveRelations: [string, Set<Subscriber>][] = []
+		for (const [key, subs] of this.relationSubscribers) {
+			if (key.startsWith(oldKeyPrefix)) {
+				toMoveRelations.push([key, subs])
+			}
+		}
+		for (const [oldRelKey, subs] of toMoveRelations) {
+			const newRelKey = newKeyPrefix + oldRelKey.slice(oldKeyPrefix.length)
+
+			// Register redirect for relation key (update existing chains first)
+			for (const [fromKey, toKey] of this.rekeyedKeys) {
+				if (toKey === oldRelKey) {
+					this.rekeyedKeys.set(fromKey, newRelKey)
+				}
+			}
+			this.rekeyedKeys.set(oldRelKey, newRelKey)
+
+			this.relationSubscribers.delete(oldRelKey)
+			this.relationSubscribers.set(newRelKey, subs)
+		}
+
+		// Move parent-child: update child→parent mappings
+		const parents = this.childToParents.get(oldKey)
+		if (parents) {
+			this.childToParents.delete(oldKey)
+			this.childToParents.set(newKey, parents)
+		}
+
+		// Update parent-child: replace oldKey in any parent sets that reference it
+		for (const parentSet of this.childToParents.values()) {
+			if (parentSet.has(oldKey)) {
+				parentSet.delete(oldKey)
+				parentSet.add(newKey)
+			}
 		}
 	}
 }
