@@ -169,33 +169,33 @@ describe('Nested hasMany create — 3-level deep (Program → Approval → Round
 		const programMutation = collector.collectUpdateData('Program', 'prog-1')
 
 		expect(programMutation).not.toBeNull()
-		expect(programMutation!.approval).toBeDefined()
+		expect(programMutation!['approval']).toBeDefined()
 
 		// The approval should be an inline create
-		const approvalOp = programMutation!.approval as { create: Record<string, unknown> }
+		const approvalOp = programMutation!['approval'] as { create: Record<string, unknown> }
 		expect(approvalOp.create).toBeDefined()
-		expect(approvalOp.create.status).toBe('pending')
+		expect(approvalOp.create['status']).toBe('pending')
 
 		// The approval's create should include rounds
-		const roundsOps = approvalOp.create.rounds as Array<{ create: Record<string, unknown> }>
+		const roundsOps = approvalOp.create['rounds'] as Array<{ create: Record<string, unknown> }>
 		expect(roundsOps).toBeDefined()
 		expect(roundsOps).toHaveLength(1)
-		expect(roundsOps[0].create).toBeDefined()
-		expect(roundsOps[0].create.roundNumber).toBe(1)
-		expect(roundsOps[0].create.status).toBe('pending')
+		expect(roundsOps[0]!.create).toBeDefined()
+		expect(roundsOps[0]!.create['roundNumber']).toBe(1)
+		expect(roundsOps[0]!.create['status']).toBe('pending')
 
 		// THIS IS THE BUG: The round's create should include reviews from the store's hasMany state
 		// Currently processNestedData only processes raw entity data (reviews: [])
 		// and ignores the reviews added via store.addToHasMany
-		const reviewsOps = roundsOps[0].create.reviews as Array<{ create: Record<string, unknown> }>
+		const reviewsOps = roundsOps[0]!.create['reviews'] as Array<{ create: Record<string, unknown> }>
 		expect(reviewsOps).toBeDefined()
 		expect(reviewsOps).toHaveLength(2)
-		expect(reviewsOps[0].create).toMatchObject({
+		expect(reviewsOps[0]!.create).toMatchObject({
 			reviewType: 'expert',
 			status: 'pending',
 			guarantor: { connect: { id: 'g-expert' } },
 		})
-		expect(reviewsOps[1].create).toMatchObject({
+		expect(reviewsOps[1]!.create).toMatchObject({
 			reviewType: 'main',
 			status: 'pending',
 			guarantor: { connect: { id: 'g-main' } },
@@ -242,18 +242,18 @@ describe('Nested hasMany create — 3-level deep (Program → Approval → Round
 		const programMutation = collector.collectUpdateData('Program', 'prog-1')
 
 		expect(programMutation).not.toBeNull()
-		const approvalOp = programMutation!.approval as { create: Record<string, unknown> }
-		const roundsOps = approvalOp.create.rounds as Array<{ create: Record<string, unknown> }>
-		const reviewsOps = roundsOps[0].create.reviews as Array<{ create: Record<string, unknown> }>
+		const approvalOp = programMutation!['approval'] as { create: Record<string, unknown> }
+		const roundsOps = approvalOp.create['rounds'] as Array<{ create: Record<string, unknown> }>
+		const reviewsOps = roundsOps[0]!.create['reviews'] as Array<{ create: Record<string, unknown> }>
 
 		// This works — processNestedData handles the embedded data
 		expect(reviewsOps).toHaveLength(2)
-		expect(reviewsOps[0].create).toMatchObject({
+		expect(reviewsOps[0]!.create).toMatchObject({
 			reviewType: 'expert',
 			status: 'pending',
 			guarantor: { connect: { id: 'g-expert' } },
 		})
-		expect(reviewsOps[1].create).toMatchObject({
+		expect(reviewsOps[1]!.create).toMatchObject({
 			reviewType: 'main',
 			status: 'pending',
 			guarantor: { connect: { id: 'g-main' } },
@@ -613,13 +613,13 @@ describe('Nested hasMany create — 3-level deep (Program → Approval → Round
 		const roundMutation = collector.collectCreateData('Round', roundId)
 
 		expect(roundMutation).not.toBeNull()
-		expect(roundMutation!.roundNumber).toBe(1)
-		expect(roundMutation!.status).toBe('pending')
+		expect(roundMutation!['roundNumber']).toBe(1)
+		expect(roundMutation!['status']).toBe('pending')
 
-		const reviewsOps = roundMutation!.reviews as Array<{ create: Record<string, unknown> }>
+		const reviewsOps = roundMutation!['reviews'] as Array<{ create: Record<string, unknown> }>
 		expect(reviewsOps).toBeDefined()
 		expect(reviewsOps).toHaveLength(1)
-		expect(reviewsOps[0].create).toMatchObject({
+		expect(reviewsOps[0]!.create).toMatchObject({
 			reviewType: 'expert',
 			status: 'pending',
 			guarantor: { connect: { id: 'g-expert' } },
