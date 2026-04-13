@@ -1089,26 +1089,35 @@ export class BatchPersister {
 					}
 				}
 
-				// Match new items to create operations by position
-				for (let i = 0; i < Math.min(createOps.length, newItems.length); i++) {
-					const createOp = createOps[i]!
-					const newItem = newItems[i]!
-					const serverId = newItem['id'] as string
-					const entityType = nestedTypes?.get(createOp.alias) ?? 'Unknown'
+				// Match new items to create operations by position.
+				// This relies on the Contember API returning hasMany items in insertion order,
+				// which holds in practice (PostgreSQL heap order for freshly inserted rows)
+				// but is not formally guaranteed by the API.
+				// When counts disagree (e.g. partial server failure, ACL filtering, or reordering),
+				// we skip matching entirely — wrong ID mapping is worse than no mapping.
+				// Unmatched entities are still committed via commitUnresolvedNestedEntities,
+				// they just keep their temp IDs until the next fetch.
+				if (createOps.length === newItems.length) {
+					for (let i = 0; i < createOps.length; i++) {
+						const createOp = createOps[i]!
+						const newItem = newItems[i]!
+						const serverId = newItem['id'] as string
+						const entityType = nestedTypes?.get(createOp.alias) ?? 'Unknown'
 
-					// Recurse into nested creates
-					const childResults = this.extractNestedResultsFromNode(
-						createOp.createData, newItem,
-						entityType, createOp.alias,
-					)
+						// Recurse into nested creates
+						const childResults = this.extractNestedResultsFromNode(
+							createOp.createData, newItem,
+							entityType, createOp.alias,
+						)
 
-					results.push({
-						entityType,
-						entityId: createOp.alias,
-						ok: true,
-						persistedId: serverId,
-						nestedResults: childResults.length > 0 ? childResults : undefined,
-					})
+						results.push({
+							entityType,
+							entityId: createOp.alias,
+							ok: true,
+							persistedId: serverId,
+							nestedResults: childResults.length > 0 ? childResults : undefined,
+						})
+					}
 				}
 			} else if (typeof fieldValue === 'object') {
 				// HasOne operation
