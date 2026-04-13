@@ -584,6 +584,122 @@ describe('Nested hasMany create — 3-level deep (Program → Approval → Round
 		expect(reviewPersistedId).toMatch(/^server-/)
 	})
 
+	/**
+	 * When the adapter returns fewer new items than create operations (e.g. partial server
+	 * failure or ACL filtering), position-based matching is skipped entirely to avoid
+	 * wrong ID mappings. The entities should still be committed (they exist on the server
+	 * as part of the parent mutation) but keep their temp IDs.
+	 */
+	test('partial failure: fewer response items than creates skips ID mapping but still commits', async () => {
+		let serverIdCounter = 0
+
+		const adapter: BackendAdapter = {
+			query: mock(() => Promise.resolve([])),
+			delete: mock(() => Promise.resolve({ ok: true })),
+			persist: mock((_entityType: string, _id: string, changes: Record<string, unknown>) => {
+				const nodeData = buildMockNodeResponse(changes)
+				return Promise.resolve({ ok: true, data: nodeData })
+			}),
+			create: mock((_entityType: string, data: Record<string, unknown>) => {
+				const nodeData = buildMockNodeResponse(data)
+				return Promise.resolve({ ok: true, data: nodeData })
+			}),
+		}
+
+		// Simulate a response where one of two reviews is missing from the node
+		// (e.g. server created it but ACL prevents reading it back)
+		function buildMockNodeResponse(data: Record<string, unknown>): Record<string, unknown> {
+			const node: Record<string, unknown> = { id: `server-${++serverIdCounter}` }
+
+			for (const [key, value] of Object.entries(data)) {
+				if (value === null || value === undefined) continue
+				if (Array.isArray(value)) {
+					const items: Record<string, unknown>[] = []
+					let createCount = 0
+					for (const item of value) {
+						if (typeof item !== 'object' || item === null) continue
+						const op = item as Record<string, unknown>
+						if ('create' in op) {
+							createCount++
+							// Only return the first create — skip the second to simulate partial response
+							if (createCount <= 1) {
+								items.push(buildMockNodeResponse(op['create'] as Record<string, unknown>))
+							}
+						}
+					}
+					if (items.length > 0) node[key] = items
+				} else if (typeof value === 'object') {
+					const op = value as Record<string, unknown>
+					if ('create' in op) {
+						node[key] = buildMockNodeResponse(op['create'] as Record<string, unknown>)
+					}
+				}
+			}
+			return node
+		}
+
+		const dispatcher = new ActionDispatcher(store)
+		const schemaAdapter = new ContemberSchemaMutationAdapter(nestedSchema)
+		const mutationCollector = new MutationCollector(store, schemaAdapter)
+		const persister = new BatchPersister(adapter, store, dispatcher, {
+			mutationCollector,
+			schema: schemaAdapter as never,
+		})
+
+		// Setup
+		store.setEntityData('Program', 'prog-1', {
+			id: 'prog-1',
+			name: 'Test Program',
+			approval: null,
+		}, true)
+		store.setExistsOnServer('Program', 'prog-1', true)
+		store.setEntityData('Guarantor', 'g-expert', { id: 'g-expert', name: 'Expert' }, true)
+		store.setExistsOnServer('Guarantor', 'g-expert', true)
+		store.setEntityData('Guarantor', 'g-main', { id: 'g-main', name: 'Main Boss' }, true)
+		store.setExistsOnServer('Guarantor', 'g-main', true)
+
+		// Create approval with round containing TWO embedded reviews
+		const approvalId = store.createEntity('Approval', { status: 'pending', rounds: [] })
+		store.getOrCreateRelation('Program', 'prog-1', 'approval', {
+			currentId: approvalId,
+			serverId: null,
+			state: 'connected',
+			serverState: 'disconnected',
+			placeholderData: {},
+		})
+
+		const roundId = store.createEntity('Round', {
+			roundNumber: 1,
+			status: 'pending',
+			reviews: [
+				{ reviewType: 'expert', status: 'pending', guarantor: { id: 'g-expert' } },
+				{ reviewType: 'main', status: 'pending', guarantor: { id: 'g-main' } },
+			],
+		})
+		store.getOrCreateHasMany('Approval', approvalId, 'rounds', [])
+		store.addToHasMany('Approval', approvalId, 'rounds', roundId)
+
+		const result = await persister.persistAll()
+		expect(result.success).toBe(true)
+
+		// Reviews should be committed (existsOnServer = true) even without ID mapping
+		const reviewsState = store.getHasMany('Round', roundId, 'reviews')
+		expect(reviewsState).not.toBeUndefined()
+		expect(reviewsState!.serverIds.size).toBe(2)
+
+		const reviewTempIds = [...reviewsState!.serverIds]
+		for (const tempId of reviewTempIds) {
+			expect(store.existsOnServer('Review', tempId)).toBe(true)
+		}
+
+		// Neither review should have a persisted ID mapping — matching was skipped
+		// because response had 1 new item but 2 create ops
+		for (const tempId of reviewTempIds) {
+			const persistedId = store.getPersistedId('Review', tempId)
+			expect(persistedId).toBeNull()
+		}
+	})
+
 	test('standalone collectCreateData for round includes reviews from store', () => {
 		const roundId = store.createEntity('Round', {
 			roundNumber: 1,
