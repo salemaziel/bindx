@@ -1,4 +1,4 @@
-import { EntityRelatedHandle } from './BaseHandle.js'
+import { EntityRelatedHandle, embeddedDataMatchesSnapshot } from './BaseHandle.js'
 import type { ActionDispatcher } from '../core/ActionDispatcher.js'
 import type { SnapshotStore } from '../store/SnapshotStore.js'
 import type { SchemaRegistry } from '../schema/SchemaRegistry.js'
@@ -308,6 +308,15 @@ export class HasOneHandle<TEntity extends object = object, TSelected = TEntity> 
 		// Same reference means the embedded data is stale and must not overwrite
 		// child state that may have been updated by a local commit.
 		if (!this.store.hasEmbeddedDataChanged(this.entityType, this.entityId, this.fieldName, embeddedData)) {
+			return
+		}
+
+		// Skip if embedded data values match existing serverData — avoids overwriting
+		// unpersisted local mutations when a re-fetch returns the same server data
+		// (e.g. polling). A new reference with identical values means no actual change.
+		const existing = this.store.getEntitySnapshot(this.targetType, id)
+		if (existing?.serverData && embeddedDataMatchesSnapshot(embeddedData as Record<string, unknown>, existing.serverData as Record<string, unknown>)) {
+			this.store.markEmbeddedDataPropagated(this.entityType, this.entityId, this.fieldName, embeddedData)
 			return
 		}
 

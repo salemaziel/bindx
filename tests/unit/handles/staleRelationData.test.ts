@@ -497,6 +497,94 @@ describe('Stale relation data after re-fetch', () => {
 	})
 
 	// ------------------------------------------------------------------
+	// Polling / re-fetch with unchanged server data
+	// ------------------------------------------------------------------
+
+	describe('Re-fetch with unchanged server data — local mutations preservation', () => {
+		test('has-one: unpersisted local mutation must survive parent re-fetch with same server data', () => {
+			// T0: Initial fetch
+			store.setEntityData('Program', 'prog-1', {
+				id: 'prog-1',
+				name: 'Test Program',
+				approval: { id: 'appr-1', status: 'pending' },
+			}, true)
+
+			const handle1 = HasOneHandle.createRaw<TestApproval>(
+				'Program', 'prog-1', 'approval', 'Approval',
+				store, dispatcher, schema,
+			)
+			handle1.entityRaw // propagates embedded data
+
+			// T1: User edits approval status locally (not yet persisted)
+			store.setFieldValue('Approval', 'appr-1', ['status'], 'draft')
+
+			const snapAfterEdit = store.getEntitySnapshot('Approval', 'appr-1')
+			expect((snapAfterEdit!.data as Record<string, unknown>)['status']).toBe('draft')
+			expect((snapAfterEdit!.serverData as Record<string, unknown>)['status']).toBe('pending')
+
+			// T2: Polling re-fetches parent with SAME server data (new object reference)
+			store.setEntityData('Program', 'prog-1', {
+				id: 'prog-1',
+				name: 'Test Program',
+				approval: { id: 'appr-1', status: 'pending' },
+			}, true)
+
+			// T3: New handle (re-render after parent snapshot change)
+			const handle2 = HasOneHandle.createRaw<TestApproval>(
+				'Program', 'prog-1', 'approval', 'Approval',
+				store, dispatcher, schema,
+			)
+			handle2.entityRaw // triggers ensureRelatedEntitySnapshot
+
+			// The local mutation 'draft' must survive — server data hasn't actually changed
+			const snapAfterRefetch = store.getEntitySnapshot('Approval', 'appr-1')
+			expect((snapAfterRefetch!.data as Record<string, unknown>)['status']).toBe('draft')
+			expect((snapAfterRefetch!.serverData as Record<string, unknown>)['status']).toBe('pending')
+		})
+
+		test('has-many: unpersisted local mutation on item must survive parent re-fetch with same server data', () => {
+			// T0: Initial fetch
+			store.setEntityData('Approval', 'appr-1', {
+				id: 'appr-1',
+				status: 'pending',
+				rounds: [{ id: 'round-1', roundNumber: 1, status: 'pending' }],
+			}, true)
+
+			const list1 = HasManyListHandle.create<TestRound>(
+				'Approval', 'appr-1', 'rounds', 'Round',
+				store, dispatcher, schema,
+			)
+			list1.items // propagates embedded data
+
+			// T1: User edits round status locally (not yet persisted)
+			store.setFieldValue('Round', 'round-1', ['status'], 'in-review')
+
+			const roundSnapAfterEdit = store.getEntitySnapshot('Round', 'round-1')
+			expect((roundSnapAfterEdit!.data as Record<string, unknown>)['status']).toBe('in-review')
+			expect((roundSnapAfterEdit!.serverData as Record<string, unknown>)['status']).toBe('pending')
+
+			// T2: Polling re-fetches parent with SAME server data (new object reference)
+			store.setEntityData('Approval', 'appr-1', {
+				id: 'appr-1',
+				status: 'pending',
+				rounds: [{ id: 'round-1', roundNumber: 1, status: 'pending' }],
+			}, true)
+
+			// T3: New handle (re-render)
+			const list2 = HasManyListHandle.create<TestRound>(
+				'Approval', 'appr-1', 'rounds', 'Round',
+				store, dispatcher, schema,
+			)
+			list2.items // triggers ensureItemSnapshots
+
+			// The local mutation 'in-review' must survive — server data hasn't actually changed
+			const roundSnapAfterRefetch = store.getEntitySnapshot('Round', 'round-1')
+			expect((roundSnapAfterRefetch!.data as Record<string, unknown>)['status']).toBe('in-review')
+			expect((roundSnapAfterRefetch!.serverData as Record<string, unknown>)['status']).toBe('pending')
+		})
+	})
+
+	// ------------------------------------------------------------------
 	// Full scenario: list page → detail page navigation
 	// ------------------------------------------------------------------
 
