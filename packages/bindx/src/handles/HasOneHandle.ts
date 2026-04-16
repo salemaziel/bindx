@@ -1,4 +1,4 @@
-import { EntityRelatedHandle } from './BaseHandle.js'
+import { EntityRelatedHandle, embeddedDataMatchesSnapshot } from './BaseHandle.js'
 import type { ActionDispatcher } from '../core/ActionDispatcher.js'
 import type { SnapshotStore } from '../store/SnapshotStore.js'
 import type { SchemaRegistry } from '../schema/SchemaRegistry.js'
@@ -580,20 +580,4 @@ export class HasOneHandle<TEntity extends object = object, TSelected = TEntity> 
 		return this.entityRaw.interceptPersisting(interceptor)
 	}
 
-}
-
-/**
- * Shallow comparison of embedded data keys against existing snapshot data.
- * Returns true if all keys in embedded data match the snapshot.
- */
-function embeddedDataMatchesSnapshot(
-	embedded: Record<string, unknown>,
-	snapshot: Record<string, unknown>,
-): boolean {
-	for (const key of Object.keys(embedded)) {
-		if (embedded[key] !== snapshot[key]) {
-			return false
-		}
-	}
-	return true
 }
