@@ -283,11 +283,6 @@ export class HasOneHandle<TEntity extends object = object, TSelected = TEntity> 
 		// This needs to happen even if the snapshot already exists
 		this.store.registerParentChild(this.entityType, this.entityId, this.targetType, id)
 
-		// Check if snapshot already exists
-		if (this.store.hasEntity(this.targetType, id)) {
-			return
-		}
-
 		// Get embedded data from parent entity
 		const parentSnapshot = this.store.getEntitySnapshot(this.entityType, this.entityId)
 		if (!parentSnapshot?.data) {
@@ -308,7 +303,15 @@ export class HasOneHandle<TEntity extends object = object, TSelected = TEntity> 
 			return
 		}
 
-		// Create snapshot from embedded data
+		// Skip if snapshot already exists and server data hasn't changed.
+		// Compare against serverData (not data) because data may include local
+		// mutations — overwriting those would discard the user's changes.
+		const existing = this.store.getEntitySnapshot(this.targetType, id)
+		if (existing?.serverData && embeddedDataMatchesSnapshot(embeddedData as Record<string, unknown>, existing.serverData as Record<string, unknown>)) {
+			return
+		}
+
+		// Create or update snapshot from embedded data
 		// Skip notification to avoid triggering React state updates during render
 		this.store.setEntityData(
 			this.targetType,
@@ -577,4 +580,20 @@ export class HasOneHandle<TEntity extends object = object, TSelected = TEntity> 
 		return this.entityRaw.interceptPersisting(interceptor)
 	}
 
+}
+
+/**
+ * Shallow comparison of embedded data keys against existing snapshot data.
+ * Returns true if all keys in embedded data match the snapshot.
+ */
+function embeddedDataMatchesSnapshot(
+	embedded: Record<string, unknown>,
+	snapshot: Record<string, unknown>,
+): boolean {
+	for (const key of Object.keys(embedded)) {
+		if (embedded[key] !== snapshot[key]) {
+			return false
+		}
+	}
+	return true
 }

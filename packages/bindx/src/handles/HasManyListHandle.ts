@@ -165,12 +165,15 @@ export class HasManyListHandle<TEntity extends object = object, TSelected = TEnt
 			// This needs to happen even if the snapshot already exists
 			this.store.registerParentChild(this.entityType, this.entityId, this.itemType, itemId)
 
-			// Skip if snapshot already exists
-			if (this.store.hasEntity(this.itemType, itemId)) {
+			// Skip if snapshot already exists and server data hasn't changed.
+			// Compare against serverData (not data) because data may include local
+			// mutations — overwriting those would discard the user's changes.
+			const existing = this.store.getEntitySnapshot(this.itemType, itemId)
+			if (existing?.serverData && embeddedDataMatchesSnapshot(itemData, existing.serverData as Record<string, unknown>)) {
 				continue
 			}
 
-			// Create snapshot from embedded data
+			// Create or update snapshot from embedded data
 			// Skip notification to avoid triggering React state updates during render
 			this.store.setEntityData(
 				this.itemType,
@@ -525,4 +528,20 @@ export class HasManyListHandle<TEntity extends object = object, TSelected = TEnt
 		)
 	}
 
+}
+
+/**
+ * Shallow comparison of embedded data keys against existing snapshot data.
+ * Returns true if all keys in embedded data match the snapshot.
+ */
+function embeddedDataMatchesSnapshot(
+	embedded: Record<string, unknown>,
+	snapshot: Record<string, unknown>,
+): boolean {
+	for (const key of Object.keys(embedded)) {
+		if (embedded[key] !== snapshot[key]) {
+			return false
+		}
+	}
+	return true
 }
