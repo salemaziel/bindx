@@ -137,6 +137,18 @@ export class SnapshotStore implements SnapshotVersionBumper {
 		}
 	}
 
+	/**
+	 * Rekeys propagation tracking entries when a temp ID is replaced by a persisted ID.
+	 */
+	private rekeyPropagatedData(oldPrefix: string, newPrefix: string): void {
+		for (const [key, value] of this.lastPropagatedData) {
+			if (key.startsWith(oldPrefix)) {
+				this.lastPropagatedData.delete(key)
+				this.lastPropagatedData.set(newPrefix + key.slice(oldPrefix.length), value)
+			}
+		}
+	}
+
 	// ==================== Entity Snapshots ====================
 
 	getEntitySnapshot<T extends object>(entityType: string, id: string): EntitySnapshot<T> | undefined {
@@ -301,9 +313,10 @@ export class SnapshotStore implements SnapshotVersionBumper {
 		// Replace tempId with persistedId in all relation/hasMany VALUE references
 		this.relations.replaceEntityId(tempId, persistedId)
 
-		// Rekey errors and touched state
+		// Rekey errors, touched state, and propagation tracking
 		this.errors.rekey(oldKey, newKey, oldKeyPrefix, newKeyPrefix)
 		this.touched.rekey(oldKeyPrefix, newKeyPrefix)
+		this.rekeyPropagatedData(oldKeyPrefix, newKeyPrefix)
 
 		// Notify on the NEW key so React picks up the change
 		this.notifyEntitySubscribers(newKey)

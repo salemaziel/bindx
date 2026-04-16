@@ -394,6 +394,109 @@ describe('Stale relation data after re-fetch', () => {
 	})
 
 	// ------------------------------------------------------------------
+	// Rekey regression: lastPropagatedData must be rekeyed on persist
+	// ------------------------------------------------------------------
+
+	describe('Rekey regression — propagation tracking must survive temp→real ID rekey', () => {
+		test('has-many committed via $create must not be overwritten after tempId rekey', () => {
+			// T0: Program with no approval (initial server fetch)
+			store.setEntityData('Program', 'prog-1', {
+				id: 'prog-1',
+				name: 'Test Program',
+			}, true)
+
+			// T1: User creates approval with rounds via $create (simulates handleSubmitForApproval)
+			const approvalHandle = HasOneHandle.createRaw<TestApproval>(
+				'Program', 'prog-1', 'approval', 'Approval',
+				store, dispatcher, schema,
+			)
+			const tempApprovalId = approvalHandle.create({ status: 'pending', rounds: [] })
+
+			// Add a round to the approval's rounds has-many
+			store.setEntityData('Round', '__temp_round_1', {
+				id: '__temp_round_1',
+				roundNumber: 1,
+				status: 'pending',
+			}, false)
+			store.addToHasMany('Approval', tempApprovalId, 'rounds', '__temp_round_1')
+
+			// Access items to initialize has-many state + propagation tracking
+			const roundsList1 = HasManyListHandle.create<TestRound>(
+				'Approval', tempApprovalId, 'rounds', 'Round',
+				store, dispatcher, schema,
+			)
+			expect(roundsList1.items.length).toBe(1)
+
+			// T2: Persist succeeds — rekey temp IDs to real IDs
+			store.mapTempIdToPersistedId('Round', '__temp_round_1', 'round-1')
+			store.mapTempIdToPersistedId('Approval', tempApprovalId, 'appr-1')
+
+			// Commit entities and relations
+			store.commitEntity('Approval', 'appr-1')
+			store.commitAllRelations('Approval', 'appr-1')
+			store.commitAllRelations('Program', 'prog-1')
+
+			// T3: Re-render after persist — access rounds through new handles
+			// The Approval entity data has rounds: [] (from $create, the embedded array).
+			// After rekey, lastPropagatedData key changed from Approval:__temp_X:rounds
+			// to Approval:appr-1:rounds — but if rekeying is missing, the key is lost
+			// and hasEmbeddedDataChanged returns true → propagates stale [] → overwrites
+			// committed has-many state.
+			const roundsList2 = HasManyListHandle.create<TestRound>(
+				'Approval', 'appr-1', 'rounds', 'Round',
+				store, dispatcher, schema,
+			)
+
+			// BUG: lastPropagatedData is not rekeyed in mapTempIdToPersistedId
+			// so hasEmbeddedDataChanged returns true → getOrCreateHasMany overwrites
+			// committed serverIds ['round-1'] with stale embedded []
+			expect(roundsList2.items.length).toBe(1)
+		})
+
+		test('has-one child snapshot must not be overwritten after tempId rekey', () => {
+			// T0: Program without approval
+			store.setEntityData('Program', 'prog-1', {
+				id: 'prog-1',
+				name: 'Test',
+			}, true)
+
+			// T1: Create approval via $create
+			const handle1 = HasOneHandle.createRaw<TestApproval>(
+				'Program', 'prog-1', 'approval', 'Approval',
+				store, dispatcher, schema,
+			)
+			const tempId = handle1.create({ status: 'pending' })
+
+			// Access to trigger propagation tracking
+			handle1.entityRaw
+
+			// T2: User changes status locally before persist
+			store.setFieldValue('Approval', tempId, ['status'], 'submitted')
+
+			// T3: Persist — rekey + commit
+			store.mapTempIdToPersistedId('Approval', tempId, 'appr-1')
+			store.commitEntity('Approval', 'appr-1')
+			store.commitAllRelations('Program', 'prog-1')
+
+			// Verify committed state
+			const snapCommitted = store.getEntitySnapshot('Approval', 'appr-1')
+			expect((snapCommitted!.data as Record<string, unknown>)['status']).toBe('submitted')
+
+			// T4: Re-render — new handle accesses the relation
+			const handle2 = HasOneHandle.createRaw<TestApproval>(
+				'Program', 'prog-1', 'approval', 'Approval',
+				store, dispatcher, schema,
+			)
+			handle2.entityRaw // triggers ensureRelatedEntitySnapshot
+
+			// BUG: lastPropagatedData lost the key after rekey → hasEmbeddedDataChanged
+			// returns true → overwrites 'submitted' with 'pending' from stale embedded data
+			const snapAfter = store.getEntitySnapshot('Approval', 'appr-1')
+			expect((snapAfter!.data as Record<string, unknown>)['status']).toBe('submitted')
+		})
+	})
+
+	// ------------------------------------------------------------------
 	// Full scenario: list page → detail page navigation
 	// ------------------------------------------------------------------
 
