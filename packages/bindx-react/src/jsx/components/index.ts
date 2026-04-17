@@ -16,6 +16,19 @@ export { If, IfWithMeta } from './If.js'
 // Show component
 export { Show, ShowWithMeta, type ShowProps } from './Show.js'
 
+// Switch / Case / Default components
+export {
+	Switch,
+	Case,
+	Default,
+	SwitchWithMeta,
+	CaseWithMeta,
+	DefaultWithMeta,
+	type SwitchProps,
+	type CaseProps,
+	type DefaultProps,
+} from './Switch.js'
+
 // Entity component
 export { Entity, type EntityProps } from './Entity.js'
 
